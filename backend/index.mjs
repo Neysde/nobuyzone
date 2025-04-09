@@ -3,9 +3,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import expressLayouts from "express-ejs-layouts";
+import routes from "./routes/routes.mjs";
 
 //we need to create our own __dirname because we are using mjs files. In js files we have __dirname as a global variable.
-const __filename = fileURLToPath(import.meta.url); 
+const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
@@ -50,10 +51,12 @@ async function reverseGeocode(lat, lon) {
   }
 }
 
-app.get("/posting", (req, res) => {
-    res.render("posting.ejs");
-  });
+app.use(routes);
 
-  app.listen(3000, () => {
-    console.log("Server is running on port 3000");
-  });
+app.get("/posting", (req, res) => {
+  res.render("posting.ejs");
+});
+
+app.listen(3000, () => {
+  console.log("Server is running on port 3000");
+});
