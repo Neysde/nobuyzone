@@ -1,0 +1,24 @@
+<header class="header">
+    <div class="container">
+        <div class="header-top">
+            <div class="logo">
+                <a href="/">
+                    <svg class="cl-logo" width="48" height="48" viewBox="0 0 48 48" fill="none">
+                        <rect width="48" height="48" rx="8" fill="var(--primary)"/>
+                        <path d="M12 20H36M12 28H36" stroke="white" stroke-width="3"/>
+                    </svg>
+                    <span>barter</span>
+                </a>
+            </div>
+            <div class="header-actions">
+                <a href="/post" class="button button-outline">My Posts</a>
+                <a href="/account" class="button button-primary">Account</a>
+            </div>
+        </div>
+        <% if (typeof breadcrumbs !== 'undefined') { %>
+        <div class="breadcrumbs">
+            <a href="/">Home</a> &gt; <span><%= breadcrumbs %></span>
+        </div>
+        <% } %>
+    </div>
+</header> 
