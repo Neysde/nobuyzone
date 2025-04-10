@@ -13,7 +13,7 @@ router.use(express.urlencoded({ extended: true }));
  */
 router.post("/api/posts", async (req, res) => {
   try {
-    console.log("Post data received:", req.body);
+    console.log("Post data received:", req.body); //will be removed later
 
     // Check if body is empty
     if (!req.body || Object.keys(req.body).length === 0) {
@@ -51,7 +51,7 @@ router.post("/api/posts", async (req, res) => {
     // Process images from URLs and IDs arrays
     const images = [];
     if (imageUrls && imageIds) {
-      // Handle both array and string cases
+      //Handle both array and string cases
       const urls = Array.isArray(imageUrls) ? imageUrls : [imageUrls];
       const ids = Array.isArray(imageIds) ? imageIds : [imageIds];
 
@@ -85,7 +85,7 @@ router.post("/api/posts", async (req, res) => {
       images,
       contactPreference: contact || "in-app",
       status: isDraft === "true" ? "draft" : "active",
-      createdBy: req.user?._id || "64f0e5d7b9b5e30016e2aaaa", // Temporary placeholder ID, replace with actual authentication
+      createdBy: req.user?._id || "64f0e5d7b9b5e30016e2aaaa", //Temporary placeholder ID, replace with actual authentication
     });
 
     // Save post to database
@@ -126,17 +126,106 @@ router.post("/api/posts/draft", async (req, res) => {
 });
 
 /**
- * Get all posts
+ * Get all posts with filtering options
  */
 router.get("/api/posts", async (req, res) => {
   try {
-    const posts = await Post.find({ status: "active" })
-      .sort({ createdAt: -1 })
-      .limit(20);
+    const {
+      category,
+      search,
+      city,
+      district,
+      neighborhood,
+      radius,
+      sort,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    // Build filter query
+    const filter = { status: "active" };
+
+    // Category filter
+    if (category && category !== "all") {
+      filter.category = category;
+    }
+
+    // Location filters
+    if (city) {
+      filter["location.city"] = { $regex: city, $options: "i" };
+    }
+
+    if (district) {
+      filter["location.district"] = { $regex: district, $options: "i" };
+    }
+
+    if (neighborhood) {
+      filter["location.neighborhood"] = { $regex: neighborhood, $options: "i" };
+    }
+
+    // Radius-based search
+    // Note: For this to work properly in a real-world scenario,
+    // we would need to use MongoDB's geospatial queries with $geoWithin and $centerSphere
+    // This would require coordinates to be stored in GeoJSON format
+    if (radius && parseInt(radius) > 0) {
+      // If we have coordinates in the query, we could implement something like:
+      // const lat = parseFloat(req.query.latitude);
+      // const lng = parseFloat(req.query.longitude);
+      // if (!isNaN(lat) && !isNaN(lng)) {
+      //   filter['location.coordinates'] = {
+      //     $geoWithin: {
+      //       $centerSphere: [[lng, lat], parseInt(radius) / 6371] // radius in km, 6371 is Earth's radius in km
+      //     }
+      //   };
+      // }
+
+      // For now, we'll just log that we received a radius parameter
+      console.log(`Searching with radius: ${radius}km`);
+    }
+
+    // Search filter (searches in title and description)
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Sort options
+    let sortOption = { createdAt: -1 }; // default: newest first
+
+    if (sort === "oldest") {
+      sortOption = { createdAt: 1 };
+    } else if (sort === "a-z") {
+      sortOption = { title: 1 };
+    } else if (sort === "z-a") {
+      sortOption = { title: -1 };
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Execute query with pagination
+    const posts = await Post.find(filter)
+      .sort(sortOption)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Get total count for pagination
+    const totalCount = await Post.countDocuments(filter);
+
+    // Calculate total pages
+    const totalPages = Math.ceil(totalCount / parseInt(limit));
 
     res.status(200).json({
       success: true,
-      count: posts.length,
+      count: totalCount,
+      pagination: {
+        totalItems: totalCount,
+        itemsPerPage: parseInt(limit),
+        currentPage: parseInt(page),
+        totalPages: totalPages,
+      },
       data: posts,
     });
   } catch (error) {

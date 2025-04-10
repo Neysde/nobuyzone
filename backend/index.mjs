@@ -30,26 +30,10 @@ app.use(expressLayouts);
 app.use("/css", express.static(path.join(__dirname, "../views/css")));
 app.use("/js", express.static(path.join(__dirname, "../views/js")));
 
-const apiKey = "67f036a6524c4571002304nfp4826b8"; //will be moved to .env
-
-async function forwardGeocode(address) {
-  const url = `https://geocode.maps.co/search?q=${address}&api_key=${apiKey}`;
-  const response = await fetch(url);
-  const data = await response.json();
-  return data;
-}
-
-async function reverseGeocode(lat, lon) {
-  try {
-    const url = `https://geocode.maps.co/reverse?lat=${lat}&lon=${lon}&api_key=${apiKey}`;
-    const response = await fetch(url);
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Error in reverseGeocode:", error);
-    return { error: { message: "Failed to fetch geocode data" } };
-  }
-}
+// Homepage redirect to find-posts
+app.get("/", (req, res) => {
+  res.redirect("/find-posts");
+});
 
 app.use(routes);
 

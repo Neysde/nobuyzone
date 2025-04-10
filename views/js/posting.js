@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const useMyLocationBtn = document.getElementById("use-my-location");
   let map = null;
   let marker = null;
-  let uploadedImages = new Set();
+  let uploadedImages = new Set(); //küme
   const fullscreenToggle = document.getElementById("fullscreen-toggle");
   const mapContainer = document.getElementById("location-map");
   const city = document.getElementById("city");
@@ -23,12 +23,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Rate limiting queue
   let lastRequestTime = 0;
-  const MIN_REQUEST_INTERVAL = 1000; // 1 second
+  const MIN_REQUEST_INTERVAL = 1000; // 1 second (you can move this to .env maybe)
 
-  // Store last valid marker position
+  //Store last valid marker position
   let lastValidMarkerPosition = null;
 
-  // State management for map transitions
+  //State management for map transitions
   let isTransitioning = false;
   let pinnedLocation = null;
 
@@ -36,6 +36,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const now = Date.now();
     const timeSinceLastRequest = now - lastRequestTime;
     if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+      //code will wait until this promise is resolved
       await new Promise((resolve) =>
         setTimeout(resolve, MIN_REQUEST_INTERVAL - timeSinceLastRequest)
       );
@@ -46,8 +47,8 @@ document.addEventListener("DOMContentLoaded", function () {
   // Initialize map with better defaults
   function initMap() {
     map = L.map("location-map", {
-      zoomControl: false, // We'll add it in a better position
-      attributionControl: false, // We'll add it in a better position
+      zoomControl: false, //We'll add it in a better position
+      attributionControl: false, //We'll add it in a better position
     }).setView([0, 0], 2);
 
     L.control
@@ -72,7 +73,7 @@ document.addEventListener("DOMContentLoaded", function () {
       draggable: true,
     }).addTo(map);
 
-    // Set up marker drag event handler
+    //Set up marker drag event handler
     marker.on("dragend", async function (e) {
       if (isTransitioning) return; // Prevent updates during transition
       const pos = e.target.getLatLng();
@@ -87,9 +88,9 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
 
-    // Add click handler to map
+    //Add click handler to map
     map.on("click", async function (e) {
-      if (isTransitioning) return; // Prevent updates during transition
+      if (isTransitioning) return; //Prevent updates during transition
       pinnedLocation = e.latlng;
       try {
         const data = await reverseGeocode(e.latlng.lat, e.latlng.lng);
@@ -103,7 +104,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Initialize the map
+  //Initialize the map
   initMap();
 
   // Title character counter with enhanced feedback
@@ -122,7 +123,7 @@ document.addEventListener("DOMContentLoaded", function () {
       titleInput.style.borderColor = "";
     }
 
-    // Add visual feedback class
+    //Add visual feedback class
     if (count > 0) {
       titleInput.classList.add("has-content");
     } else {
@@ -140,7 +141,7 @@ document.addEventListener("DOMContentLoaded", function () {
       document.body.addEventListener(eventName, preventDefaults, false);
     });
 
-    // Highlight drop zone when dragging over it
+    //Highlight drop zone when dragging over it
     ["dragenter", "dragover"].forEach((eventName) => {
       dropZone.addEventListener(eventName, highlight, false);
     });
@@ -150,7 +151,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Handle dropped files
-    dropZone.addEventListener("drop", handleDrop, false);
+    dropZone.addEventListener("drop", handleDrop, false); //false specifies whether to use capturing or bubbling: (false: bubbling) (bubbling: event starts frominside element to outside element)
 
     // Handle click to upload
     dropZone.addEventListener("click", () => {
@@ -207,7 +208,7 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
 
-        const imageId = Date.now() + Math.random().toString(36).substr(2, 9);
+        const imageId = Date.now() + Math.random().toString(36).slice(2, 11);
         uploadedImages.add(imageId);
 
         const preview = createImagePreview(e.target.result, imageId);
@@ -232,7 +233,7 @@ document.addEventListener("DOMContentLoaded", function () {
     removeBtn.className = "remove-btn";
     removeBtn.innerHTML = "×";
     removeBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
+      e.stopPropagation(); //stops the event from bubbling up to the parent elements
       uploadedImages.delete(id);
       div.remove();
       updateUploadState();
@@ -466,7 +467,7 @@ document.addEventListener("DOMContentLoaded", function () {
           if (!dataUrl.startsWith("data:")) continue;
 
           try {
-            // Convert data URL to blob
+            // Convert data URL to blob (binary large object)
             const blob = await fetch(dataUrl).then((r) => r.blob());
 
             // Create form data for this image
@@ -530,7 +531,15 @@ document.addEventListener("DOMContentLoaded", function () {
       // Convert FormData to JSON for better compatibility
       const formDataObj = {};
       for (const [key, value] of formData.entries()) {
-        formDataObj[key] = value;
+        // Handle multiple values for the same key (arrays like imageUrls and imageIds)
+        if (key === "imageUrls" || key === "imageIds") {
+          if (!formDataObj[key]) {
+            formDataObj[key] = [];
+          }
+          formDataObj[key].push(value);
+        } else {
+          formDataObj[key] = value;
+        }
       }
 
       console.log("Submitting post data:", formDataObj);
@@ -673,10 +682,18 @@ document.addEventListener("DOMContentLoaded", function () {
       // Convert FormData to JSON for better compatibility
       const formDataObj = {};
       for (const [key, value] of formData.entries()) {
-        formDataObj[key] = value;
+        // Handle multiple values for the same key (arrays like imageUrls and imageIds)
+        if (key === "imageUrls" || key === "imageIds") {
+          if (!formDataObj[key]) {
+            formDataObj[key] = [];
+          }
+          formDataObj[key].push(value);
+        } else {
+          formDataObj[key] = value; //will look like this {title: "example"} etc.
+        }
       }
 
-      console.log("Saving draft data:", formDataObj);
+      console.log("Saving draft data:", formDataObj); //will be removed later
 
       const response = await fetch("/api/posts", {
         method: "POST",
@@ -767,6 +784,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 3000);
   }
 
+  ///CHECK FOR THEM LATER!!!!!!!!!!!!!
   // Loading state helper
   function showLoadingState() {
     const loader = document.createElement("div");
@@ -782,7 +800,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Add form field interactions
+  //Add form field interactions
   document
     .querySelectorAll(
       ".form-group input, .form-group textarea, .form-group select"

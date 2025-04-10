@@ -1,0 +1,1124 @@
+/* CSS Variables and Base Styles */
+:root {
+  /* Colors */
+  --primary: #f0a04b;
+  --primary-dark: #e08a35;
+  --primary-light: #f4b573;
+
+  /* Neutral Colors */
+  --neutral-100: #ffffff;
+  --neutral-200: #f7f7f7;
+  --neutral-300: #e5e5e5;
+  --neutral-400: #d4d4d4;
+  --neutral-500: #a3a3a3;
+  --neutral-600: #737373;
+  --neutral-700: #404040;
+  --neutral-800: #262626;
+  --neutral-900: #171717;
+
+  /* Condition Colors */
+  --condition-new: #48bb78;
+  --condition-like-new: #68d391;
+  --condition-good: #f0a04b;
+  --condition-fair: #f6ad55;
+
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+
+  /* Font Sizes */
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.5;
+  color: var(--neutral-800);
+  background-color: var(--neutral-200);
+}
+
+/* Fix for horizontal scroll on mobile devices */
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  position: relative; /* Helps with children positioning */
+  overflow-wrap: break-word; /* Ensure content doesn't overflow viewport */
+}
+
+/* Adjust container for full responsiveness */
+.container {
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 var(--space-md);
+}
+
+/* Force all elements to respect container width */
+*,
+*::before,
+*::after {
+  max-width: 100%; /* Prevent any element from exceeding its container */
+  box-sizing: border-box; /* Include padding in width calculations */
+}
+
+/* Force all content to stay within bounds */
+img,
+video,
+svg,
+object,
+iframe {
+  max-width: 100%;
+  height: auto;
+  display: block; /* Remove inline spacing issues */
+}
+
+/* Common element responsiveness fixes */
+img,
+svg,
+video {
+  max-width: 100%; /* Prevent media from causing overflow */
+  height: auto; /* Maintain aspect ratio */
+}
+
+/* Ensure all content stays within viewport */
+.card,
+.description-content,
+.post-title,
+.post-meta,
+.location-text {
+  overflow-wrap: break-word; /* Ensures text wraps instead of overflowing */
+  word-wrap: break-word;
+  word-break: break-word; /* Breaks words at appropriate points */
+  hyphens: auto; /* Adds hyphens when breaking words */
+}
+
+/* Additional mobile tweaks for screens under 480px */
+@media (max-width: 480px) {
+  /* Critical narrow screen fixes */
+  .container {
+    padding: 0 var(--space-xs); /* Minimal padding on extremely narrow screens */
+  }
+
+  .post-grid {
+    gap: var(--space-xs); /* Tighter spacing between grid items */
+  }
+
+  .card {
+    padding: var(--space-xs); /* Minimal padding in cards */
+    margin-bottom: var(--space-xs); /* Tighter vertical spacing */
+  }
+
+  .post-meta {
+    flex-direction: column; /* Stack metadata items vertically */
+    gap: var(--space-xs);
+    margin-bottom: var(--space-sm);
+  }
+
+  .meta-item {
+    width: 100%; /* Full width for meta items */
+  }
+
+  /* Reduce text size for better fit */
+  .post-title {
+    font-size: var(--font-size-lg);
+    line-height: 1.3;
+  }
+
+  /* Adjust controls for better thumb access */
+  .button,
+  .contact-icon,
+  #fullscreen-toggle {
+    min-height: 44px; /* Maintain minimum touch target size */
+  }
+
+  /* Ensure map container doesn't overflow */
+  .map-container {
+    margin: 0 -var(--space-xs); /* Negative margin to align with card edge */
+    width: calc(100% + var(--space-xs) * 2); /* Adjust width to match */
+  }
+
+  /* Reduce main image height to avoid excessive scrolling */
+  .main-image {
+    height: 250px;
+  }
+
+  /* Better thumbnail handling */
+  .thumbnail {
+    width: 50px;
+    height: 40px;
+  }
+}
+
+/* Ultra-narrow screens critical fixes */
+@media (max-width: 375px) {
+  /* Extreme compression for smallest screens */
+  .post-title {
+    font-size: var(--font-size-md);
+  }
+
+  .main-image {
+    height: 200px; /* Even shorter image container */
+  }
+
+  /* Make gallery controls more accessible on tiny screens */
+  .gallery-nav {
+    width: 32px;
+    height: 32px;
+  }
+
+  .gallery-nav svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Stack contact info vertically */
+  .contact-method {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xs);
+  }
+
+  .contact-icon {
+    margin-right: 0;
+    margin-bottom: var(--space-xs);
+  }
+
+  /* Shrink heading sizes */
+  h2 {
+    font-size: var(--font-size-lg);
+  }
+
+  /* Enhance visibility of condition and category badges */
+  .category-badge,
+  .condition-badge {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    margin-top: var(--space-xs);
+  }
+
+  /* Simplify description section */
+  .description-section h2 {
+    font-size: var(--font-size-md);
+    margin-bottom: var(--space-xs);
+  }
+}
+
+/* Fix fullscreen carousel for narrow screens */
+@media (max-width: 480px) {
+  .carousel-content {
+    width: 100%; /* Use full width */
+    height: 90%;
+  }
+
+  .carousel-nav {
+    width: 36px;
+    height: 36px;
+  }
+
+  .carousel-nav svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Force proper image scaling */
+  .carousel-slide img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+  }
+}
+
+/* Button Styles */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  gap: var(--space-sm);
+}
+
+.button-primary {
+  background-color: var(--primary);
+  color: white;
+}
+
+.button-primary:hover {
+  background-color: var(--primary-dark);
+}
+
+.button-outline {
+  background-color: transparent;
+  border: 1px solid var(--neutral-300);
+  color: var(--neutral-700);
+}
+
+.button-outline:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.full-width {
+  width: 100%;
+}
+
+/* Page Styles */
+.post-detail-page {
+  padding: var(--space-xl) 0;
+  background-color: var(--neutral-200);
+  min-height: calc(100vh - 200px);
+}
+
+/* Grid Layout */
+.post-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-lg);
+  margin-bottom: 0;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.flex-column .card:last-child {
+  flex-grow: 1;
+  margin-bottom: 0;
+}
+
+@media (max-width: 1024px) {
+  .post-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Card Styles */
+.card {
+  background: var(--neutral-100);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  border: 1px solid var(--neutral-300);
+}
+
+.post-sidebar .card:last-child {
+  margin-bottom: 0;
+}
+
+.post-main .card:last-child {
+  margin-bottom: 0;
+}
+
+/* Image Gallery Styles */
+.gallery-section {
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--radius-lg); /* Ensure consistent rounding */
+}
+
+.image-gallery {
+  width: 100%;
+}
+
+.main-image {
+  width: 100%;
+  height: 400px;
+  overflow: hidden;
+  position: relative;
+  background-color: var(--neutral-200);
+}
+
+.main-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.thumbnail-row {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  background-color: var(--neutral-100);
+  border-top: 1px solid var(--neutral-300);
+  overflow-x: auto; /* Allow horizontal scroll for thumbnails */
+  scrollbar-width: thin; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.thumbnail-row::-webkit-scrollbar {
+  display: none;
+}
+
+.thumbnail {
+  width: 80px;
+  height: 60px;
+  flex-shrink: 0; /* Prevent thumbnails from shrinking */
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  position: relative;
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.thumbnail.active {
+  border-color: var(--primary);
+}
+
+.thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.no-images {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 400px;
+  background-color: var(--neutral-200);
+}
+
+.placeholder-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--neutral-500);
+}
+
+.placeholder-image svg {
+  margin-bottom: var(--space-md);
+  stroke-width: 1;
+}
+
+/* Post Details Styles */
+.post-title {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  color: var(--neutral-900);
+  margin-bottom: var(--space-md);
+}
+
+.post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-label {
+  font-size: var(--font-size-sm);
+  color: var(--neutral-600);
+  margin-bottom: var(--space-xs);
+}
+
+.meta-value {
+  font-weight: 500;
+  color: var(--neutral-800);
+}
+
+.category-badge {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-sm);
+  background-color: var(--primary-light);
+  color: var(--neutral-800);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.condition-badge {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-sm);
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.condition-new {
+  background-color: var(--condition-new);
+}
+
+.condition-like-new {
+  background-color: var(--condition-like-new);
+}
+
+.condition-good {
+  background-color: var(--condition-good);
+}
+
+.condition-fair {
+  background-color: var(--condition-fair);
+}
+
+.section-divider {
+  height: 1px;
+  background-color: var(--neutral-300);
+  margin: var(--space-lg) 0;
+}
+
+.description-section h2 {
+  font-size: var(--font-size-xl);
+  margin-bottom: var(--space-md);
+}
+
+.description-content {
+  white-space: pre-line;
+  color: var(--neutral-700);
+  line-height: 1.6;
+}
+
+/* Contact Card Styles */
+.contact-card h2,
+.location-card h2 {
+  margin-bottom: var(--space-md);
+  font-size: var(--font-size-xl);
+}
+
+.contact-method {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+}
+
+.contact-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--neutral-200);
+  border-radius: 50%;
+  margin-right: var(--space-md);
+  font-size: 20px;
+}
+
+.contact-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.contact-type {
+  font-weight: 600;
+  color: var(--neutral-800);
+}
+
+.contact-info {
+  color: var(--neutral-600);
+  font-size: var(--font-size-sm);
+}
+
+/* Location Card Styles */
+.location-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.location-card h2 {
+  margin-bottom: var(--space-lg);
+  font-size: var(--font-size-xl);
+}
+
+.location-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  flex-grow: 1;
+}
+
+.location-text {
+  color: var(--neutral-700);
+  line-height: 1.6;
+  background-color: var(--neutral-200);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+}
+
+/* Map styles need enhancement to support fullscreen mode */
+.map-container {
+  width: 100%;
+  position: relative;
+  overflow: hidden; /* Prevent map overflow */
+}
+
+.map {
+  width: 100%;
+  height: 200px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  position: relative;
+  transition: all 0.3s ease;
+  z-index: 10;
+  max-width: 100vw; /* Ensure map doesn't exceed viewport width */
+}
+
+.map.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  border-radius: 0;
+}
+
+#fullscreen-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 9999;
+  background-color: white;
+  border: 1px solid var(--neutral-300);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-sm);
+  box-shadow: var(--shadow-md);
+}
+
+#fullscreen-toggle:hover {
+  background-color: var(--neutral-200);
+}
+
+/* Additional fixes for extremely narrow screens */
+@media (max-width: 415px) {
+  /* Fix map component for narrow screens */
+  .map-container {
+    margin: 0;
+    max-width: 100%;
+  }
+
+  .map {
+    height: 130px; /* Shorter map on very narrow screens */
+  }
+
+  /* Hide text in fullscreen button on very narrow screens */
+  #fullscreen-toggle {
+    font-size: 0; /* Hide text */
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #fullscreen-toggle svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* Fix carousel specific issues */
+  .fullscreen-carousel {
+    left: 0;
+    right: 0;
+    width: 100vw;
+  }
+
+  .carousel-content {
+    width: 100%;
+    padding: 0 5px;
+  }
+
+  .carousel-close {
+    top: 5px;
+    right: 5px;
+    width: 32px;
+    height: 32px;
+    font-size: 24px;
+  }
+
+  .carousel-counter {
+    top: 5px;
+    left: 5px;
+    font-size: 12px;
+  }
+
+  .carousel-slide img {
+    max-width: 100%;
+    max-height: 90%;
+  }
+
+  /* Shrink thumbnails further on extremely narrow screens */
+  .thumbnail {
+    width: 40px;
+    height: 30px;
+    min-width: 40px; /* Prevent further shrinking */
+  }
+
+  .thumbnail-row {
+    padding: var(--space-xs);
+    gap: 4px;
+  }
+
+  /* Reduce main image height */
+  .main-image {
+    height: 180px;
+  }
+
+  /* Ensure leaflet elements don't overflow */
+  .leaflet-control-container {
+    max-width: 100%;
+  }
+
+  .leaflet-control-attribution {
+    max-width: 100%;
+    white-space: normal !important;
+    font-size: 8px !important;
+  }
+
+  /* Hide fullscreen button text on narrow screens */
+  .fullscreen-text {
+    display: none;
+  }
+
+  /* Extra overrides to prevent overflow */
+  .leaflet-container,
+  .leaflet-control-container,
+  .leaflet-control-attribution {
+    max-width: 100% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* Make leaflet attribution smaller */
+  .leaflet-control-attribution {
+    padding: 0 3px !important;
+    font-size: 6px !important;
+    line-height: 10px !important;
+    max-width: 90% !important;
+  }
+
+  /* Remove borders from buttons */
+  #fullscreen-toggle {
+    top: 3px;
+    right: 3px;
+    border: none;
+    background-color: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Media Queries */
+@media (max-width: 768px) {
+  .post-detail-page {
+    padding: var(--space-md) 0;
+  }
+
+  .card {
+    padding: var(--space-md);
+  }
+
+  .main-image {
+    height: 300px;
+  }
+
+  .post-title {
+    font-size: var(--font-size-xl); /* Smaller title on mobile */
+    line-height: 1.3; /* Improve readability */
+  }
+
+  .post-meta {
+    gap: var(--space-md);
+    flex-wrap: wrap; /* Ensure wrapping on narrow screens */
+  }
+
+  .thumbnail {
+    width: 60px;
+    height: 45px;
+  }
+
+  .map {
+    height: 150px;
+  }
+
+  /* Improve mobile display of meta items */
+  .meta-item {
+    min-width: 45%; /* Allow two columns on small screens */
+  }
+
+  /* Fix carousel content dimensions for mobile */
+  .carousel-content {
+    width: 95%; /* Use more screen space */
+    height: 80%;
+  }
+
+  /* Make buttons larger and more touch-friendly on mobile */
+  .button {
+    padding: var(--space-md) var(--space-lg);
+    min-height: 44px; /* Minimum touch target size */
+  }
+
+  /* Improve fullscreen toggle button for touch */
+  #fullscreen-toggle {
+    padding: var(--space-sm) var(--space-md);
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Extreme narrow screens */
+@media (max-width: 350px) {
+  .post-title {
+    font-size: var(--font-size-lg); /* Even smaller for very narrow screens */
+  }
+
+  .meta-item {
+    min-width: 100%; /* Stack vertically on extra narrow screens */
+  }
+
+  .main-image {
+    height: 250px; /* Shorter image container */
+  }
+
+  /* Make gallery nav buttons smaller but still touchable */
+  .gallery-nav {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Adjust thumbnail size for very small screens */
+  .thumbnail {
+    width: 50px;
+    height: 40px;
+  }
+}
+
+/* Improve fullscreen carousel for all screen sizes */
+.fullscreen-carousel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  z-index: 9999;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.fullscreen-carousel.active {
+  display: flex; /* Use flex instead of block for better centering */
+  opacity: 1;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.carousel-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.carousel-content {
+  position: relative;
+  width: 90%;
+  height: 90%;
+  max-width: 1200px;
+}
+
+/* Reposition close button for mobile */
+.carousel-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: white;
+  font-size: 32px; /* Slightly smaller font size */
+  cursor: pointer;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: color 0.2s ease;
+  line-height: 1; /* Fix vertical alignment of the × character */
+  padding-bottom: 2px; /* Slight adjustment to better center the × visually */
+  text-align: center; /* Ensure text is centered */
+}
+
+.carousel-close:hover {
+  color: var(--primary);
+}
+
+.carousel-counter {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  color: white;
+  font-size: 16px;
+  z-index: 10;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.carousel-images {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.carousel-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.carousel-slide.active {
+  display: flex;
+}
+
+.carousel-slide img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Carousel Navigation - Fix positioning for mobile */
+.carousel-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(255, 255, 255, 0.2);
+  border: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: white;
+  z-index: 10;
+}
+
+.carousel-prev {
+  left: 10px; /* Position inside view on mobile */
+}
+
+.carousel-next {
+  right: 10px; /* Position inside view on mobile */
+}
+
+/* Adjust for larger screens */
+@media (min-width: 1024px) {
+  .carousel-prev {
+    left: -60px;
+  }
+
+  .carousel-next {
+    right: -60px;
+  }
+}
+
+/* Image gallery navigation controls - Make always visible on mobile */
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(255, 255, 255, 0.8);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-md);
+  z-index: 5;
+  opacity: 1; /* Always visible */
+}
+
+/* Only hide on larger screens with hover capability */
+@media (hover: hover) and (min-width: 769px) {
+  .gallery-nav {
+    opacity: 0;
+  }
+
+  .main-image:hover .gallery-nav {
+    opacity: 1;
+  }
+}
+
+.gallery-prev {
+  left: 10px;
+}
+
+.gallery-next {
+  right: 10px;
+}
+
+/* No location message */
+.no-location-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--neutral-700);
+  z-index: 400;
+  pointer-events: none;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Ensure gallery nav hover effects still work */
+.gallery-nav:hover {
+  background-color: white;
+  color: var(--primary);
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* Make main image clickable to open carousel */
+.carousel-trigger {
+  cursor: pointer;
+}
+
+/* Carousel nav hover effects */
+.carousel-nav:hover {
+  background-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* Improve counter position for mobile */
+.carousel-counter {
+  top: 10px;
+  left: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+}
+
+/* Add indicator for page count */
+.page-indicator {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.page-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.4);
+  transition: all 0.2s ease;
+}
+
+.page-dot.active {
+  background-color: white;
+}
+
+/* Adjust page indicator for better visibility on mobile */
+@media (max-width: 768px) {
+  .page-indicator {
+    bottom: 25px;
+  }
+
+  .page-dot {
+    width: 10px;
+    height: 10px;
+    background-color: rgba(255, 255, 255, 0.6);
+  }
+}
+
+/* Fix for thumbnail scrolling on touch devices */
+@media (pointer: coarse) {
+  .thumbnail-row {
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    padding-bottom: var(--space-md); /* Add padding for easier scrolling */
+  }
+
+  /* Visual indicator that thumbnails are scrollable */
+  .thumbnail-row::after {
+    content: "";
+    min-width: var(--space-md); /* Add space at the end to indicate scrolling */
+  }
+}
+
+/* Handle leaflet controls better */
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.leaflet-control-zoom a {
+  background-color: white !important;
+  color: var(--neutral-800) !important;
+  border: 1px solid var(--neutral-300) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: var(--neutral-200) !important;
+  color: var(--primary) !important;
+}
+
+/* Override for fullscreen map controls */
+.map.fullscreen .leaflet-control-container .leaflet-top {
+  top: 60px;
+}

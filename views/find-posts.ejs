@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Find Posts | Barter</title>
+    <meta
+      name="description"
+      content="Search and find items to barter on our platform"
+    />
+    <link rel="stylesheet" href="/css/header.css" />
+    <link rel="stylesheet" href="/css/footer.css" />
+    <link rel="stylesheet" href="/css/find-posts.css" />
+    <!-- Leaflet CSS for location map -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+  </head>
+  <body>
+    <!-- Header will be included here in production -->
+
+    <main class="find-posts-page">
+      <div class="search-bar-container">
+        <div class="search-bar">
+          <!-- Search input field -->
+          <div class="search-field">
+            <span class="search-icon">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </span>
+            <input
+              type="text"
+              id="global-search-input"
+              placeholder="What are you looking for?"
+              class="search-input"
+            />
+          </div>
+
+          <!-- Categories dropdown -->
+          <div class="categories-field">
+            <select id="global-categories" class="field-select">
+              <option value="all">All Categories</option>
+              <% Object.keys(categories).forEach(category => { %>
+              <option value="<%= category %>">
+                <%= category.charAt(0).toUpperCase() + category.slice(1) %>
+              </option>
+              <% }); %>
+            </select>
+          </div>
+
+          <!-- Location field -->
+          <div class="location-field">
+            <select id="global-city" class="location-select">
+              <option value="">Select City</option>
+              <option value="istanbul">Istanbul</option>
+              <option value="ankara">Ankara</option>
+              <option value="izmir">Izmir</option>
+            </select>
+            <select id="global-district" class="location-select" disabled>
+              <option value="">Select District</option>
+            </select>
+            <select id="global-neighborhood" class="location-select" disabled>
+              <option value="">Select Neighborhood</option>
+            </select>
+          </div>
+
+          <!-- Radius field - only enabled when location is selected -->
+          <div class="radius-field">
+            <select id="global-radius" class="field-select" disabled>
+              <option value="0">Entire Area</option>
+              <option value="5">5 km</option>
+              <option value="10">10 km</option>
+              <option value="20">20 km</option>
+              <option value="50">50 km</option>
+            </select>
+          </div>
+
+          <!-- Search button -->
+          <button id="global-search-button" class="search-button">Find</button>
+        </div>
+      </div>
+
+      <div class="container">
+        <!-- Main Content Grid -->
+        <div class="find-posts-grid">
+          <!-- Left Column - Filters and Categories -->
+          <div class="sidebar">
+            <!-- Categories Section -->
+            <div class="card categories-card">
+              <h3>Categories</h3>
+              <div class="categories-list">
+                <button class="category-button active">
+                  <span class="category-count"><%= totalCount %></span>
+                  <span class="category-name">All Categories</span>
+                </button>
+
+                <% Object.keys(categories).forEach(category => { %>
+                <button class="category-button">
+                  <span class="category-count"
+                    ><%= categories[category] %></span
+                  >
+                  <span class="category-name"
+                    ><%= category.charAt(0).toUpperCase() + category.slice(1)
+                    %></span
+                  >
+                </button>
+                <% }); %>
+              </div>
+            </div>
+
+            <!-- Location Filters -->
+            <div class="card location-card">
+              <h3>Location</h3>
+              <div class="location-filters">
+                <div class="location-item">
+                  <span class="location-label">City</span>
+                  <select id="city-filter" class="location-select">
+                    <option value="">All Cities</option>
+                    <option value="istanbul">Istanbul</option>
+                    <option value="ankara">Ankara</option>
+                    <option value="izmir">Izmir</option>
+                  </select>
+                </div>
+                <div class="location-item">
+                  <span class="location-label">District</span>
+                  <select id="district-filter" class="location-select">
+                    <option value="">All Districts</option>
+                    <option value="sisli">Şişli</option>
+                    <option value="kadikoy">Kadıköy</option>
+                    <option value="besiktas">Beşiktaş</option>
+                  </select>
+                </div>
+                <div class="location-item">
+                  <span class="location-label">Neighborhood</span>
+                  <select id="neighborhood-filter" class="location-select">
+                    <option value="">All Neighborhoods</option>
+                    <option value="mecidiyekoy">Mecidiyeköy</option>
+                    <option value="levent">Levent</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column - Posts Display -->
+          <div class="posts-container">
+            <!-- Filter/Sort Controls -->
+            <div class="posts-controls card">
+              <div class="posts-count">
+                <span id="results-count"><%= posts.length %></span> items found
+              </div>
+              <div class="posts-sorting">
+                <label for="sort-options">Sort by:</label>
+                <select id="sort-options" class="sort-select">
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="a-z">A-Z</option>
+                  <option value="z-a">Z-A</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Posts Grid -->
+            <div class="posts-grid">
+              <% if (posts && posts.length > 0) { %> <% posts.forEach(post => {
+              %>
+              <div
+                class="post-card card"
+                onclick="window.location.href='/posts/<%= post._id %>'"
+              >
+                <div class="post-image">
+                  <% if (post.images && post.images.length > 0) { %>
+                  <img
+                    src="<%= post.images[0].url %>"
+                    alt="<%= post.title %>"
+                  />
+                  <% } else { %>
+                  <img
+                    src="https://via.placeholder.com/300x200"
+                    alt="No image available"
+                  />
+                  <% } %> <% // Check if post is recent (less than 3 days old)
+                  const postDate = new Date(post.createdAt); const now = new
+                  Date(); const isNew = (now - postDate) / (1000 * 60 * 60 * 24)
+                  < 3; %> <% if (isNew) { %>
+                  <div class="post-badge">New</div>
+                  <% } %>
+                </div>
+                <div class="post-details">
+                  <h3 class="post-title"><%= post.title %></h3>
+                  <div class="post-meta">
+                    <span class="post-location">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"
+                        ></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                      </svg>
+                      <%= post.location.city %>, <%= post.location.district %>
+                    </span>
+                    <span class="post-date">
+                      Posted: <%= new
+                      Date(post.createdAt).toLocaleDateString('en-US', { year:
+                      'numeric', month: 'short', day: 'numeric' }) %>
+                    </span>
+                  </div>
+                  <p class="post-description"><%= post.description %></p>
+                  <div class="post-tags">
+                    <span class="tag"><%= post.category %></span>
+                    <span class="tag"><%= post.condition %></span>
+                  </div>
+                </div>
+              </div>
+              <% }); %> <% } else { %>
+              <div class="no-results">
+                <p>No posts found matching your criteria.</p>
+              </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pagination Container -->
+        <div class="pagination-container">
+          <div class="pagination">
+            <button class="pagination-button" disabled>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+              Previous
+            </button>
+            <div class="pagination-numbers">
+              <button class="page-number active">1</button>
+              <button class="page-number">2</button>
+              <button class="page-number">3</button>
+            </div>
+            <button class="pagination-button">
+              Next
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer will be included here in production -->
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/js/find-posts.js"></script>
+  </body>
+</html>
