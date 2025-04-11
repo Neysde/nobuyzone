@@ -463,6 +463,13 @@ body {
 .pagination-numbers {
   display: flex;
   gap: var(--space-xs);
+  align-items: center;
+}
+
+.pagination-ellipsis {
+  color: var(--neutral-600);
+  padding: 0 var(--space-xs);
+  font-weight: bold;
 }
 
 .page-number {
@@ -536,21 +543,29 @@ body {
 
 .search-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   max-width: 1200px;
   margin: 0 auto;
   background-color: var(--neutral-100);
   border-radius: var(--radius-lg);
-  padding: var(--space-sm);
+  padding: var(--space-md);
   box-shadow: var(--shadow-md);
-  gap: var(--space-sm);
+  gap: var(--space-md);
+  position: relative;
+}
+
+/* Common styles for all search form elements */
+.search-field,
+.categories-field,
+.location-field {
+  flex: 1 1 200px; /* Equal flexible width with a minimum of 200px */
+  overflow: visible;
 }
 
 /* Search field with magnifying glass icon */
 .search-field {
   position: relative;
-  flex: 1;
-  min-width: 180px;
 }
 
 .search-icon {
@@ -563,6 +578,7 @@ body {
 
 #global-search-input {
   width: 100%;
+  height: 38px;
   padding: var(--space-md) var(--space-md) var(--space-md)
     calc(var(--space-md) * 3);
   border: 1px solid var(--neutral-300);
@@ -575,40 +591,66 @@ body {
   border-color: var(--primary);
 }
 
-/* Categories field */
-.categories-field {
-  flex: 1;
-  min-width: 150px;
-}
-
-/* Location field */
+/* Location field container */
 .location-field {
-  flex: 2.5;
   display: flex;
-  position: relative;
   gap: var(--space-xs);
+  transition: all 0.3s ease-in-out;
 }
 
-.location-icon {
-  position: absolute;
-  left: var(--space-sm);
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--primary);
-  z-index: 1;
+/* Animation for show/hide location elements */
+.location-select-wrapper {
+  flex: 1;
+  transition: flex 0.3s ease, opacity 0.3s ease, max-width 0.3s ease,
+    margin 0.3s ease;
+  opacity: 1;
+  margin-right: var(--space-xs);
+  min-width: 0;
+}
+
+.location-select-wrapper:last-child {
+  margin-right: 0;
+}
+
+/* Width distribution classes */
+/* When only city is visible */
+.search-bar.city-only .location-field .location-select-wrapper:first-child {
+  flex: 1;
+}
+
+/* When city and radius visible (2 elements) */
+.search-bar.city-radius .location-field .location-select-wrapper {
+  flex: 0.5;
+}
+
+/* When city, district, and radius visible (3 elements) */
+.search-bar.city-district-radius .location-field .location-select-wrapper {
+  flex: 0.33;
+}
+
+/* When all four visible (4 elements) */
+.search-bar.city-district-neighborhood-radius
+  .location-field
+  .location-select-wrapper {
+  flex: 0.25;
+}
+
+.location-select-wrapper.hidden {
+  max-width: 0;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+  flex: 0;
 }
 
 .location-select {
-  flex: 1;
+  width: 100%;
+  height: 38px;
   padding: var(--space-sm) var(--space-sm);
   border: 1px solid var(--neutral-300);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   background-color: var(--neutral-100);
-}
-
-.location-select:first-child {
-  padding-left: calc(var(--space-md) * 2);
 }
 
 .location-select:disabled {
@@ -619,13 +661,24 @@ body {
 
 /* Radius field */
 .radius-field {
-  flex: 0.8;
-  min-width: 120px;
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
+  opacity: 1;
+  max-width: 100%;
+}
+
+.radius-field.hidden {
+  max-width: 0;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+  flex: 0;
 }
 
 /* Common field select styles */
 .field-select {
   width: 100%;
+  height: 38px;
   padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--neutral-300);
   border-radius: var(--radius-md);
@@ -641,6 +694,7 @@ body {
 
 /* Search/Find button */
 .search-button {
+  flex: 0 0 auto;
   background-color: var(--primary);
   color: white;
   padding: var(--space-sm) var(--space-lg);
@@ -665,16 +719,54 @@ body {
   .search-bar {
     flex-direction: column;
     align-items: stretch;
+    padding: var(--space-md);
   }
 
   .search-field,
   .categories-field,
-  .location-field,
-  .radius-field {
+  .location-field {
     width: 100%;
+    flex: 1 1 auto;
+    margin-bottom: var(--space-sm);
+  }
+
+  .location-field {
+    flex-wrap: wrap;
+  }
+
+  .location-select-wrapper {
+    flex: 1 1 100%;
+    min-width: 100%;
+    margin-bottom: var(--space-xs);
+    margin-right: 0;
+  }
+
+  .location-select-wrapper.hidden {
+    height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  .radius-field {
+    margin-bottom: var(--space-sm);
+  }
+
+  .radius-field.hidden {
+    height: 0;
+    margin: 0;
   }
 
   .search-button {
     width: 100%;
+    margin-top: 0;
   }
+}
+
+#global-radius {
+  width: 100%;
+  height: 38px;
+  padding: var(--space-sm) var(--space-sm);
+  font-size: var(--font-size-sm);
+  background-color: var(--neutral-100);
+  cursor: pointer;
 }

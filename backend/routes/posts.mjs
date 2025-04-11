@@ -163,36 +163,38 @@ router.get("/api/posts", async (req, res) => {
       filter["location.neighborhood"] = { $regex: neighborhood, $options: "i" };
     }
 
-    // Radius-based search
-    // Note: For this to work properly in a real-world scenario,
-    // we would need to use MongoDB's geospatial queries with $geoWithin and $centerSphere
-    // This would require coordinates to be stored in GeoJSON format
+    //Radius-based search
+    //Note: For this to work properly in a real-world scenario,
+    //we would need to use MongoDB's geospatial queries with $geoWithin and $centerSphere
+    //This would require coordinates to be stored in GeoJSON format
+    //This is not implemented yet
     if (radius && parseInt(radius) > 0) {
-      // If we have coordinates in the query, we could implement something like:
-      // const lat = parseFloat(req.query.latitude);
-      // const lng = parseFloat(req.query.longitude);
-      // if (!isNaN(lat) && !isNaN(lng)) {
-      //   filter['location.coordinates'] = {
-      //     $geoWithin: {
-      //       $centerSphere: [[lng, lat], parseInt(radius) / 6371] // radius in km, 6371 is Earth's radius in km
-      //     }
-      //   };
-      // }
+      //If we have coordinates in the query, we could implement something like:
+      //const lat = parseFloat(req.query.latitude);
+      //const lng = parseFloat(req.query.longitude);
+      //if (!isNaN(lat) && !isNaN(lng)) {
+      //filter['location.coordinates'] = {
+      //$geoWithin: {
+      //$centerSphere: [[lng, lat], parseInt(radius) / 6371] // radius in km, 6371 is Earth's radius in km
+      //}
+      //};
+      //}
 
-      // For now, we'll just log that we received a radius parameter
+      //For now, we'll just log that we received a radius parameter
       console.log(`Searching with radius: ${radius}km`);
     }
 
-    // Search filter (searches in title and description)
+    //Search filter (searches in title and description)
     if (search) {
       filter.$or = [
-        { title: { $regex: search, $options: "i" } },
+        //or statement for these conditions
+        { title: { $regex: search, $options: "i" } }, //i is for case insensitive search (mongodb)
         { description: { $regex: search, $options: "i" } },
       ];
     }
 
-    // Sort options
-    let sortOption = { createdAt: -1 }; // default: newest first
+    //Sort options
+    let sortOption = { createdAt: -1 }; //default: newest first
 
     if (sort === "oldest") {
       sortOption = { createdAt: 1 };
@@ -202,19 +204,19 @@ router.get("/api/posts", async (req, res) => {
       sortOption = { title: -1 };
     }
 
-    // Calculate pagination
+    //Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Execute query with pagination
+    //Execute query with pagination
     const posts = await Post.find(filter)
       .sort(sortOption)
       .skip(skip)
       .limit(parseInt(limit));
 
-    // Get total count for pagination
+    //Get total count for pagination
     const totalCount = await Post.countDocuments(filter);
 
-    // Calculate total pages
+    //Calculate total pages
     const totalPages = Math.ceil(totalCount / parseInt(limit));
 
     res.status(200).json({
@@ -237,9 +239,7 @@ router.get("/api/posts", async (req, res) => {
   }
 });
 
-/**
- * Get single post by ID
- */
+//get single post by id
 router.get("/api/posts/:id", async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);

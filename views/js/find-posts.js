@@ -12,7 +12,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const sortSelect = document.getElementById("sort-options");
   const postsGrid = document.querySelector(".posts-grid");
   const resultsCount = document.getElementById("results-count");
-  const pageNumbers = document.querySelectorAll(".page-number");
   const prevButton = document.querySelector(".pagination-button:first-child");
   const nextButton = document.querySelector(".pagination-button:last-child");
   const globalSearchInput = document.getElementById("global-search-input");
@@ -34,143 +33,122 @@ document.addEventListener("DOMContentLoaded", function () {
     page: 1,
   };
 
-  // Sample data for demonstration purposes
-  // In a real application, this would come from an API call
-  const samplePosts = [
-    // Posts would be fetched from the server
-  ];
-
-  /**
-   * Initialize event listeners
-   */
+  //event listeners
   function initEventListeners() {
-    // Category filter
+    //Category filter
     categoryButtons.forEach((button) => {
       button.addEventListener("click", function () {
-        // Remove active class from all buttons
+        //Remove active class from all buttons
         categoryButtons.forEach((btn) => btn.classList.remove("active"));
-        // Add active class to clicked button
+        //Add active class to clicked button
         this.classList.add("active");
 
-        // Extract category name and convert to lowercase for API filtering
+        //Extract category name and convert to lowercase for API filtering !!!GETS OTHER CATEGORIES FROM EJS FILE AND EJS DOES THIS DYNAMICALLY
         const categoryName =
           this.querySelector(".category-name").textContent.trim();
-        // Use 'all' for "All Categories", otherwise use lowercase category name
+        //Use 'all' for "All Categories", otherwise use lowercase category name
         const category =
           categoryName === "All Categories"
             ? "all"
             : categoryName.toLowerCase();
 
-        // Update filter and refresh posts
+        //Another func for updating filters and refreshing posts
         updateFilters({ category: category, page: 1 });
       });
     });
 
-    // Location filters
+    //Location filters
     cityFilter.addEventListener("change", function () {
+      const cityValue = this.value || ""; // Ensure empty string if no value
       updateFilters({
-        city: this.value,
-        // Reset dependent filters when parent changes
+        city: cityValue,
+        //Reset dependent filters when parent changes
         district: "",
         neighborhood: "",
         page: 1,
       });
 
-      // In a real application, you would now fetch districts for the selected city
-      // and update the district select options
-      updateDistrictOptions(this.value);
+      //In a real application, you would now fetch districts for the selected city
+      //and update the district select options
+      updateDistrictOptions(cityValue);
     });
 
     districtFilter.addEventListener("change", function () {
+      const districtValue = this.value || "";
       updateFilters({
-        district: this.value,
-        // Reset dependent filters when parent changes
+        district: districtValue,
+        //Reset dependent filters when parent changes
         neighborhood: "",
         page: 1,
       });
 
-      // In a real application, you would now fetch neighborhoods for the selected district
-      // and update the neighborhood select options
-      updateNeighborhoodOptions(this.value);
+      updateNeighborhoodOptions(districtValue);
     });
 
     neighborhoodFilter.addEventListener("change", function () {
+      const neighborhoodValue = this.value || "";
       updateFilters({
-        neighborhood: this.value,
+        neighborhood: neighborhoodValue,
         page: 1,
       });
     });
 
-    // Sorting functionality
+    //Sorting functionality
     sortSelect.addEventListener("change", function () {
       updateFilters({ sort: this.value });
     });
 
-    // Pagination
-    pageNumbers.forEach((button) => {
-      button.addEventListener("click", function () {
-        const page = parseInt(this.textContent);
-        updateFilters({ page: page });
-      });
-    });
+    // Pagination events are now handled by the updatePagination function
 
-    prevButton.addEventListener("click", function () {
-      if (!this.hasAttribute("disabled")) {
-        updateFilters({ page: currentFilters.page - 1 });
-      }
-    });
-
-    nextButton.addEventListener("click", function () {
-      if (!this.hasAttribute("disabled")) {
-        updateFilters({ page: currentFilters.page + 1 });
-      }
-    });
-
-    // Global Search Bar functionality
+    //Global Search Bar functionality
     globalSearchButton.addEventListener("click", function () {
-      // Collect all search parameters
+      //Collect all search parameters
       const searchParams = {
         search: globalSearchInput.value.trim(),
         category: globalCategories.value,
         page: 1,
+        //Always explicitly set location parameters, even when empty
+        city: globalCity.value || "",
+        district: globalDistrict.value || "",
+        neighborhood: globalNeighborhood.value || "",
       };
 
-      // Add location parameters if selected
-      if (globalCity.value) {
-        searchParams.city = globalCity.value;
-
-        if (globalDistrict.value) {
-          searchParams.district = globalDistrict.value;
-
-          if (globalNeighborhood.value) {
-            searchParams.neighborhood = globalNeighborhood.value;
-          }
-        }
-
-        // Add radius if location is selected and radius is not "whole area"
-        if (globalRadius.value !== "0") {
-          searchParams.radius = globalRadius.value;
-        }
+      // dd radius if location is selected and radius is not "whole area"
+      if (globalCity.value && globalRadius.value !== "0") {
+        searchParams.radius = globalRadius.value;
       }
 
-      // Update filters and perform search
+      //Update filters and perform search
       updateFilters(searchParams);
     });
 
-    // Global search input - search on Enter key
+    //Global search input - search on Enter key
     globalSearchInput.addEventListener("keyup", function (e) {
       if (e.key === "Enter") {
         globalSearchButton.click();
       }
     });
 
-    // City select - enable/disable district select based on selection
+    //City select - enable/disable district select based on selection
     globalCity.addEventListener("change", function () {
-      if (this.value) {
-        globalDistrict.disabled = false;
-        globalRadius.disabled = false; // Enable radius when city is selected
+      const searchBar = document.querySelector(".search-bar");
 
-        // Populate districts for the selected city
+      if (this.value) {
+        //Enable and show district and radius
+        globalDistrict.disabled = false;
+        globalRadius.disabled = false;
+
+        //Show district wrapper with animation
+        document.getElementById("district-wrapper").classList.remove("hidden");
+
+        //Show radius wrapper with animation
+        document.getElementById("radius-wrapper").classList.remove("hidden");
+
+        //Update width distribution classes
+        searchBar.classList.remove("city-only");
+        searchBar.classList.add("city-district-radius");
+
+        //Populate districts for the selected city
         populateDistrictsGlobal(this.value);
       } else {
         // Disable and reset dependent fields
@@ -179,36 +157,76 @@ document.addEventListener("DOMContentLoaded", function () {
         globalNeighborhood.disabled = true;
         globalNeighborhood.value = "";
         globalRadius.disabled = true;
+        globalRadius.value = "0"; // Reset radius to default
+
+        //Hide district wrapper with animation
+        document.getElementById("district-wrapper").classList.add("hidden");
+
+        //Hide neighborhood wrapper with animation
+        document.getElementById("neighborhood-wrapper").classList.add("hidden");
+
+        //Hide radius wrapper with animation
+        document.getElementById("radius-wrapper").classList.add("hidden");
+
+        //Update width distribution classes
+        searchBar.classList.add("city-only");
+        searchBar.classList.remove(
+          "city-radius",
+          "city-district-radius",
+          "city-district-neighborhood-radius"
+        );
       }
     });
 
-    // District select - enable/disable neighborhood select based on selection
+    //District select - enable/disable neighborhood select based on selection
     globalDistrict.addEventListener("change", function () {
+      const searchBar = document.querySelector(".search-bar");
+
       if (this.value) {
         globalNeighborhood.disabled = false;
 
-        // Populate neighborhoods for the selected district
+        //Show neighborhood wrapper with animation
+        document
+          .getElementById("neighborhood-wrapper")
+          .classList.remove("hidden");
+
+        //Update width distribution classes
+        searchBar.classList.remove("city-district-radius");
+        searchBar.classList.add("city-district-neighborhood-radius");
+
+        //Populate neighborhoods for the selected district
         populateNeighborhoodsGlobal(this.value);
       } else {
         // Disable and reset dependent field
         globalNeighborhood.disabled = true;
         globalNeighborhood.value = "";
+
+        //Hide neighborhood wrapper with animation
+        document.getElementById("neighborhood-wrapper").classList.add("hidden");
+
+        //Update width distribution classes
+        searchBar.classList.remove("city-district-neighborhood-radius");
+        searchBar.classList.add("city-district-radius");
       }
     });
   }
 
   /**
    * Update filters and refresh the posts display
-   * @param {Object} newFilters - Object containing the filter properties to update
+   * newFilters should be an object
+   * @param {Object} newFilters
    */
   function updateFilters(newFilters) {
-    // Update the filter state
-    currentFilters = { ...currentFilters, ...newFilters };
+    //Update the filter state
+    currentFilters = { ...currentFilters, ...newFilters }; //It creates a new object.
+    //It copies all properties from currentFilters into this new object.
+    //It then copies all properties from newFilters into the same new object.
+    //If there are any properties in newFilters that already exist in currentFilters, the values from newFilters will overwrite the existing values.
 
-    // Apply the new filters
+    //Apply the new filters in previous line on top it combined filters obj. so current filter has been updated
     applyFilters();
 
-    // Update UI to reflect filter state
+    //Update UI to reflect filter state
     updateFilterUI();
   }
 
@@ -216,11 +234,11 @@ document.addEventListener("DOMContentLoaded", function () {
    * Apply current filters to posts data and update the display
    */
   function applyFilters() {
-    // In a real application, this would make an API call with the filter parameters
-    // For demo, we'll just log the current filter state
+    //In a real application, this would make an API call with the filter parameters
+    //For demo, we'll just log the current filter state !!!!THIS CONSOLE.LOG WILL BE REMOVED LATER
     console.log("Applying filters:", currentFilters);
 
-    // This would be replaced with actual API call
+    //This would be replaced with actual API call
     fetchPosts(currentFilters);
   }
 
@@ -228,7 +246,7 @@ document.addEventListener("DOMContentLoaded", function () {
    * Update UI elements to reflect the current filter state
    */
   function updateFilterUI() {
-    // Update category buttons
+    //Update category buttons
     categoryButtons.forEach((button) => {
       const category = button
         .querySelector(".category-name")
@@ -243,12 +261,59 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
 
-    // Update location selects
+    //Update location selects
     cityFilter.value = currentFilters.city;
     districtFilter.value = currentFilters.district;
     neighborhoodFilter.value = currentFilters.neighborhood;
 
-    // Update sort select
+    //Update global search inputs
+    globalSearchInput.value = currentFilters.search || "";
+    globalCategories.value = currentFilters.category || "all";
+    globalCity.value = currentFilters.city || "";
+    globalDistrict.value = currentFilters.district || "";
+    globalNeighborhood.value = currentFilters.neighborhood || "";
+
+    //Update wrappers visibility
+    const districtWrapper = document.getElementById("district-wrapper");
+    const neighborhoodWrapper = document.getElementById("neighborhood-wrapper");
+    const radiusWrapper = document.getElementById("radius-wrapper");
+    const searchBar = document.querySelector(".search-bar");
+
+    //Reset all classes for width distribution
+    searchBar.classList.remove(
+      "city-only",
+      "city-radius",
+      "city-district-radius",
+      "city-district-neighborhood-radius"
+    );
+
+    //Show/hide based on current values
+    if (globalCity.value) {
+      globalDistrict.disabled = false;
+      globalRadius.disabled = false;
+      districtWrapper.classList.remove("hidden");
+      radiusWrapper.classList.remove("hidden");
+
+      if (globalDistrict.value) {
+        globalNeighborhood.disabled = false;
+        neighborhoodWrapper.classList.remove("hidden");
+        searchBar.classList.add("city-district-neighborhood-radius");
+      } else {
+        globalNeighborhood.disabled = true;
+        neighborhoodWrapper.classList.add("hidden");
+        searchBar.classList.add("city-district-radius");
+      }
+    } else {
+      globalDistrict.disabled = true;
+      globalNeighborhood.disabled = true;
+      globalRadius.disabled = true;
+      districtWrapper.classList.add("hidden");
+      neighborhoodWrapper.classList.add("hidden");
+      radiusWrapper.classList.add("hidden");
+      searchBar.classList.add("city-only");
+    }
+
+    //Update sort select
     sortSelect.value = currentFilters.sort;
 
     // Update pagination
@@ -275,8 +340,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // Show loading state
     postsGrid.innerHTML = '<div class="loading">Loading posts...</div>';
 
-    // Make actual API call with filters
-    fetch("/api/posts?" + new URLSearchParams(filters))
+    //Make actual API call with filters (query params)
+    fetch("/api/posts?" + new URLSearchParams(filters)) //It turns an obj to query params
       .then((response) => {
         if (!response.ok) {
           throw new Error("Network response was not ok");
@@ -287,14 +352,14 @@ document.addEventListener("DOMContentLoaded", function () {
         if (data.success) {
           renderPosts(data.data);
 
-          // Update pagination data if provided
+          //Update pagination data if provided
           if (data.pagination) {
             updatePagination(data.pagination);
           } else {
-            // Basic pagination data if not provided by API
+            //Basic pagination data if not provided by API
             updatePagination({
               currentPage: currentFilters.page,
-              totalPages: Math.ceil(data.count / 10),
+              totalPages: Math.max(1, Math.ceil(data.count / 10)),
               totalItems: data.count,
             });
           }
@@ -306,6 +371,13 @@ document.addEventListener("DOMContentLoaded", function () {
         console.error("Error fetching posts:", error);
         postsGrid.innerHTML =
           '<div class="error">Error loading posts. Please try again.</div>';
+
+        // Set up empty pagination for error state
+        updatePagination({
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 0,
+        });
       });
   }
 
@@ -321,19 +393,14 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    // Update results count
+    //Update results count
     resultsCount.textContent = posts.length;
 
-    // Clear posts grid
+    //Clear posts grid
     postsGrid.innerHTML = "";
 
     // Render each post
     posts.forEach((post) => {
-      // Check if post is recent (less than 3 days old)
-      const postDate = new Date(post.createdAt);
-      const now = new Date();
-      const isNew = (now - postDate) / (1000 * 60 * 60 * 24) < 3;
-
       const postElement = document.createElement("div");
       postElement.className = "post-card card";
       postElement.addEventListener("click", function () {
@@ -347,7 +414,6 @@ document.addEventListener("DOMContentLoaded", function () {
               ? `<img src="${post.images[0].url}" alt="${post.title}">`
               : `<img src="https://via.placeholder.com/300x200" alt="No image available">`
           }
-          ${isNew ? '<div class="post-badge">New</div>' : ""}
         </div>
         <div class="post-details">
           <h3 class="post-title">${post.title}</h3>
@@ -361,7 +427,7 @@ document.addEventListener("DOMContentLoaded", function () {
             </span>
             <span class="post-date">Posted: ${new Date(
               post.createdAt
-            ).toLocaleDateString("en-US", {
+            ).toLocaleDateString("tr-TR", {
               year: "numeric",
               month: "short",
               day: "numeric",
@@ -384,22 +450,87 @@ document.addEventListener("DOMContentLoaded", function () {
    * @param {Object} pagination - Pagination information
    */
   function updatePagination(pagination) {
-    // This is a simplified version, in a real app you would dynamically
-    // generate the pagination numbers based on total pages
+    const paginationNumbers = document.querySelector(".pagination-numbers");
+    paginationNumbers.innerHTML = ""; // Clear existing buttons
 
-    // Update active page
-    pageNumbers.forEach((button) => {
-      const page = parseInt(button.textContent);
-      if (page === pagination.currentPage) {
-        button.classList.add("active");
-      } else {
-        button.classList.remove("active");
+    const { currentPage, totalPages } = pagination;
+
+    // Determine range of pages to show
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+
+    // Adjust start page if we're near the end
+    if (endPage - startPage < 4 && startPage > 1) {
+      startPage = Math.max(1, endPage - 4);
+    }
+
+    // Add first page button if not in range
+    if (startPage > 1) {
+      const firstPageBtn = createPageButton(1, currentPage);
+      paginationNumbers.appendChild(firstPageBtn);
+
+      // Add ellipsis if there's a gap
+      if (startPage > 2) {
+        const ellipsis = document.createElement("span");
+        ellipsis.className = "pagination-ellipsis";
+        ellipsis.textContent = "...";
+        paginationNumbers.appendChild(ellipsis);
       }
-    });
+    }
+
+    // Create page number buttons
+    for (let i = startPage; i <= endPage; i++) {
+      const pageBtn = createPageButton(i, currentPage);
+      paginationNumbers.appendChild(pageBtn);
+    }
+
+    // Add last page button if not in range
+    if (endPage < totalPages) {
+      // Add ellipsis if there's a gap
+      if (endPage < totalPages - 1) {
+        const ellipsis = document.createElement("span");
+        ellipsis.className = "pagination-ellipsis";
+        ellipsis.textContent = "...";
+        paginationNumbers.appendChild(ellipsis);
+      }
+
+      const lastPageBtn = createPageButton(totalPages, currentPage);
+      paginationNumbers.appendChild(lastPageBtn);
+    }
 
     // Enable/disable previous and next buttons
-    prevButton.disabled = pagination.currentPage === 1;
-    nextButton.disabled = pagination.currentPage === pagination.totalPages;
+    prevButton.disabled = currentPage === 1;
+    nextButton.disabled = currentPage === totalPages;
+
+    // Update next/prev button handlers
+    prevButton.onclick = function () {
+      if (!this.disabled) {
+        updateFilters({ page: currentPage - 1 });
+      }
+    };
+
+    nextButton.onclick = function () {
+      if (!this.disabled) {
+        updateFilters({ page: currentPage + 1 });
+      }
+    };
+  }
+
+  /**
+   * Create a page number button
+   * @param {Number} pageNum - The page number
+   * @param {Number} currentPage - The current active page
+   * @returns {HTMLElement} The page button element
+   */
+  function createPageButton(pageNum, currentPage) {
+    const button = document.createElement("button");
+    button.className =
+      "page-number" + (pageNum === currentPage ? " active" : "");
+    button.textContent = pageNum;
+    button.addEventListener("click", function () {
+      updateFilters({ page: pageNum });
+    });
+    return button;
   }
 
   /**
@@ -439,7 +570,6 @@ document.addEventListener("DOMContentLoaded", function () {
     neighborhoodFilter.innerHTML =
       '<option value="">All Neighborhoods</option>';
   }
-
   /**
    * Update neighborhood options based on selected district
    * @param {string} district - Selected district value
@@ -468,12 +598,6 @@ document.addEventListener("DOMContentLoaded", function () {
         neighborhoodFilter.appendChild(option);
       });
     }
-  }
-
-  // Global filters - pass to main filters !!!!!!!!CHECK THIS FUNC LATER
-  function applyGlobalFilters() {
-    // This function can be expanded if needed to handle special global filter logic
-    globalSearchButton.click();
   }
 
   /**
@@ -511,12 +635,14 @@ document.addEventListener("DOMContentLoaded", function () {
    * @param {string} district - Selected district value
    */
   function populateNeighborhoodsGlobal(district) {
-    // Clear current options except the first one
+    //Clear current options except the first one
+
+    //This removes the second option every time the loop runs until only 'Select...' is left in the dropdown.
     while (globalNeighborhood.options.length > 1) {
       globalNeighborhood.remove(1);
     }
 
-    // Add neighborhoods based on selected district
+    //Add neighborhoods based on selected district
     let neighborhoods = [];
 
     if (district === "şişli" || district === "sisli") {
@@ -541,10 +667,19 @@ document.addEventListener("DOMContentLoaded", function () {
   // Initialize the page
   function init() {
     initEventListeners();
-    // Initial load of posts
+
+    // Hide district, neighborhood, and radius sections on initial load
+    document.getElementById("district-wrapper").classList.add("hidden");
+    document.getElementById("neighborhood-wrapper").classList.add("hidden");
+    document.getElementById("radius-wrapper").classList.add("hidden");
+
+    //Set initial class for width distribution
+    document.querySelector(".search-bar").classList.add("city-only");
+
+    //Initial load of posts
     applyFilters();
   }
 
-  // Start the application
+  //Start the application
   init();
 });

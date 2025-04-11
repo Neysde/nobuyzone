@@ -60,29 +60,37 @@
 
           <!-- Location field -->
           <div class="location-field">
-            <select id="global-city" class="location-select">
-              <option value="">Select City</option>
-              <option value="istanbul">Istanbul</option>
-              <option value="ankara">Ankara</option>
-              <option value="izmir">Izmir</option>
-            </select>
-            <select id="global-district" class="location-select" disabled>
-              <option value="">Select District</option>
-            </select>
-            <select id="global-neighborhood" class="location-select" disabled>
-              <option value="">Select Neighborhood</option>
-            </select>
-          </div>
-
-          <!-- Radius field - only enabled when location is selected -->
-          <div class="radius-field">
-            <select id="global-radius" class="field-select" disabled>
-              <option value="0">Entire Area</option>
-              <option value="5">5 km</option>
-              <option value="10">10 km</option>
-              <option value="20">20 km</option>
-              <option value="50">50 km</option>
-            </select>
+            <div class="location-select-wrapper">
+              <select id="global-city" class="location-select">
+                <option value="">Select City</option>
+                <option value="istanbul">Istanbul</option>
+                <option value="ankara">Ankara</option>
+                <option value="izmir">Izmir</option>
+              </select>
+            </div>
+            <div class="location-select-wrapper hidden" id="district-wrapper">
+              <select id="global-district" class="location-select" disabled>
+                <option value="">Select District</option>
+              </select>
+            </div>
+            <div
+              class="location-select-wrapper hidden"
+              id="neighborhood-wrapper"
+            >
+              <select id="global-neighborhood" class="location-select" disabled>
+                <option value="">Select Neighborhood</option>
+              </select>
+            </div>
+            <!-- Radius field moved inside location-field -->
+            <div class="location-select-wrapper hidden" id="radius-wrapper">
+              <select id="global-radius" class="location-select" disabled>
+                <option value="0">Entire Area</option>
+                <option value="5">5 km</option>
+                <option value="10">10 km</option>
+                <option value="20">20 km</option>
+                <option value="50">50 km</option>
+              </select>
+            </div>
           </div>
 
           <!-- Search button -->
@@ -189,11 +197,6 @@
                     src="https://via.placeholder.com/300x200"
                     alt="No image available"
                   />
-                  <% } %> <% // Check if post is recent (less than 3 days old)
-                  const postDate = new Date(post.createdAt); const now = new
-                  Date(); const isNew = (now - postDate) / (1000 * 60 * 60 * 24)
-                  < 3; %> <% if (isNew) { %>
-                  <div class="post-badge">New</div>
                   <% } %>
                 </div>
                 <div class="post-details">
@@ -252,9 +255,7 @@
               Previous
             </button>
             <div class="pagination-numbers">
-              <button class="page-number active">1</button>
-              <button class="page-number">2</button>
-              <button class="page-number">3</button>
+              <!-- Page numbers will be generated dynamically -->
             </div>
             <button class="pagination-button">
               Next

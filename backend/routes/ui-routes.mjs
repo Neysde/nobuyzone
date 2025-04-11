@@ -6,17 +6,15 @@ const router = express.Router();
 // Find posts page
 router.get("/find-posts", async (req, res) => {
   try {
-    // In a real implementation, you would fetch initial posts with pagination
-    // This would be replaced with filtered queries based on request parameters
     const posts = await Post.find({ status: "active" }).sort({ createdAt: -1 });
 
-    // Count posts by category for sidebar display
+    //Count posts by category for sidebar display THIS will be used later for other purposes!!!
     const categoryCounts = await Post.aggregate([
       { $match: { status: "active" } },
       { $group: { _id: "$category", count: { $sum: 1 } } },
     ]);
 
-    // Transform category counts into a format easier to use in the template
+    //Transform category counts into a format easier to use in the template
     const categories = {};
     categoryCounts.forEach((cat) => {
       categories[cat._id] = cat.count;
