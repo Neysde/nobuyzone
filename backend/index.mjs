@@ -4,6 +4,11 @@ import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import expressLayouts from "express-ejs-layouts";
 import routes from "./routes/routes.mjs";
+import cookieParser from "cookie-parser";
+import passport from "passport";
+import { Strategy } from "passport-jwt";
+import User from "./mongoose/user.mjs";
+import { isAuthenticated } from "./middlewares.mjs";
 
 //we need to create our own __dirname because we are using mjs files. In js files we have __dirname as a global variable.
 const __filename = fileURLToPath(import.meta.url);
@@ -12,6 +17,37 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser());
+
+const jwtOptions = {
+  jwtFromRequest: (req) => {
+    var token = null;
+    if (req && req.cookies) {
+      token = req.cookies["login"]; // This matches the cookie name in login function
+    }
+    return token;
+  },
+  secretOrKey: "process.env.SECRETKEY", //will be moved to .env
+};
+
+passport.use(
+  new Strategy(jwtOptions, async (jwt_payload, done) => {
+    try {
+      // Find user by _id (not 'id') and use async/await since mongoose no longer supports callbacks
+      const user = await User.findOne({ _id: jwt_payload._id });
+      if (user) {
+        return done(null, user);
+      } else {
+        return done(null, false);
+      }
+    } catch (err) {
+      return done(err, false);
+    }
+  })
+);
+
+//!!!!!Initialize passport
+app.use(passport.initialize());
 
 // Set up views directory and serve static files from it
 app.set("views", path.join(__dirname, "../views"));
@@ -37,7 +73,7 @@ app.get("/", (req, res) => {
 
 app.use(routes);
 
-app.get("/posting", (req, res) => {
+app.get("/posting", isAuthenticated, (req, res) => {
   res.render("posting.ejs");
 });
 

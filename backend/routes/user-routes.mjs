@@ -1,8 +1,6 @@
 import express from "express";
 import User from "../mongoose/user.mjs";
-import bcrypt, { compare } from "bcrypt";
 import Token from "../mongoose/email-token.mjs";
-import { sendEmail } from "../utils/sendEmail.js";
 import Joi from "joi";
 import passwordComplexity from "joi-password-complexity";
 import jwt from "jsonwebtoken";
@@ -15,6 +13,7 @@ const register = async (req, res) => {
     //input validation function
     const validate = (data) => {
       const schema = Joi.object({
+        username: Joi.string().required().label("Username"),
         firstName: Joi.string().required().label("First Name"),
         lastName: Joi.string().required().label("Last Name"),
         email: Joi.string().email().required().label("Email"),
@@ -95,9 +94,14 @@ const login = async (req, res) => {
     const token = jwt.sign(
       { email: user.email, _id: user._id },
       "process.env.SECRETKEY", //will be moved to .env file.
-      { expiresIn: "1h" }
+      { expiresIn: "1d" }
     );
     res
+      .cookie("login", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 24 * 60 * 60 * 1000, //1 day
+      })
       .status(200)
       .send({ data: token, message: "User has successfully logged in" });
   } catch (error) {
@@ -114,13 +118,13 @@ const emailLink = async (req, res) => {
       userId: user._id,
       token: req.params.token,
     });
-    if (!token) return res.status(400).send({ message: "invalid Link" });
+    if (!token) return res.status(400).send({ message: "Invalid Link" });
     await User.updateOne({ _id: user._id }, { verified: true });
-    await token.remove();
+    await token.deleteOne();
 
     res.status(200).send({ message: "Email Verified successfully" });
   } catch (error) {
-    res.status(500).send({ message: "Internally Server Error" });
+    res.status(500).send({ message: "Internal Server Error" });
   }
 };
 
@@ -215,31 +219,33 @@ const resetPassword = async (req, res) => {
     const hashedPassword = await hashPassword(req.body.password);
     user.password = hashedPassword;
     await user.save();
-    await token.remove();
+    await token.deleteOne(); //use deleteOne instead of delete or remove(deprecated)
     res.status(200).send({ message: "Password has been successfully reset" });
   } catch (error) {
-    res.status(500).send({ message: "Internal server error" });
+    res.status(500).send({ message: "Internal Server Error" });
   }
 };
 
 const sendEmail = async (email, subject, message) => {
   try {
     const transporter = nodemailer.createTransport({
-      //creates a transporter object that is used to send emails.
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 587, //TLS port
+      secureConnection: false, //TLS requires secureConnection to be false
       auth: {
-        //contains the credentials needed to log in to the email account:
-        user: process.env.HOST, //email address of the sender
-        pass: process.env.PASS, //password of the sender's email account
+        user: "zucklol1453@gmail.com", // Will be moved to process.env.EMAIL_USER
+        pass: "rjpo kbif nxnu tapl", // Use app password will be moved to .env process.env.APP_PASSWORD
+      },
+      tls: {
+        ciphers: "SSLv3",
       },
     });
 
-    transporter.sendMail({
-      //used to actually send the mail.
-      from: process.env.HOST, //email address of the sender
-      to: email, //email address of the receiver
-      subject: subject, //subject of the email
-      html: message, //html content of the email
+    await transporter.sendMail({
+      from: '"Barter App" <zucklol1453@gmail.com>', // Better formatted sender
+      to: email,
+      subject: subject,
+      html: message,
     });
     console.log("Email sent Successfully");
   } catch (error) {
@@ -249,14 +255,18 @@ const sendEmail = async (email, subject, message) => {
   }
 };
 
+//login and register routes
 router.post("/api/login", login);
 
 router.post("/api/register", register);
 
-router.get("/:id/verify/:token", emailLink);
+router.get("/:id/verify/:token", emailLink); //register verification
 
+//password reset routes
 router.post("/passwordreset", passwordLink);
 
-router.get("/:id/:token", verifyUrl);
+router.get("/:id/:token", verifyUrl); //password reset verification
 
 router.post("/:id/:token", resetPassword);
+
+export default router;

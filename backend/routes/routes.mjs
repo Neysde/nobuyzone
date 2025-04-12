@@ -7,6 +7,7 @@ import {
 } from "./image-upload.mjs";
 import postsRouter from "./posts.mjs";
 import uiRouter from "./ui-routes.mjs";
+import userRouter from "./user-routes.mjs";
 
 const router = express.Router();
 
@@ -25,5 +26,6 @@ router.delete("/api/delete/:public_id", deleteImage);
 
 router.use(postsRouter);
 router.use(uiRouter);
+router.use(userRouter);
 
 export default router;

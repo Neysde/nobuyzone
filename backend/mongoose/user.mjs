@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, "Password is required"],
   },
-  profilePicture: {
+  /* profilePicture: { //will be added later
     url: {
       type: String,
       required: true,
@@ -30,8 +30,8 @@ const userSchema = new mongoose.Schema({
     publicId: {
       type: String,
       required: true,
-    },
-  },
+    }, 
+  },*/
   verified: {
     type: Boolean,
     default: false,
