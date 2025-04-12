@@ -10,23 +10,20 @@ import uiRouter from "./ui-routes.mjs";
 
 const router = express.Router();
 
-// Add body parsing middleware
+//Add body parsing middleware
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
-// Upload image route
+//Upload image route
 router.post("/api/upload", multerUploads, uploadImage);
 
-// Specific route for post image uploads - simpler configuration
+//Specific route for post image uploads - simpler configuration
 router.post("/api/posts/upload-image", singleImageUpload, uploadImage);
 
-// Delete image route
+//Delete image route
 router.delete("/api/delete/:public_id", deleteImage);
 
-// Use posts router for API routes
 router.use(postsRouter);
-
-// Use UI router for page routes
 router.use(uiRouter);
 
 export default router;

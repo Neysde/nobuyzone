@@ -1,204 +1,340 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Create New Post | Barter</title>
-    <link rel="stylesheet" href="/css/header.css">
-    <link rel="stylesheet" href="/css/footer.css">
-    <link rel="stylesheet" href="/css/posting.css">
+    <link rel="stylesheet" href="/css/header.css" />
+    <link rel="stylesheet" href="/css/footer.css" />
+    <link rel="stylesheet" href="/css/posting.css" />
     <!-- Leaflet CSS for location map -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-</head>
-<body>
-    
-
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+  </head>
+  <body>
     <main class="posting-page">
-        <div class="container">
-            <form id="posting-form" class="posting-form" enctype="multipart/form-data">
-                <!-- Main Content Grid -->
-                <div class="posting-grid">
-                    <!-- Left Column - Main Content -->
-                    <div class="posting-main flex-column">
-                        <!-- Image Upload Section -->
-                        <div class="card image-section">
-                            <div class="image-upload-container" id="image-upload">
-                                <input type="file" id="images" name="images" multiple accept="image/*" class="file-input" style="display:none;">
-                                <div class="upload-overlay">
-                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-                                    </svg>
-                                    <h3>Drop your images here</h3>
-                                    <p>or click anywhere to upload</p>
-                                    <span class="upload-hint">Add up to 5 photos</span>
-                                </div>
-                            </div>
-                            <div class="image-preview-grid" id="image-previews"></div>
-                        </div>
-
-                        <!-- Basic Info Section -->
-                        <div class="card info-section">
-                            <div class="section-header">
-                                <h2>Item Details</h2>
-                                <span class="required-note">* Required fields</span>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="title">Title <span class="required">*</span></label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="title" name="title" required maxlength="140" 
-                                           placeholder="What are you offering to barter?">
-                                    <span class="character-count"><span id="titleCount">0</span>/140</span>
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="category">Category <span class="required">*</span></label>
-                                    <select id="category" name="category" required>
-                                        <option value="">Select a category</option>
-                                        <option value="furniture">Furniture</option>
-                                        <option value="electronics">Electronics</option>
-                                        <option value="clothing">Clothing</option>
-                                        <option value="books">Books</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="condition">Condition <span class="required">*</span></label>
-                                    <select id="condition" name="condition" required>
-                                        <option value="">Select condition</option>
-                                        <option value="new">New</option>
-                                        <option value="like-new">Like New</option>
-                                        <option value="good">Good</option>
-                                        <option value="fair">Fair</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="description">Description <span class="required">*</span></label>
-                                <textarea id="description" name="description" required
-                                    placeholder="Describe your item in detail. What condition is it in? What would you like to trade it for?"></textarea>
-                                <div class="description-tips">
-                                    <h4>Tips for a great description:</h4>
-                                    <ul>
-                                        <li>Include the brand and model</li>
-                                        <li>Mention any defects or wear</li>
-                                        <li>List what you're interested in trading for</li>
-                                        <li>Add dimensions if relevant</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right Column - Sidebar -->
-                    <div class="posting-sidebar flex-column">
-                        <!-- Location Card -->
-                        <div class="card location-card">
-                            <h2>Location</h2>
-                            <div class="map-container">
-                                <div id="location-map" class="map">
-                                    <button type="button" id="fullscreen-toggle" class="button button-outline">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                            <path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/>
-                                        </svg>
-                                        Fullscreen
-                                    </button>
-                                </div>
-                                <button type="button" id="use-my-location" class="button button-outline">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                        <circle cx="12" cy="12" r="3"/>
-                                        <path d="M12 2v2m0 16v2M2 12h2m16 0h2"/>
-                                    </svg>
-                                    Use My Location
-                                </button>
-                            </div>
-                            <div class="location-fields">
-                                <div class="form-group">
-                                    <label for="city">City <span class="required">*</span></label>
-                                    <input type="text" id="city" name="city" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="district">District <span class="required">*</span></label>
-                                    <input type="text" id="district" name="district" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="neighborhood">Neighborhood <span class="required">*</span></label>
-                                    <input type="text" id="neighborhood" name="neighborhood" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="street">Street <span class="required">*</span></label>
-                                    <input type="text" id="street" name="street" required>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Contact Preferences Card -->
-                        <div class="card contact-card">
-                            <h2>Contact Preferences</h2>
-                            <div class="contact-options">
-                                <label class="contact-option">
-                                    <input type="radio" name="contact" value="in-app" checked>
-                                    <div class="option-content">
-                                        <span class="contact-icon">💬</span>
-                                        <div class="option-text">
-                                            <span class="option-title">In-App Chat</span>
-                                            <span class="option-desc">Fastest way to connect</span>
-                                        </div>
-                                    </div>
-                                </label>
-                                <label class="contact-option">
-                                    <input type="radio" name="contact" value="email">
-                                    <div class="option-content">
-                                        <span class="contact-icon">📧</span>
-                                        <div class="option-text">
-                                            <span class="option-title">Email</span>
-                                            <span class="option-desc">Get notified by email</span>
-                                        </div>
-                                    </div>
-                                </label>
-                                <label class="contact-option">
-                                    <input type="radio" name="contact" value="phone">
-                                    <div class="option-content">
-                                        <span class="contact-icon">📱</span>
-                                        <div class="option-text">
-                                            <span class="option-title">Phone</span>
-                                            <span class="option-desc">Direct contact</span>
-                                        </div>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
+      <div class="container">
+        <form
+          id="posting-form"
+          class="posting-form"
+          enctype="multipart/form-data"
+        >
+          <!-- Main Content Grid -->
+          <div class="posting-grid">
+            <!-- Left Column - Main Content -->
+            <div class="posting-main flex-column">
+              <!-- Image Upload Section -->
+              <div class="card image-section">
+                <div class="image-upload-container" id="image-upload">
+                  <input
+                    type="file"
+                    id="images"
+                    name="images"
+                    multiple
+                    accept="image/*"
+                    class="file-input"
+                    style="display: none"
+                  />
+                  <div class="upload-overlay">
+                    <svg
+                      width="48"
+                      height="48"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <path
+                        d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
+                      />
+                    </svg>
+                    <h3>Drop your images here</h3>
+                    <p>or click anywhere to upload</p>
+                    <span class="upload-hint">Add up to 5 photos</span>
+                  </div>
                 </div>
-                
-                <!-- Action Buttons - Full Width -->
-                <div class="action-card full-width-card">
-                    <div class="action-buttons">
-                        <button type="submit" class="button button-primary full-width">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M12 2v20m-8-8l8 8 8-8"/>
-                            </svg>
-                            Post Item
-                        </button>
-                        <button type="button" class="button button-outline full-width">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
-                                <polyline points="17 21 17 13 7 13 7 21"/>
-                            </svg>
-                            Save as Draft
-                        </button>
-                    </div>
+                <div class="image-preview-grid" id="image-previews"></div>
+              </div>
+
+              <!-- Basic Info Section -->
+              <div class="card info-section">
+                <div class="section-header">
+                  <h2>Item Details</h2>
+                  <span class="required-note">* Required fields</span>
                 </div>
-            </form>
-        </div>
+
+                <div class="form-group">
+                  <label for="title"
+                    >Title <span class="required">*</span></label
+                  >
+                  <div class="input-wrapper">
+                    <input
+                      type="text"
+                      id="title"
+                      name="title"
+                      required
+                      maxlength="140"
+                      placeholder="What are you offering to barter?"
+                    />
+                    <span class="character-count"
+                      ><span id="titleCount">0</span>/140</span
+                    >
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="category"
+                      >Category <span class="required">*</span></label
+                    >
+                    <select id="category" name="category" required>
+                      <option value="">Select a category</option>
+                      <option value="furniture">Furniture</option>
+                      <option value="electronics">Electronics</option>
+                      <option value="clothing">Clothing</option>
+                      <option value="books">Books</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="condition"
+                      >Condition <span class="required">*</span></label
+                    >
+                    <select id="condition" name="condition" required>
+                      <option value="">Select condition</option>
+                      <option value="new">New</option>
+                      <option value="like-new">Like New</option>
+                      <option value="good">Good</option>
+                      <option value="fair">Fair</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="description"
+                    >Description <span class="required">*</span></label
+                  >
+                  <textarea
+                    id="description"
+                    name="description"
+                    required
+                    placeholder="Describe your item in detail. What condition is it in? What would you like to trade it for?"
+                  ></textarea>
+                  <div class="description-tips">
+                    <h4>Tips for a great description:</h4>
+                    <ul>
+                      <li>Include the brand and model</li>
+                      <li>Mention any defects or wear</li>
+                      <li>List what you're interested in trading for</li>
+                      <li>Add dimensions if relevant</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column - Sidebar -->
+            <div class="posting-sidebar flex-column">
+              <!-- Location Card -->
+              <div class="card location-card">
+                <h2>Location</h2>
+                <div class="map-container">
+                  <div id="location-map" class="map">
+                    <button
+                      type="button"
+                      id="fullscreen-toggle"
+                      class="button button-outline"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"
+                        />
+                      </svg>
+                      Fullscreen
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    id="use-my-location"
+                    class="button button-outline"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M12 2v2m0 16v2M2 12h2m16 0h2" />
+                    </svg>
+                    Use My Location
+                  </button>
+                </div>
+                <div class="location-fields">
+                  <div class="form-group">
+                    <label for="city"
+                      >City <span class="required">*</span></label
+                    >
+                    <input type="text" id="city" name="city" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="district"
+                      >District <span class="required">*</span></label
+                    >
+                    <input type="text" id="district" name="district" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="neighborhood"
+                      >Neighborhood <span class="required">*</span></label
+                    >
+                    <input
+                      type="text"
+                      id="neighborhood"
+                      name="neighborhood"
+                      required
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="street"
+                      >Street <span class="required">*</span></label
+                    >
+                    <input type="text" id="street" name="street" required />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contact Preferences Card -->
+              <div class="card contact-card">
+                <h2>Contact Preferences</h2>
+                <div class="contact-options">
+                  <label class="contact-option">
+                    <input type="radio" name="contact" value="in-app" checked />
+                    <div class="option-content">
+                      <span class="contact-icon">💬</span>
+                      <div class="option-text">
+                        <span class="option-title">In-App Chat</span>
+                        <span class="option-desc">Fastest way to connect</span>
+                      </div>
+                    </div>
+                  </label>
+                  <label class="contact-option">
+                    <input type="radio" name="contact" value="email" />
+                    <div class="option-content">
+                      <span class="contact-icon">📧</span>
+                      <div class="option-text">
+                        <span class="option-title">Email</span>
+                        <span class="option-desc">Get notified by email</span>
+                      </div>
+                    </div>
+                  </label>
+                  <label class="contact-option">
+                    <input type="radio" name="contact" value="phone" />
+                    <div class="option-content">
+                      <span class="contact-icon">📱</span>
+                      <div class="option-text">
+                        <span class="option-title">Phone</span>
+                        <span class="option-desc">Direct contact</span>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons - Full Width -->
+          <div class="action-card full-width-card">
+            <div class="action-buttons">
+              <button type="submit" class="button button-primary full-width">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <path d="M12 2v20m-8-8l8 8 8-8" />
+                </svg>
+                Post Item
+              </button>
+              <button type="button" class="button button-outline full-width">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <path
+                    d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
+                  />
+                  <polyline points="17 21 17 13 7 13 7 21" />
+                </svg>
+                Save as Draft
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </main>
 
+    <!-- Image Cropper Modal -->
+    <div id="image-cropper-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Crop Image</h3>
+          <button type="button" class="close-button" id="close-cropper">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="cropper-container">
+            <div id="image-to-crop-container">
+              <img id="image-to-crop" src="" alt="Image to crop" />
+              <div id="crop-box">
+                <div class="resize-handle top-left"></div>
+                <div class="resize-handle top-right"></div>
+                <div class="resize-handle bottom-left"></div>
+                <div class="resize-handle bottom-right"></div>
+              </div>
+            </div>
+          </div>
+          <div class="cropper-instructions">
+            <p>
+              Drag to reposition. Drag corners to resize. The entire image is
+              selected by default.
+            </p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="button button-outline" id="cancel-crop">
+            Cancel
+          </button>
+          <button type="button" class="button button-primary" id="apply-crop">
+            Apply Crop
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="/js/posting.js"></script>
-</body>
-</html> 
+  </body>
+</html>
