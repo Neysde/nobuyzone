@@ -89,4 +89,43 @@ router.get("/profile/drafts", async (req, res) => {
   }
 });
 
+// Authentication pages
+// Login page
+router.get("/api/login", (req, res) => {
+  res.render("login", { breadcrumbs: "Login", layout: false });
+});
+
+// Register page
+router.get("/api/register", (req, res) => {
+  res.render("register", { breadcrumbs: "Register", layout: false });
+});
+
+// Password reset request page
+router.get("/passwordreset", (req, res) => {
+  res.render("password-reset-request", {
+    breadcrumbs: "Reset Password",
+    layout: false,
+  });
+});
+
+// Password reset page (after clicking the link in email)
+router.get("/:id/:token", async (req, res) => {
+  // This route will be used for both verifying the token and displaying the reset form
+  // The actual verification happens in the backend user-routes.mjs
+  res.render("password-reset", {
+    breadcrumbs: "Set New Password",
+    userId: req.params.id,
+    token: req.params.token,
+    layout: false,
+  });
+});
+
+// Email verification success page
+router.get("/:id/verify/:token/success", (req, res) => {
+  res.render("verify-success", {
+    breadcrumbs: "Email Verified",
+    layout: false,
+  });
+});
+
 export default router;

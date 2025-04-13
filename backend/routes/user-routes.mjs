@@ -122,7 +122,8 @@ const emailLink = async (req, res) => {
     await User.updateOne({ _id: user._id }, { verified: true });
     await token.deleteOne();
 
-    res.status(200).send({ message: "Email Verified successfully" });
+    // Redirect to the success page instead of sending a JSON response
+    res.redirect(`/${user._id}/verify/${req.params.token}/success`);
   } catch (error) {
     res.status(500).send({ message: "Internal Server Error" });
   }
