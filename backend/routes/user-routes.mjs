@@ -264,7 +264,7 @@ router.post("/api/register", register);
 router.get("/:id/verify/:token", emailLink); //register verification
 
 //password reset routes
-router.post("/passwordreset", passwordLink);
+router.post("/api/passwordreset", passwordLink);
 
 router.get("/:id/:token", verifyUrl); //password reset verification
 

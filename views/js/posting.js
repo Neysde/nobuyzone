@@ -235,7 +235,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Function to process image without cropping
+  //Function to process image without cropping
   function processImageDirectly(file) {
     const reader = new FileReader();
     reader.onload = function (e) {

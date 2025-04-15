@@ -724,25 +724,32 @@ body.modal-open {
   border-radius: 0;
 }
 
+/* Base style for all cropper points */
 .cropper-point {
   background-color: var(--primary);
   opacity: 0.75;
+  width: 10px !important; /* Force consistent width */
+  height: 10px !important; /* Force consistent height */
+  border-radius: 50%;
+  border: 1px solid white;
 }
 
+/* Ensure consistent size for all corner points */
+.cropper-point.point-ne,
+.cropper-point.point-nw, 
+.cropper-point.point-se,
+.cropper-point.point-sw {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+/* Side points can be different size if desired */
 .cropper-point.point-e,
 .cropper-point.point-n, 
 .cropper-point.point-w,
 .cropper-point.point-s {
-  width: 8px;
-  height: 8px;
-}
-
-.cropper-point.point-ne,
-.cropper-point.point-nw,
-.cropper-point.point-se,
-.cropper-point.point-sw {
-  width: 10px;
-  height: 10px;
+  width: 8px !important;
+  height: 8px !important;
 }
 
 /* Hide the crop box until cropper is initialized */

@@ -53,6 +53,12 @@ app.use(passport.initialize());
 app.set("views", path.join(__dirname, "../views"));
 app.use(express.static(path.join(__dirname, "../views")));
 
+// Set up static file directories
+app.use(expressLayouts);
+app.use("/css", express.static(path.join(__dirname, "../views/css")));
+app.use("/js", express.static(path.join(__dirname, "../views/js")));
+app.use("/backend/json", express.static(path.join(__dirname, "json")));
+
 const connectionString =
   "mongodb+srv://root:1Ow6PKsLv1It8K2S@cluster0.ok6h4.mongodb.net/bartertest?retryWrites=true&w=majority&appName=Cluster0";
 mongoose
@@ -61,10 +67,6 @@ mongoose
   .catch((err) => console.log(`Error: ${err}`));
 
 app.set("view engine", "ejs");
-
-app.use(expressLayouts);
-app.use("/css", express.static(path.join(__dirname, "../views/css")));
-app.use("/js", express.static(path.join(__dirname, "../views/js")));
 
 // Homepage redirect to find-posts
 app.get("/", (req, res) => {

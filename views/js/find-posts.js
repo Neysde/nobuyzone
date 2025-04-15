@@ -22,6 +22,10 @@ document.addEventListener("DOMContentLoaded", function () {
   const globalRadius = document.getElementById("global-radius");
   const globalSearchButton = document.getElementById("global-search-button");
 
+  // Data variables for location 
+  let cities = [];
+  let districts = [];
+
   // State variables
   let currentFilters = {
     category: "all",
@@ -32,6 +36,67 @@ document.addEventListener("DOMContentLoaded", function () {
     sort: "newest",
     page: 1,
   };
+
+  // Load city and district data
+  async function loadLocationData() {
+    try {
+      console.log("Fetching location data...");
+      const [ilResponse, ilceResponse] = await Promise.all([
+        fetch("/backend/json/il.json"),
+        fetch("/backend/json/ilce.json")
+      ]);
+
+      if (!ilResponse.ok || !ilceResponse.ok) {
+        console.error("Failed to load location data. Status codes:", ilResponse.status, ilceResponse.status);
+        throw new Error("Failed to load location data");
+      }
+
+      const ilJson = await ilResponse.json();
+      const ilceJson = await ilceResponse.json();
+
+      console.log("Location data loaded successfully", 
+                 "Cities:", ilJson.find(item => item.name === "il").data.length,
+                 "Districts:", ilceJson.find(item => item.name === "ilce").data.length);
+
+      // Extract data arrays from JSON
+      cities = ilJson.find(item => item.name === "il").data;
+      districts = ilceJson.find(item => item.name === "ilce").data;
+
+      // Populate city dropdowns
+      populateCityDropdowns();
+    } catch (error) {
+      console.error("Error loading location data:", error);
+    }
+  }
+
+  /**
+   * Populate city dropdowns with data from the JSON file
+   */
+  function populateCityDropdowns() {
+    // Sort cities alphabetically by name
+    cities.sort((a, b) => a.name.localeCompare(b.name));
+
+    // Clear and populate global city select
+    globalCity.innerHTML = '<option value="">Select City</option>';
+    
+    // Clear and populate sidebar city filter
+    cityFilter.innerHTML = '<option value="">All Cities</option>';
+    
+    // Add cities to both dropdowns
+    cities.forEach(city => {
+      // Add to global search
+      const globalOption = document.createElement("option");
+      globalOption.value = city.id;
+      globalOption.textContent = city.name;
+      globalCity.appendChild(globalOption);
+      
+      // Add to sidebar filter
+      const sidebarOption = document.createElement("option");
+      sidebarOption.value = city.id;
+      sidebarOption.textContent = city.name;
+      cityFilter.appendChild(sidebarOption);
+    });
+  }
 
   //event listeners
   function initEventListeners() {
@@ -59,18 +124,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
     //Location filters
     cityFilter.addEventListener("change", function () {
-      const cityValue = this.value || ""; // Ensure empty string if no value
+      const cityId = this.value || ""; // Ensure empty string if no value
+      
+      // Find the city name from the city id
+      const selectedCity = cities.find(city => city.id === cityId);
+      const cityName = selectedCity ? selectedCity.name.toLowerCase() : "";
+      
       updateFilters({
-        city: cityValue,
+        city: cityId,
         //Reset dependent filters when parent changes
         district: "",
         neighborhood: "",
         page: 1,
       });
 
-      //In a real application, you would now fetch districts for the selected city
-      //and update the district select options
-      updateDistrictOptions(cityValue);
+      //Update district select options based on selected city
+      updateDistrictOptions(cityId);
     });
 
     districtFilter.addEventListener("change", function () {
@@ -317,6 +386,7 @@ document.addEventListener("DOMContentLoaded", function () {
     sortSelect.value = currentFilters.sort;
 
     // Update pagination
+    const pageNumbers = document.querySelectorAll('.page-number');
     pageNumbers.forEach((button) => {
       const page = parseInt(button.textContent);
       if (page === currentFilters.page) {
@@ -535,123 +605,128 @@ document.addEventListener("DOMContentLoaded", function () {
 
   /**
    * Update district options based on selected city
-   * @param {string} city - Selected city value
+   * @param {string} cityId - Selected city ID
    */
-
-  //CHECK FOR THIS FUNC LATER MAYBE IT IS NOT NECESSARY
-  function updateDistrictOptions(city) {
+  function updateDistrictOptions(cityId) {
+    // Clear district dropdown
     districtFilter.innerHTML = '<option value="">All Districts</option>';
 
-    if (city === "istanbul") {
-      const districts = [
-        "Şişli",
-        "Kadıköy",
-        "Beşiktaş",
-        "Bayrampaşa",
-        "Beylikdüzü",
-      ];
-      districts.forEach((district) => {
-        const option = document.createElement("option");
-        option.value = district.toLowerCase();
-        option.textContent = district;
-        districtFilter.appendChild(option);
-      });
-    } else if (city === "ankara") {
-      const districts = ["Çankaya", "Keçiören", "Mamak"];
-      districts.forEach((district) => {
-        const option = document.createElement("option");
-        option.value = district.toLowerCase();
-        option.textContent = district;
-        districtFilter.appendChild(option);
-      });
-    }
+    // If no city selected, just return
+    if (!cityId) return;
+
+    // Filter districts by selected city
+    const filteredDistricts = districts.filter(district => district.il_id === cityId);
+    
+    // Sort districts alphabetically
+    filteredDistricts.sort((a, b) => a.name.localeCompare(b.name));
+
+    // Add filtered districts to the dropdown
+    filteredDistricts.forEach(district => {
+      const option = document.createElement("option");
+      option.value = district.id;
+      option.textContent = district.name;
+      districtFilter.appendChild(option);
+    });
 
     // Reset neighborhood filter since district changed
-    neighborhoodFilter.innerHTML =
-      '<option value="">All Neighborhoods</option>';
+    neighborhoodFilter.innerHTML = '<option value="">All Neighborhoods</option>';
   }
+
   /**
    * Update neighborhood options based on selected district
-   * @param {string} district - Selected district value
+   * @param {string} districtId - Selected district ID
    */
-  function updateNeighborhoodOptions(district) {
+  function updateNeighborhoodOptions(districtId) {
+    // Clear the neighborhood dropdown
+    neighborhoodFilter.innerHTML = '<option value="">All Neighborhoods</option>';
+    
+    // If no district selected, just return
+    if (!districtId) return;
+    
+    // Find the district name to match with the hardcoded neighborhoods
+    const selectedDistrict = districts.find(d => d.id === districtId);
+    if (!selectedDistrict) return;
+    
+    const districtName = selectedDistrict.name.toLowerCase();
+    
     // In a real application, you would fetch neighborhoods for the selected district
-    // For demo, we'll just simulate different options
-
-    neighborhoodFilter.innerHTML =
-      '<option value="">All Neighborhoods</option>';
-
-    if (district === "sisli") {
-      const neighborhoods = ["Mecidiyeköy", "Esentepe", "Fulya"];
-      neighborhoods.forEach((neighborhood) => {
-        const option = document.createElement("option");
-        option.value = neighborhood.toLowerCase();
-        option.textContent = neighborhood;
-        neighborhoodFilter.appendChild(option);
-      });
-    } else if (district === "kadikoy") {
-      const neighborhoods = ["Moda", "Caferağa", "Fenerbahçe"];
-      neighborhoods.forEach((neighborhood) => {
-        const option = document.createElement("option");
-        option.value = neighborhood.toLowerCase();
-        option.textContent = neighborhood;
-        neighborhoodFilter.appendChild(option);
-      });
+    // For demo, we'll just simulate different options based on district name
+    let neighborhoods = [];
+    
+    if (districtName.includes("şişli") || districtName.includes("sisli")) {
+      neighborhoods = ["Mecidiyeköy", "Esentepe", "Fulya"];
+    } else if (districtName.includes("kadıköy") || districtName.includes("kadikoy")) {
+      neighborhoods = ["Moda", "Caferağa", "Fenerbahçe"];
     }
+    
+    // Add neighborhoods to dropdown
+    neighborhoods.forEach((neighborhood) => {
+      const option = document.createElement("option");
+      option.value = neighborhood.toLowerCase();
+      option.textContent = neighborhood;
+      neighborhoodFilter.appendChild(option);
+    });
   }
 
   /**
    * Populate district options for the global search based on selected city
-   * @param {string} city - Selected city value
+   * @param {string} cityId - Selected city ID
    */
-  function populateDistrictsGlobal(city) {
+  function populateDistrictsGlobal(cityId) {
     // Clear current options except the first one
-    while (globalDistrict.options.length > 1) {
-      globalDistrict.remove(1);
-    }
+    globalDistrict.innerHTML = '<option value="">Select District</option>';
 
-    // Add districts based on selected city
-    let districts = [];
+    // If no city selected, just return
+    if (!cityId) return;
 
-    if (city === "istanbul") {
-      districts = ["Şişli", "Kadıköy", "Beşiktaş", "Bayrampaşa", "Beylikdüzü"];
-    } else if (city === "ankara") {
-      districts = ["Çankaya", "Keçiören", "Mamak"];
-    } else if (city === "izmir") {
-      districts = ["Karşıyaka", "Konak", "Bornova"];
-    }
+    // Filter districts by selected city
+    const filteredDistricts = districts.filter(district => district.il_id === cityId);
+    
+    // Sort districts alphabetically
+    filteredDistricts.sort((a, b) => a.name.localeCompare(b.name));
 
-    // Add options to select
-    districts.forEach((district) => {
+    // Add filtered districts to the dropdown
+    filteredDistricts.forEach(district => {
       const option = document.createElement("option");
-      option.value = district.toLowerCase();
-      option.textContent = district;
+      option.value = district.id;
+      option.textContent = district.name;
       globalDistrict.appendChild(option);
     });
   }
 
   /**
    * Populate neighborhood options for the global search based on selected district
-   * @param {string} district - Selected district value
+   * @param {string} districtId - Selected district ID
    */
-  function populateNeighborhoodsGlobal(district) {
-    //Clear current options except the first one
-
-    //This removes the second option every time the loop runs until only 'Select...' is left in the dropdown.
-    while (globalNeighborhood.options.length > 1) {
-      globalNeighborhood.remove(1);
-    }
-
+  function populateNeighborhoodsGlobal(districtId) {
+    //Clear current options
+    globalNeighborhood.innerHTML = '<option value="">Select Neighborhood</option>';
+    
+    // If no district selected, just return
+    if (!districtId) return;
+    
+    // Currently, the JSON data doesn't include neighborhoods
+    // This would be the place to fetch neighborhood data if available
+    // For now, we'll use the sample data from the original implementation
+    
+    // Find the district name to match with the hardcoded neighborhoods
+    const selectedDistrict = districts.find(d => d.id === districtId);
+    if (!selectedDistrict) return;
+    
+    const districtName = selectedDistrict.name.toLowerCase();
+    
     //Add neighborhoods based on selected district
     let neighborhoods = [];
 
-    if (district === "şişli" || district === "sisli") {
+    // The code below is just for demonstration purposes
+    // In a production app, you would fetch neighborhoods from an API or database
+    if (districtName.includes("şişli") || districtName.includes("sisli")) {
       neighborhoods = ["Mecidiyeköy", "Esentepe", "Fulya"];
-    } else if (district === "kadıköy" || district === "kadikoy") {
+    } else if (districtName.includes("kadıköy") || districtName.includes("kadikoy")) {
       neighborhoods = ["Moda", "Caferağa", "Fenerbahçe"];
-    } else if (district === "beşiktaş" || district === "besiktas") {
+    } else if (districtName.includes("beşiktaş") || districtName.includes("besiktas")) {
       neighborhoods = ["Levent", "Ortaköy", "Etiler"];
-    } else if (district === "çankaya" || district === "cankaya") {
+    } else if (districtName.includes("çankaya") || districtName.includes("cankaya")) {
       neighborhoods = ["Kızılay", "Çukurambar", "Bahçelievler"];
     }
 
@@ -665,7 +740,11 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // Initialize the page
-  function init() {
+  async function init() {
+    // Load location data first
+    await loadLocationData();
+    
+    // Then initialize event listeners
     initEventListeners();
 
     // Hide district, neighborhood, and radius sections on initial load
