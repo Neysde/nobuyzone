@@ -21,24 +21,13 @@ document.addEventListener("DOMContentLoaded", function () {
   // Image Cropper Elements
   const cropperModal = document.getElementById("image-cropper-modal");
   const imageToCrop = document.getElementById("image-to-crop");
-  const cropBox = document.getElementById("crop-box");
   const closeCropperBtn = document.getElementById("close-cropper");
   const applyCropBtn = document.getElementById("apply-crop");
   const cancelCropBtn = document.getElementById("cancel-crop");
 
-  // Cropper state variables
+  // Cropper.js instance
+  let cropper = null;
   let currentImageFile = null;
-  let cropperActive = false;
-  let cropBoxWidth = 200; // Default width
-  let cropBoxHeight = 200; // Default height
-  let cropBoxPosition = { x: 0, y: 0 };
-  let originalImageDimensions = { width: 0, height: 0 };
-  let isDraggingCropBox = false;
-  let isResizing = false;
-  let activeHandle = null;
-  let dragStartPosition = { x: 0, y: 0 };
-  let cropBoxStartPosition = { x: 0, y: 0 };
-  let cropBoxStartDimensions = { width: 0, height: 0 };
 
   // Add file input programmatically
   const imageSection = document.querySelector(".image-section");
@@ -273,297 +262,57 @@ document.addEventListener("DOMContentLoaded", function () {
     // Read the file into the cropper
     const reader = new FileReader();
     reader.onload = function (e) {
-      // Reset any previous crop state
-      isDraggingCropBox = false;
-      isResizing = false;
-
-      // Set the image source and wait for it to load
+      // Set the image source
       imageToCrop.src = e.target.result;
 
-      // Show the modal first so dimensions are correct
+      // Show the modal
       cropperModal.classList.add("active");
       document.body.classList.add("modal-open");
-      cropperActive = true;
 
-      imageToCrop.onload = function () {
-        // Get original image dimensions
-        originalImageDimensions.width = imageToCrop.naturalWidth;
-        originalImageDimensions.height = imageToCrop.naturalHeight;
+      // Wait for the image to load
+      imageToCrop.onload = function() {
+        // Destroy existing cropper if it exists
+        if (cropper) {
+          cropper.destroy();
+        }
 
-        // Wait a bit for the DOM to update
-        setTimeout(() => {
-          // Get displayed image dimensions
-          const imageRect = imageToCrop.getBoundingClientRect();
-          console.log("Image dimensions:", imageRect.width, imageRect.height);
-
-          // Set crop box to match the image dimensions
-          cropBoxWidth = imageRect.width;
-          cropBoxHeight = imageRect.height;
-
-          // Position crop box in the center of the image
-          cropBoxPosition = {
-            x: imageRect.width / 2,
-            y: imageRect.height / 2,
-          };
-
-          // Update crop box position and size
-          updateCropBoxStyle();
-          console.log("Crop box positioned at:", cropBoxPosition);
-
-          // Initialize crop box event listeners
-          initCropBoxEvents();
-        }, 100);
+        // Initialize the Cropper instance
+        cropper = new Cropper(imageToCrop, {
+          viewMode: 1, // Restrict the crop box to not exceed the size of the canvas
+          dragMode: 'move', // Move the canvas by default instead of crop
+          aspectRatio: NaN, // Free ratio
+          autoCropArea: 1, // The size of the crop box relative to the canvas size (0.8 = 80%)
+          restore: false, // Don't restore after resize
+          guides: true, // Show the dashed lines for guiding
+          center: true, // Show the center indicator for guiding
+          highlight: true, // Show the white modal to highlight the crop box
+          cropBoxMovable: true, // Enable to move the crop box
+          cropBoxResizable: true, // Enable to resize the crop box
+          toggleDragModeOnDblclick: true, // Toggle drag mode between "crop" and "move" when double click on the cropper
+          responsive: true, // Re-render the cropper when resizing the window
+          background: true, // Show the grid background of the container
+        });
       };
     };
     reader.readAsDataURL(file);
   }
 
-  // Update crop box position and size - using direct top/left positioning
-  function updateCropBoxStyle() {
-    const left = cropBoxPosition.x - cropBoxWidth / 2;
-    const top = cropBoxPosition.y - cropBoxHeight / 2;
-
-    cropBox.style.width = `${cropBoxWidth}px`;
-    cropBox.style.height = `${cropBoxHeight}px`;
-    cropBox.style.left = `${left}px`;
-    cropBox.style.top = `${top}px`;
-  }
-
-  // Initialize crop box drag and resize events
-  function initCropBoxEvents() {
-    // Main crop box drag - use direct event listeners
-    cropBox.onmousedown = startDraggingCropBox;
-
-    // Resize handles
-    const resizeHandles = cropBox.querySelectorAll(".resize-handle");
-    resizeHandles.forEach((handle) => {
-      handle.onmousedown = function (e) {
-        startResizing(e, handle.className.split(" ")[1]);
-      };
-    });
-
-    // Global event listeners
-    document.onmousemove = handleMouseMove;
-    document.onmouseup = handleMouseUp;
-
-    // Touch events for mobile
-    cropBox.ontouchstart = handleTouchStart;
-    document.ontouchmove = handleTouchMove;
-    document.ontouchend = handleTouchEnd;
-  }
-
-  // Crop box dragging
-  function startDraggingCropBox(e) {
-    // Ignore if we clicked on a resize handle
-    if (e.target.classList.contains("resize-handle")) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-    isDraggingCropBox = true;
-    isResizing = false;
-
-    // Store the starting position
-    dragStartPosition = {
-      x: e.clientX,
-      y: e.clientY,
-    };
-
-    cropBoxStartPosition = {
-      x: cropBoxPosition.x,
-      y: cropBoxPosition.y,
-    };
-
-    console.log("Started dragging crop box");
-  }
-
-  function handleMouseMove(e) {
-    if (isDraggingCropBox) {
-      dragCropBox(e);
-    } else if (isResizing) {
-      resizeCropBox(e);
-    }
-  }
-
-  function handleMouseUp() {
-    isDraggingCropBox = false;
-    isResizing = false;
-    console.log("Mouse up - stopped dragging/resizing");
-  }
-
-  function dragCropBox(e) {
-    e.preventDefault();
-
-    const deltaX = e.clientX - dragStartPosition.x;
-    const deltaY = e.clientY - dragStartPosition.y;
-
-    console.log("Dragging crop box", deltaX, deltaY);
-
-    // Get current image boundaries
-    const imageRect = imageToCrop.getBoundingClientRect();
-
-    // Calculate new position
-    let newX = cropBoxStartPosition.x + deltaX;
-    let newY = cropBoxStartPosition.y + deltaY;
-
-    // Calculate boundaries to keep crop box within image
-    const halfWidth = cropBoxWidth / 2;
-    const halfHeight = cropBoxHeight / 2;
-
-    // Constrain to image boundaries
-    newX = Math.max(halfWidth, Math.min(newX, imageRect.width - halfWidth));
-    newY = Math.max(halfHeight, Math.min(newY, imageRect.height - halfHeight));
-
-    cropBoxPosition = { x: newX, y: newY };
-    updateCropBoxStyle();
-  }
-
-  // Resize functionality
-  function startResizing(e, handleClass) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    isResizing = true;
-    isDraggingCropBox = false;
-    activeHandle = handleClass;
-
-    dragStartPosition = {
-      x: e.clientX,
-      y: e.clientY,
-    };
-
-    cropBoxStartPosition = {
-      x: cropBoxPosition.x,
-      y: cropBoxPosition.y,
-    };
-
-    cropBoxStartDimensions = {
-      width: cropBoxWidth,
-      height: cropBoxHeight,
-    };
-
-    console.log("Started resizing with handle:", activeHandle);
-  }
-
-  function resizeCropBox(e) {
-    e.preventDefault();
-
-    const deltaX = e.clientX - dragStartPosition.x;
-    const deltaY = e.clientY - dragStartPosition.y;
-
-    console.log("Resizing crop box", deltaX, deltaY);
-
-    // Get current image boundaries
-    const imageRect = imageToCrop.getBoundingClientRect();
-
-    // Calculate new dimensions and position based on which handle is being dragged
-    let newWidth = cropBoxStartDimensions.width;
-    let newHeight = cropBoxStartDimensions.height;
-    let newX = cropBoxStartPosition.x;
-    let newY = cropBoxStartPosition.y;
-
-    // Handle different resize corners
-    if (activeHandle === "top-left") {
-      newWidth = cropBoxStartDimensions.width - deltaX;
-      newHeight = cropBoxStartDimensions.height - deltaY;
-      newX = cropBoxStartPosition.x + deltaX / 2;
-      newY = cropBoxStartPosition.y + deltaY / 2;
-    } else if (activeHandle === "top-right") {
-      newWidth = cropBoxStartDimensions.width + deltaX;
-      newHeight = cropBoxStartDimensions.height - deltaY;
-      newX = cropBoxStartPosition.x + deltaX / 2;
-      newY = cropBoxStartPosition.y + deltaY / 2;
-    } else if (activeHandle === "bottom-left") {
-      newWidth = cropBoxStartDimensions.width - deltaX;
-      newHeight = cropBoxStartDimensions.height + deltaY;
-      newX = cropBoxStartPosition.x + deltaX / 2;
-      newY = cropBoxStartPosition.y + deltaY / 2;
-    } else if (activeHandle === "bottom-right") {
-      newWidth = cropBoxStartDimensions.width + deltaX;
-      newHeight = cropBoxStartDimensions.height + deltaY;
-      newX = cropBoxStartPosition.x + deltaX / 2;
-      newY = cropBoxStartPosition.y + deltaY / 2;
-    }
-
-    // Ensure minimum dimensions
-    newWidth = Math.max(50, newWidth);
-    newHeight = Math.max(50, newHeight);
-
-    // Check if the crop box would extend beyond image boundaries
-    const halfWidth = newWidth / 2;
-    const halfHeight = newHeight / 2;
-
-    // Constrain to image boundaries
-    if (newX - halfWidth < 0) {
-      newWidth = newX * 2;
-      newX = halfWidth;
-    }
-
-    if (newX + halfWidth > imageRect.width) {
-      newWidth = (imageRect.width - newX) * 2;
-      newX = imageRect.width - halfWidth;
-    }
-
-    if (newY - halfHeight < 0) {
-      newHeight = newY * 2;
-      newY = halfHeight;
-    }
-
-    if (newY + halfHeight > imageRect.height) {
-      newHeight = (imageRect.height - newY) * 2;
-      newY = imageRect.height - halfHeight;
-    }
-
-    // Update crop box
-    cropBoxWidth = newWidth;
-    cropBoxHeight = newHeight;
-    cropBoxPosition = { x: newX, y: newY };
-    updateCropBoxStyle();
-  }
-
   // Apply crop and add to preview
   function applyImageCrop() {
-    // Create a canvas to crop the image
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+    if (!cropper) {
+      closeCropper();
+      return;
+    }
 
-    // Calculate the scale between original image and displayed image
-    const imageRect = imageToCrop.getBoundingClientRect();
-    const scaleX = originalImageDimensions.width / imageRect.width;
-    const scaleY = originalImageDimensions.height / imageRect.height;
-
-    // Calculate source coordinates in the original image
-    const halfWidth = cropBoxWidth / 2;
-    const halfHeight = cropBoxHeight / 2;
-
-    // Calculate crop box coordinates relative to the image
-    const cropLeft = cropBoxPosition.x - halfWidth;
-    const cropTop = cropBoxPosition.y - halfHeight;
-
-    // Calculate source coordinates in the original image
-    const sourceX = Math.max(0, cropLeft) * scaleX;
-    const sourceY = Math.max(0, cropTop) * scaleY;
-    const sourceWidth = cropBoxWidth * scaleX;
-    const sourceHeight = cropBoxHeight * scaleY;
-
-    // Set canvas size to crop box size
-    canvas.width = sourceWidth;
-    canvas.height = sourceHeight;
-
-    // Draw the cropped image on the canvas
-    ctx.drawImage(
-      imageToCrop,
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
-      0,
-      0,
-      canvas.width,
-      canvas.height
-    );
+    // Get a canvas with the cropped image
+    const canvas = cropper.getCroppedCanvas({
+      maxWidth: 4096, // Maximum width of output
+      maxHeight: 4096, // Maximum height of output
+      fillColor: '#fff', // Fill color for transparent areas
+    });
 
     // Generate data URL from canvas
-    const croppedImageDataUrl = canvas.toDataURL("image/jpeg", 0.95);
+    const croppedImageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
 
     // Add to previews
     const imageId = Date.now() + Math.random().toString(36).slice(2, 11);
@@ -582,78 +331,13 @@ document.addEventListener("DOMContentLoaded", function () {
   function closeCropper() {
     cropperModal.classList.remove("active");
     document.body.classList.remove("modal-open");
-    cropperActive = false;
+    
+    if (cropper) {
+      cropper.destroy();
+      cropper = null;
+    }
+    
     currentImageFile = null;
-
-    // Clear the crop box position
-    cropBoxPosition = { x: 0, y: 0 };
-    updateCropBoxStyle();
-  }
-
-  // Touch event handlers
-  function handleTouchStart(e) {
-    if (e.touches.length !== 1) return;
-    e.preventDefault();
-
-    const touch = e.touches[0];
-
-    // Check if the touch is on a resize handle
-    if (e.target.classList.contains("resize-handle")) {
-      // Get the handle class (top-left, top-right, etc.)
-      let handleClass = null;
-      for (const className of e.target.classList) {
-        if (className.includes("-")) {
-          handleClass = className;
-          break;
-        }
-      }
-
-      // Create a simulated mouse event
-      const simulatedEvent = {
-        preventDefault: () => {},
-        stopPropagation: () => {},
-        clientX: touch.clientX,
-        clientY: touch.clientY,
-        target: e.target,
-      };
-
-      startResizing(simulatedEvent, handleClass);
-    } else {
-      // Handle crop box dragging
-      const simulatedEvent = {
-        preventDefault: () => {},
-        stopPropagation: () => {},
-        clientX: touch.clientX,
-        clientY: touch.clientY,
-        target: e.target,
-      };
-
-      startDraggingCropBox(simulatedEvent);
-    }
-  }
-
-  function handleTouchMove(e) {
-    if (e.touches.length !== 1) return;
-    e.preventDefault();
-
-    const touch = e.touches[0];
-    const simulatedEvent = {
-      preventDefault: () => {},
-      clientX: touch.clientX,
-      clientY: touch.clientY,
-    };
-
-    if (isResizing) {
-      resizeCropBox(simulatedEvent);
-    } else if (isDraggingCropBox) {
-      dragCropBox(simulatedEvent);
-    }
-  }
-
-  function handleTouchEnd(e) {
-    isDraggingCropBox = false;
-    isResizing = false;
-    console.log("Touch end - stopped dragging/resizing");
   }
 
   // Set up cropper button events
@@ -1038,7 +722,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // Handle Save as Draft button
-  const saveAsDraftBtn = form.querySelector("button.button-outline");
+  const saveAsDraftBtn = form.querySelector(".action-buttons button.button-outline");
   saveAsDraftBtn.addEventListener("click", async (e) => {
     e.preventDefault();
 
@@ -1285,10 +969,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       });
     });
-
-  function stopDraggingCropBox() {
-    isDraggingCropBox = false;
-  }
 
   //Prevent Enter key from submitting the form in input fields
   //This prevents the page from reloading and losing uploaded images

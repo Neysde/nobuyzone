@@ -711,66 +711,46 @@ body.modal-open {
   user-select: none; /* Prevent text selection during drag */
 }
 
-#image-to-crop-container {
-  position: relative;
-  max-width: 100%;
-  max-height: 60vh;
-  overflow: hidden;
-  margin: 0 auto;
-  user-select: none; /* Prevent text selection during drag */
-}
-
-#crop-box {
-  position: absolute;
-  border: 3px dashed #f0a04b;
-  box-sizing: border-box;
-  cursor: move;
-  background-color: rgba(240, 160, 75, 0.1);
-  box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.3);
-  touch-action: none; /* Prevent browser handling of touch events */
-  z-index: 1105; /* Make sure it's above the image but below handles */
-}
-
+/* Cropper.js specific styles */
 #image-to-crop {
   display: block;
   max-width: 100%;
   max-height: 60vh;
-  object-fit: contain;
 }
 
-.resize-handle {
+/* Ensure the cropper has proper space */
+.cropper-view-box,
+.cropper-face {
+  border-radius: 0;
+}
+
+.cropper-point {
+  background-color: var(--primary);
+  opacity: 0.75;
+}
+
+.cropper-point.point-e,
+.cropper-point.point-n, 
+.cropper-point.point-w,
+.cropper-point.point-s {
+  width: 8px;
+  height: 8px;
+}
+
+.cropper-point.point-ne,
+.cropper-point.point-nw,
+.cropper-point.point-se,
+.cropper-point.point-sw {
+  width: 10px;
+  height: 10px;
+}
+
+/* Hide the crop box until cropper is initialized */
+.cropper-hide {
   position: absolute;
-  width: 14px;
-  height: 14px;
-  background-color: #f0a04b;
-  border-radius: 50%;
-  border: 2px solid var(--neutral-100);
-  z-index: 1110; /* Make sure handles appear above everything */
-  touch-action: none; /* Prevent browser handling of touch events */
-}
-
-.top-left {
-  top: -8px;
-  left: -8px;
-  cursor: nwse-resize;
-}
-
-.top-right {
-  top: -7px;
-  right: -7px;
-  cursor: nesw-resize;
-}
-
-.bottom-left {
-  bottom: -7px;
-  left: -7px;
-  cursor: nesw-resize;
-}
-
-.bottom-right {
-  bottom: -7px;
-  right: -7px;
-  cursor: nwse-resize;
+  display: block;
+  width: 0;
+  height: 0;
 }
 
 .cropper-instructions {
@@ -796,10 +776,5 @@ body.modal-open {
 
   .modal-body {
     padding: var(--space-md);
-  }
-
-  #crop-box {
-    width: 150px;
-    height: 150px;
   }
 }
