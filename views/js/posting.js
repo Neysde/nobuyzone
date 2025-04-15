@@ -53,6 +53,9 @@ document.addEventListener("DOMContentLoaded", function () {
   //State management for map transitions
   let isTransitioning = false;
   let pinnedLocation = null;
+  
+  //Flag to track if user is actively editing an address field
+  let isEditingAddressField = false;
 
   async function waitForRateLimit() {
     const now = Date.now();
@@ -100,10 +103,14 @@ document.addEventListener("DOMContentLoaded", function () {
       if (isTransitioning) return; // Prevent updates during transition
       const pos = e.target.getLatLng();
       pinnedLocation = pos;
+      
+      //Always save the position but only update fields if not editing
       try {
-        const data = await reverseGeocode(pos.lat, pos.lng);
-        if (data && data.address) {
-          updateAddressFields(data.address);
+        if (!isEditingAddressField) {
+          const data = await reverseGeocode(pos.lat, pos.lng);
+          if (data && data.address) {
+            updateAddressFields(data.address);
+          }
         }
       } catch (error) {
         console.error("Error updating address from marker drag:", error);
@@ -114,11 +121,17 @@ document.addEventListener("DOMContentLoaded", function () {
     map.on("click", async function (e) {
       if (isTransitioning) return; //Prevent updates during transition
       pinnedLocation = e.latlng;
+      
+      //Always update marker position
+      marker.setLatLng(e.latlng);
+      
+      //Only update address fields if not editing
       try {
-        const data = await reverseGeocode(e.latlng.lat, e.latlng.lng);
-        if (data && data.address) {
-          updateAddressFields(data.address);
-          marker.setLatLng(e.latlng);
+        if (!isEditingAddressField) {
+          const data = await reverseGeocode(e.latlng.lat, e.latlng.lng);
+          if (data && data.address) {
+            updateAddressFields(data.address);
+          }
         }
       } catch (error) {
         console.error("Error updating address from map click:", error);
@@ -731,9 +744,12 @@ document.addEventListener("DOMContentLoaded", function () {
     map.setView(pinnedLocation, 16, { animate: false });
 
     try {
-      const data = await reverseGeocode(lat, lon);
-      if (data && data.address) {
-        updateAddressFields(data.address);
+      //Only fetch and update address data if user is not actively editing fields
+      if (!isEditingAddressField) {
+        const data = await reverseGeocode(lat, lon);
+        if (data && data.address) {
+          updateAddressFields(data.address);
+        }
       }
     } catch (error) {
       console.error("Error updating address fields:", error);
@@ -745,6 +761,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Update address fields from geocoding data
   function updateAddressFields(address) {
+    // Skip updating if user is actively editing an address field
+    if (isEditingAddressField) return;
+    
     city.value = address.province || "";
     district.value = address.town || "";
     neighborhood.value = address.suburb || "";
@@ -830,7 +849,25 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Handle address field updates
   let debounceTimer;
-  [city, district, neighborhood, street].forEach((field) => {
+  const addressFields = [city, district, neighborhood, street];
+  
+  addressFields.forEach((field) => {
+    // Set flag when user focuses on input field
+    field.addEventListener("focus", () => {
+      isEditingAddressField = true;
+    });
+    
+    // Clear the flag when user leaves the field
+    field.addEventListener("blur", () => {
+      // Small delay to ensure field is actually blurred before allowing updates
+      setTimeout(() => {
+        // Only clear flag if no other address field is focused
+        if (!addressFields.some(f => document.activeElement === f)) {
+          isEditingAddressField = false;
+        }
+      }, 100);
+    });
+    
     field.addEventListener("input", () => {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(async () => {
@@ -1252,4 +1289,20 @@ document.addEventListener("DOMContentLoaded", function () {
   function stopDraggingCropBox() {
     isDraggingCropBox = false;
   }
+
+  //Prevent Enter key from submitting the form in input fields
+  //This prevents the page from reloading and losing uploaded images
+  document.querySelectorAll('form input[type="text"]').forEach(input => {
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        //Optionally focus the next input field
+        const formElements = Array.from(form.elements);
+        const currentIndex = formElements.indexOf(this);
+        if (currentIndex > -1 && currentIndex < formElements.length - 1) {
+          formElements[currentIndex + 1].focus();
+        }
+      }
+    });
+  });
 });

@@ -1,5 +1,5 @@
 /**
- * Authentication Pages JavaScript
+ * Authentication Pages js
  * Handles form submissions, validation, and notifications for login, register, and password reset pages
  */
 
@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   );
   const passwordResetForm = document.getElementById("password-reset-form");
 
-  // Initialize forms with validation and submit handlers
+  //Initialize forms with validation and submit handlers
   if (loginForm) initLoginForm(loginForm);
   if (registerForm) initRegisterForm(registerForm);
   if (passwordResetRequestForm)
@@ -22,20 +22,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
 /**
  * Initialize login form
- * @param {HTMLFormElement} form - The login form element
+ * @param {HTMLFormElement} form - The login form
  */
 function initLoginForm(form) {
   form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+    e.preventDefault(); //prevents refreshing the page.
 
-    // Get form data
+    //Get form data
     const email = form.querySelector("#email").value.trim();
     const password = form.querySelector("#password").value;
 
-    // Validate form
+    //Validate form
     if (!validateEmail(email)) {
       showError("Please enter a valid email address");
-      return;
+      return; //it returns nothing but it stops the login process if the email is not valid.
     }
 
     if (!password) {
@@ -43,13 +43,13 @@ function initLoginForm(form) {
       return;
     }
 
-    // Show loading state
+    //Show loading state
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalBtnText = submitBtn.innerHTML;
     setLoading(submitBtn, true);
 
     try {
-      // Send login request
+      //Send login request
       const response = await fetch("/api/login", {
         method: "POST",
         headers: {
@@ -61,20 +61,20 @@ function initLoginForm(form) {
       const data = await response.json();
 
       if (response.ok) {
-        // On success, show notification and redirect
+        //On success, show notification and redirect
         showNotification("Login successful! Redirecting...", "success");
         setTimeout(() => {
-          window.location.href = "/"; // Redirect to homepage or dashboard
+          window.location.href = "/"; //Redirect to homepage or dashboard WILL BE USED TO REDIRECT TO USER DASHBOARD
         }, 1500);
       } else {
-        // Show error message
+        //Show error message
         showError(data.message || "Login failed. Please try again.");
       }
     } catch (error) {
       console.error("Login error:", error);
       showError("An unexpected error occurred. Please try again later.");
     } finally {
-      // Reset button state
+      //Reset button state
       setLoading(submitBtn, false, originalBtnText);
     }
   });
@@ -129,7 +129,7 @@ function initRegisterForm(form) {
     setLoading(submitBtn, true);
 
     try {
-      // Send register request
+      //Send register request
       const response = await fetch("/api/register", {
         method: "POST",
         headers: {
@@ -147,23 +147,23 @@ function initRegisterForm(form) {
       const data = await response.json();
 
       if (response.ok) {
-        // On success, show notification and redirect to verification page
+        //On success, show notification and redirect to verification page
         showNotification(
           data.message ||
-            "Registration successful! Please check your email for verification.",
+            "Registration successful! Please check your email for verification mail.",
           "success"
         );
-        // Clear the form
+        //Clear the form
         form.reset();
       } else {
-        // Show error message
+        //Show error message
         showError(data.message || "Registration failed. Please try again.");
       }
     } catch (error) {
       console.error("Register error:", error);
       showError("An unexpected error occurred. Please try again later.");
     } finally {
-      // Reset button state
+      //Reset button state
       setLoading(submitBtn, false, originalBtnText);
     }
   });
@@ -177,23 +177,23 @@ function initPasswordResetRequestForm(form) {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // Get form data
+    //Get form data
     const email = form.querySelector("#email").value.trim();
 
-    // Validate form
+    //Validate form
     if (!validateEmail(email)) {
       showError("Please enter a valid email address");
       return;
     }
 
-    // Show loading state
+    //Show loading state
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalBtnText = submitBtn.innerHTML;
     setLoading(submitBtn, true);
 
     try {
       // Send password reset request
-      const response = await fetch("/passwordreset", {
+      const response = await fetch("/api/passwordreset", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -239,8 +239,9 @@ function initPasswordResetForm(form) {
     // Get form data
     const password = form.querySelector("#password").value;
 
-    // Get the user ID and token from the URL
-    const urlParts = window.location.pathname.split("/");
+    //Get the user ID and token from the URL
+    const urlParts = window.location.pathname.split("/"); //For example, if the URL is 
+    //https://example.com/12345/abcde, urlParts would be ["", "12345", "abcde"].
     const userId = urlParts[1];
     const token = urlParts[2];
 
@@ -252,7 +253,7 @@ function initPasswordResetForm(form) {
       return;
     }
 
-    // Show loading state
+    //Show loading state
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalBtnText = submitBtn.innerHTML;
     setLoading(submitBtn, true);
@@ -270,16 +271,16 @@ function initPasswordResetForm(form) {
       const data = await response.json();
 
       if (response.ok) {
-        // On success, show notification and redirect to login page
+        //On success, show notification and redirect to login page
         showNotification(
           data.message || "Password has been reset successfully!",
           "success"
         );
         setTimeout(() => {
-          window.location.href = "/api/login"; // Redirect to login page
+          window.location.href = "/api/login"; //Redirect to login page
         }, 1500);
       } else {
-        // Show error message
+        //Show error message
         showError(
           data.message || "Failed to reset password. Please try again."
         );
@@ -288,7 +289,7 @@ function initPasswordResetForm(form) {
       console.error("Password reset error:", error);
       showError("An unexpected error occurred. Please try again later.");
     } finally {
-      // Reset button state
+      //Reset button state
       setLoading(submitBtn, false, originalBtnText);
     }
   });
@@ -310,7 +311,7 @@ function validateEmail(email) {
  * @returns {boolean} - Whether the password meets strength requirements
  */
 function validatePassword(password) {
-  // At least 8 characters, one uppercase, one lowercase, one number, one special character
+  //At least 8 characters, one uppercase, one lowercase, one number, one special character
   const passwordRegex =
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$/;
   return passwordRegex.test(password);
@@ -330,30 +331,30 @@ function showError(message) {
  * @param {string} type - The type of notification ('success' or 'error')
  */
 function showNotification(message, type = "error") {
-  // Remove any existing notifications
+  //Remove any existing notifications
   const existingNotification = document.querySelector(".notification");
   if (existingNotification) {
     existingNotification.remove();
   }
 
-  // Create notification element
+  //Create notification element
   const notification = document.createElement("div");
-  notification.className = `notification ${type}`;
+  notification.className = `notification ${type}`; //adds 2 classes for this element.
   notification.textContent = message;
 
-  // Add to DOM
+  //Add to DOM
   document.body.appendChild(notification);
 
-  // Show the notification (using setTimeout to ensure the initial state is set)
+  //Show the notification (using setTimeout to ensure the initial state is set)
   setTimeout(() => {
     notification.classList.add("show");
   }, 10);
 
-  // Hide after 5 seconds
+  //Hide after 5 seconds
   setTimeout(() => {
     notification.classList.remove("show");
 
-    // Remove from DOM after animation completes
+    //Remove from DOM after animation completes
     setTimeout(() => {
       notification.remove();
     }, 300);
