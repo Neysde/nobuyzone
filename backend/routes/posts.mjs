@@ -8,6 +8,44 @@ router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
 /**
+ * Normalize text by removing diacritics and converting to lowercase
+ * This will help with search consistency by normalizing characters like İ->i, ş->s, etc.
+ * @param {string} text - The text to normalize
+ * @returns {string} - Normalized text
+ */
+const normalizeText = (text) => {
+  if (!text) return '';
+  
+  // Convert to lowercase and normalize Unicode characters
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics (accents)
+    .replace(/[^a-z0-9\s]/g, ''); // Remove non-alphanumeric characters
+};
+
+/**
+ * Create an accent-insensitive regex pattern for MongoDB search
+ * This helps with cases like searching for "baris" to match "Barış"
+ * @param {string} text - The text to search for
+ * @returns {object} - MongoDB regex object for the search
+ */
+const createAccentInsensitiveRegex = (text) => {
+  if (!text || typeof text !== 'string') return null;
+  
+  // Create a pattern that will match the same characters with or without diacritics
+  const normalizedText = normalizeText(text);
+  
+  // Return both the original search and the normalized search as alternatives
+  return {
+    $or: [
+      { $regex: text, $options: 'i' },  // Original text (case insensitive)
+      { $regex: normalizedText, $options: 'i' }  // Normalized text without diacritics
+    ]
+  };
+};
+
+/**
  * Create a new post
  * Handles the form submission from the posting page
  */
@@ -73,9 +111,9 @@ router.post("/api/posts", async (req, res) => {
       condition,
       description,
       location: {
-        city,
-        district,
-        neighborhood,
+        city: city ? city.trim() : '',
+        district: district ? district.trim() : '',
+        neighborhood: neighborhood ? neighborhood.trim() : '',
         street,
         coordinates: {
           latitude: parseFloat(latitude),
@@ -142,6 +180,14 @@ router.get("/api/posts", async (req, res) => {
       limit = 10,
     } = req.query;
 
+    // Log raw request parameters for debugging
+    console.log("Search parameters received:", {
+      city,
+      district,
+      neighborhood,
+      search
+    });
+
     // Build filter query
     const filter = { status: "active" };
 
@@ -152,15 +198,89 @@ router.get("/api/posts", async (req, res) => {
 
     // Location filters
     if (city) {
-      filter["location.city"] = { $regex: city, $options: "i" };
+      const normalizedCity = normalizeText(city);
+      console.log(`Searching for city: ${city}, normalized: ${normalizedCity}`);
+      
+      // For Turkish text: handle common letter transformations
+      const searchPatterns = [
+        city, // Original text
+        // Special handling for Turkish characters
+        city.replace(/i/gi, '[iİıI]'), // i↔İ, ı↔I
+        city.replace(/s/gi, '[sŞş]'),  // s↔ş
+        city.replace(/g/gi, '[gĞğ]'),  // g↔ğ
+        city.replace(/u/gi, '[uUüÜ]'),  // u↔ü
+        city.replace(/o/gi, '[oOöÖ]'),  // o↔ö
+        city.replace(/c/gi, '[cCçÇ]'),  // c↔ç
+        normalizedCity // Fully normalized
+      ];
+      
+      // Build $or condition with all search patterns
+      const cityConditions = searchPatterns.map(pattern => (
+        { "location.city": { $regex: pattern, $options: "i" } }
+      ));
+      
+      filter.$and = filter.$and || [];
+      filter.$and.push({ $or: cityConditions });
     }
 
     if (district) {
-      filter["location.district"] = { $regex: district, $options: "i" };
+      const normalizedDistrict = normalizeText(district);
+      console.log(`Searching for district: ${district}, normalized: ${normalizedDistrict}`);
+      
+      // For Turkish text: handle common letter transformations
+      const searchPatterns = [
+        district, // Original text
+        // Special handling for Turkish characters
+        district.replace(/i/gi, '[iİıI]'), // i↔İ, ı↔I
+        district.replace(/s/gi, '[sŞş]'),  // s↔ş
+        district.replace(/g/gi, '[gĞğ]'),  // g↔ğ
+        district.replace(/u/gi, '[uUüÜ]'),  // u↔ü
+        district.replace(/o/gi, '[oOöÖ]'),  // o↔ö
+        district.replace(/c/gi, '[cCçÇ]'),  // c↔ç
+        normalizedDistrict // Fully normalized
+      ];
+      
+      // Build $or condition with all search patterns
+      const districtConditions = searchPatterns.map(pattern => (
+        { "location.district": { $regex: pattern, $options: "i" } }
+      ));
+      
+      filter.$and = filter.$and || [];
+      filter.$and.push({ $or: districtConditions });
     }
 
     if (neighborhood) {
-      filter["location.neighborhood"] = { $regex: neighborhood, $options: "i" };
+      const normalizedNeighborhood = normalizeText(neighborhood);
+      console.log(`Searching for neighborhood: ${neighborhood}, normalized: ${normalizedNeighborhood}`);
+      
+      // For Turkish text: handle common letter transformations
+      const searchPatterns = [
+        neighborhood, // Original text
+        // Special handling for Turkish characters
+        neighborhood.replace(/i/gi, '[iİıI]'), // i↔İ, ı↔I
+        neighborhood.replace(/s/gi, '[sŞş]'),  // s↔ş
+        neighborhood.replace(/g/gi, '[gĞğ]'),  // g↔ğ
+        neighborhood.replace(/u/gi, '[uUüÜ]'),  // u↔ü
+        neighborhood.replace(/o/gi, '[oOöÖ]'),  // o↔ö
+        neighborhood.replace(/c/gi, '[cCçÇ]'),  // c↔ç
+        normalizedNeighborhood // Fully normalized
+      ];
+      
+      // Build $or condition with all search patterns
+      const neighborhoodConditions = searchPatterns.map(pattern => (
+        { "location.neighborhood": { $regex: pattern, $options: "i" } }
+      ));
+      
+      // Define explicit mappings for common neighborhoods
+      // This is a fallback for the most common cases that the regex might miss
+      if (normalizedNeighborhood === 'baris') {
+        neighborhoodConditions.push(
+          { "location.neighborhood": { $regex: 'Barış', $options: "i" } }
+        );
+      }
+      
+      filter.$and = filter.$and || [];
+      filter.$and.push({ $or: neighborhoodConditions });
     }
 
     //Radius-based search
@@ -184,13 +304,16 @@ router.get("/api/posts", async (req, res) => {
       console.log(`Searching with radius: ${radius}km`);
     }
 
-    //Search filter (searches in title and description)
+    // Text search filter (title and description)
     if (search) {
-      filter.$or = [
-        //or statement for these conditions
-        { title: { $regex: search, $options: "i" } }, //i is for case insensitive search (mongodb)
-        { description: { $regex: search, $options: "i" } },
+      // Create a separate $or for text search to avoid mixing with location filters
+      const textConditions = [
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } }
       ];
+      
+      filter.$and = filter.$and || [];
+      filter.$and.push({ $or: textConditions });
     }
 
     //Sort options
@@ -204,17 +327,26 @@ router.get("/api/posts", async (req, res) => {
       sortOption = { title: -1 };
     }
 
-    //Calculate pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    // Create the aggregation pipeline
+    const pipeline = [
+      { $match: filter },
+      { $sort: sortOption },
+      { $skip: (parseInt(page) - 1) * parseInt(limit) },
+      { $limit: parseInt(limit) }
+    ];
 
-    //Execute query with pagination
-    const posts = await Post.find(filter)
-      .sort(sortOption)
-      .skip(skip)
-      .limit(parseInt(limit));
+    // Log the generated pipeline for debugging
+    console.log("Search pipeline:", JSON.stringify(pipeline, null, 2));
 
-    //Get total count for pagination
-    const totalCount = await Post.countDocuments(filter);
+    // Execute aggregation pipeline
+    const posts = await Post.aggregate(pipeline);
+
+    // Get total count for pagination (need a separate aggregation for count)
+    const countPipeline = pipeline.slice(0, -2); // Remove skip and limit
+    countPipeline.push({ $count: "total" });
+    
+    const countResult = await Post.aggregate(countPipeline);
+    const totalCount = countResult.length > 0 ? countResult[0].total : 0;
 
     //Calculate total pages
     const totalPages = Math.ceil(totalCount / parseInt(limit));

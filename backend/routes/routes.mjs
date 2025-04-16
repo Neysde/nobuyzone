@@ -8,6 +8,7 @@ import {
 import postsRouter from "./posts.mjs";
 import uiRouter from "./ui-routes.mjs";
 import userRouter from "./user-routes.mjs";
+import fetch from "node-fetch";
 
 const router = express.Router();
 
@@ -23,6 +24,31 @@ router.post("/api/posts/upload-image", singleImageUpload, uploadImage);
 
 //Delete image route
 router.delete("/api/delete/:public_id", deleteImage);
+
+// Proxy endpoint for neighborhoods to avoid CORS issues
+router.get("/api/mahalleler", async (req, res) => {
+  try {
+    const { iladi, ilce } = req.query;
+    if (!iladi || !ilce) {
+      return res.status(400).json({ error: "City and district parameters are required" });
+    }
+    
+    // Make request to external API
+    const response = await fetch(`https://tradres.com.tr/api/mahalleler?iladi=${encodeURIComponent(iladi)}&ilce=${encodeURIComponent(ilce)}`);
+    
+    if (!response.ok) {
+      return res.status(response.status).json({ 
+        error: `Failed to fetch neighborhoods: ${response.statusText}` 
+      });
+    }
+    
+    const data = await response.json();
+    return res.json(data);
+  } catch (error) {
+    console.error("Error fetching neighborhoods:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 router.use(postsRouter);
 router.use(uiRouter);
