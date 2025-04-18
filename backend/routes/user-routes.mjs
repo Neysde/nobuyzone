@@ -6,6 +6,10 @@ import passwordComplexity from "joi-password-complexity";
 import jwt from "jsonwebtoken";
 import { hashPassword, comparePassword } from "../encryptpass.mjs";
 import nodemailer from "nodemailer";
+import Favorite from "../mongoose/favorite.mjs";
+import Post from "../mongoose/post.mjs";
+import { isAuthenticated } from "../middlewares.mjs";
+
 const router = express.Router();
 
 const register = async (req, res) => {
@@ -269,5 +273,124 @@ router.post("/api/passwordreset", passwordLink);
 router.get("/:id/:token", verifyUrl); //password reset verification
 
 router.post("/:id/:token", resetPassword);
+
+// Update username
+router.patch("/api/user/username", isAuthenticated, async (req, res) => {
+  try {
+    const { username } = req.body;
+
+    if (!username) {
+      return res.status(400).send({ message: "Username is required" });
+    }
+
+    // Check if username is already taken
+    const existingUser = await User.findOne({ username });
+    if (
+      existingUser &&
+      existingUser._id.toString() !== req.user._id.toString()
+    ) {
+      return res.status(409).send({ message: "Username already taken" });
+    }
+
+    // Update the username
+    await User.findByIdAndUpdate(req.user._id, { username });
+
+    res.status(200).send({ message: "Username updated successfully" });
+  } catch (error) {
+    console.error("Error updating username:", error);
+    res.status(500).send({ message: "Internal server error" });
+  }
+});
+
+// Update profile picture
+router.patch("/api/user/profile-picture", isAuthenticated, async (req, res) => {
+  try {
+    const { url, publicId } = req.body;
+
+    // Validate required fields
+    if (!url || !publicId) {
+      return res.status(400).json({
+        success: false,
+        error: "Image URL and publicId are required",
+      });
+    }
+
+    // Update user profile with new picture information
+    await User.findByIdAndUpdate(req.user._id, {
+      profilePicture: {
+        url,
+        publicId,
+      },
+    });
+
+    // Return success response
+    return res.status(200).json({
+      success: true,
+      message: "Profile picture updated successfully",
+    });
+  } catch (error) {
+    console.error("Error updating profile picture:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to update profile picture: " + error.message,
+    });
+  }
+});
+
+// Delete from favorites
+router.delete("/api/favorites/:postId", isAuthenticated, async (req, res) => {
+  try {
+    const { postId } = req.params;
+
+    // Delete the favorite
+    await Favorite.findOneAndDelete({
+      userId: req.user._id,
+      postId,
+    });
+
+    res.status(200).send({ message: "Removed from favorites" });
+  } catch (error) {
+    console.error("Error removing from favorites:", error);
+    res.status(500).send({ message: "Internal server error" });
+  }
+});
+
+// Add to favorites
+router.post("/api/favorites", isAuthenticated, async (req, res) => {
+  try {
+    const { postId } = req.body;
+
+    if (!postId) {
+      return res.status(400).send({ message: "Post ID is required" });
+    }
+
+    // Check if post exists
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).send({ message: "Post not found" });
+    }
+
+    // Check if already favorited
+    const existingFavorite = await Favorite.findOne({
+      userId: req.user._id,
+      postId,
+    });
+
+    if (existingFavorite) {
+      return res.status(409).send({ message: "Already in favorites" });
+    }
+
+    // Create new favorite
+    await new Favorite({
+      userId: req.user._id,
+      postId,
+    }).save();
+
+    res.status(201).send({ message: "Added to favorites" });
+  } catch (error) {
+    console.error("Error adding to favorites:", error);
+    res.status(500).send({ message: "Internal server error" });
+  }
+});
 
 export default router;

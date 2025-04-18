@@ -72,8 +72,8 @@ app.get("/api/listinglocation/:id", async (req, res) => {
     const lat = parseFloat(locationData.latitude);
     const lon = parseFloat(locationData.longitude);
 
-    // Add random offset to hide exact location (0.01 ≈ 1km) now -300 +300m
-    const offset = 0.003;
+    // Add random offset to hide exact location (0.01 ≈ 1km) now -200 +200m
+    const offset = 0.002;
     const centerLat = lat + (Math.random() * offset * 2 - offset);
     const centerLon = lon + (Math.random() * offset * 2 - offset);
 

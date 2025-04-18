@@ -70,24 +70,6 @@
                 <option value="">Select District</option>
               </select>
             </div>
-            <div
-              class="location-select-wrapper hidden"
-              id="neighborhood-wrapper"
-            >
-              <select id="global-neighborhood" class="location-select" disabled>
-                <option value="">Select Neighborhood</option>
-              </select>
-            </div>
-            <!-- Radius field moved inside location-field -->
-            <div class="location-select-wrapper hidden" id="radius-wrapper">
-              <select id="global-radius" class="location-select" disabled>
-                <option value="0">Entire Area</option>
-                <option value="5">5 km</option>
-                <option value="10">10 km</option>
-                <option value="20">20 km</option>
-                <option value="50">50 km</option>
-              </select>
-            </div>
           </div>
 
           <!-- Search button -->
@@ -100,6 +82,97 @@
         <div class="find-posts-grid">
           <!-- Left Column - Filters and Categories -->
           <div class="sidebar">
+            <!-- Radius Search Card -->
+            <div class="card radius-search-card">
+              <h3>Radius Search</h3>
+              <div class="map-container">
+                <div id="radius-map" class="map">
+                  <!-- Circle overlay will appear here -->
+                  <button
+                    type="button"
+                    id="radius-fullscreen-toggle"
+                    class="button button-outline"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <path
+                        d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"
+                      />
+                    </svg>
+                    Fullscreen
+                  </button>
+                </div>
+
+                <!-- Location selectors specific to radius search -->
+                <div class="radius-location-field">
+                  <div class="location-selectors">
+                    <div class="radius-location-select-wrapper">
+                      <select
+                        id="radius-city"
+                        class="location-select"
+                        size="1"
+                        style="position: relative"
+                      >
+                        <option value="">Select City</option>
+                      </select>
+                    </div>
+                    <div
+                      class="radius-location-select-wrapper"
+                      id="radius-district-wrapper"
+                    >
+                      <select
+                        id="radius-district"
+                        class="location-select"
+                        disabled
+                        size="1"
+                        style="position: relative"
+                      >
+                        <option value="">Select District</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="radius-controls">
+                  <button
+                    type="button"
+                    id="use-my-location"
+                    class="button button-outline"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M12 2v2m0 16v2M2 12h2m16 0h2" />
+                    </svg>
+                    Use My Location
+                  </button>
+                </div>
+                <div class="radius-info">
+                  <span id="location-display">Drag to set location</span>
+                </div>
+
+                <!-- Centered search button -->
+                <div class="radius-search-button-container">
+                  <button
+                    id="search-radius-button"
+                    class="button button-primary"
+                  >
+                    Search with Radius
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <!-- Categories Section -->
             <div class="card categories-card">
               <h3>Categories</h3>

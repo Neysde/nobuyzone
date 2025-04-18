@@ -1,5 +1,7 @@
 import express from "express";
 import Post from "../mongoose/post.mjs";
+import User from "../mongoose/user.mjs";
+import Favorite from "../mongoose/favorite.mjs";
 
 const router = express.Router();
 
@@ -63,6 +65,69 @@ router.get("/posts/:id", async (req, res) => {
     console.error("Error rendering post detail:", error);
     res.status(500).render("error", {
       message: "Error loading post",
+      error: { status: 500 },
+    });
+  }
+});
+
+// Dashboard page for user
+router.get("/dashboard/:id", async (req, res) => {
+  try {
+    // Get the user id from the route parameter
+    const userId = req.params.id;
+
+    // Fetch the user data
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).render("error", {
+        message: "User not found",
+        error: { status: 404 },
+      });
+    }
+
+    // Fetch user's active posts
+    const posts = await Post.find({
+      createdBy: userId,
+      status: "active",
+    }).sort({ createdAt: -1 });
+
+    // Fetch user's draft posts
+    const drafts = await Post.find({
+      createdBy: userId,
+      status: "draft",
+    }).sort({ updatedAt: -1 });
+
+    // Fetch user's favorites with populated post data
+    const favoritesData = await Favorite.find({ userId: userId })
+      .populate({
+        path: "postId",
+        model: "Post",
+        select: "title category location images createdAt status",
+      })
+      .sort({ createdAt: -1 });
+
+    // Transform favorites to match the expected format in the template
+    const favorites = favoritesData
+      .map((favorite) => {
+        return {
+          post: favorite.postId,
+          addedAt: favorite.createdAt,
+        };
+      })
+      .filter((favorite) => favorite.post.status === "active"); // Only include active posts
+
+    // Render the dashboard template with all the data
+    res.render("dashboard", {
+      user,
+      posts,
+      drafts,
+      favorites,
+    });
+  } catch (error) {
+    console.error("Error rendering dashboard:", error);
+    res.status(500).render("error", {
+      message: "Error loading dashboard",
       error: { status: 500 },
     });
   }

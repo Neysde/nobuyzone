@@ -618,21 +618,9 @@ body {
   flex: 1;
 }
 
-/* When city and radius visible (2 elements) */
-.search-bar.city-radius .location-field .location-select-wrapper {
+/* When city and district visible (2 elements) */
+.search-bar.city-district .location-field .location-select-wrapper {
   flex: 0.5;
-}
-
-/* When city, district, and radius visible (3 elements) */
-.search-bar.city-district-radius .location-field .location-select-wrapper {
-  flex: 0.33;
-}
-
-/* When all four visible (4 elements) */
-.search-bar.city-district-neighborhood-radius
-  .location-field
-  .location-select-wrapper {
-  flex: 0.25;
 }
 
 .location-select-wrapper.hidden {
@@ -657,22 +645,6 @@ body {
   background-color: var(--neutral-200);
   color: var(--neutral-500);
   cursor: not-allowed;
-}
-
-/* Radius field */
-.radius-field {
-  transition: all 0.3s ease-in-out;
-  overflow: hidden;
-  opacity: 1;
-  max-width: 100%;
-}
-
-.radius-field.hidden {
-  max-width: 0;
-  opacity: 0;
-  margin: 0;
-  padding: 0;
-  flex: 0;
 }
 
 /* Common field select styles */
@@ -747,26 +719,280 @@ body {
     margin-bottom: 0;
   }
 
-  .radius-field {
-    margin-bottom: var(--space-sm);
-  }
-
-  .radius-field.hidden {
-    height: 0;
-    margin: 0;
-  }
-
   .search-button {
     width: 100%;
     margin-top: 0;
   }
 }
 
-#global-radius {
+/* Radius Search Card */
+.radius-search-card {
+  transition: all 0.3s ease;
+  background-color: white; /* Ensure the card has a white background */
+}
+
+.radius-search-card h3 {
+  margin-bottom: var(--space-md);
+  font-size: var(--font-size-lg);
+  color: var(--neutral-800);
+}
+
+.radius-search-card.active {
+  border: 2px solid var(--primary);
+  box-shadow: 0 4px 12px rgba(240, 160, 75, 0.2);
+}
+
+.radius-search-card .map-container {
+  position: relative;
+  padding: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.radius-search-card .map {
+  height: 250px;
   width: 100%;
-  height: 38px;
-  padding: var(--space-sm) var(--space-sm);
-  font-size: var(--font-size-sm);
-  background-color: var(--neutral-100);
+  border-radius: var(--radius-lg);
+  position: relative;
+}
+
+.radius-search-card .map.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  border-radius: 0;
+}
+
+#radius-fullscreen-toggle {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  z-index: 500;
+  background: var(--neutral-100);
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-md);
+  padding: var(--space-xs) var(--space-sm);
   cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  color: var(--neutral-800);
+}
+
+#radius-fullscreen-toggle:hover {
+  background: var(--neutral-200);
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Location selectors for radius search */
+.radius-location-field {
+  padding: var(--space-sm) var(--space-md);
+  background-color: white;
+}
+
+.radius-location-field .location-selectors {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.radius-location-select-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+/* Apply these styles to all select elements in the radius search area */
+.radius-location-select-wrapper select {
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-md);
+  background-color: white;
+  font-size: var(--font-size-sm);
+  color: var(--neutral-800);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  /* Force all dropdowns to open downward */
+  transform: scaleY(1);
+  direction: ltr;
+}
+
+/* Fix Firefox dropdown direction */
+@-moz-document url-prefix() {
+  .radius-location-select-wrapper select {
+    text-indent: 0.01px;
+    text-overflow: "";
+    padding-right: 1rem;
+  }
+}
+
+/* Fix for Chrome and Safari */
+select::-ms-expand {
+  display: none;
+}
+
+/* Fix for Webkit browsers (Chrome/Safari) */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  .radius-location-select-wrapper select {
+    padding-right: 20px; /* Space for custom arrow */
+  }
+}
+
+.radius-location-select-wrapper select:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(240, 160, 75, 0.2);
+}
+
+/* Add a custom dropdown arrow */
+.radius-location-select-wrapper::after {
+  content: "▼";
+  font-size: 0.7em;
+  color: var(--neutral-600);
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none; /* Makes the arrow clickthrough */
+  z-index: 1; /* Ensure it's visible */
+}
+
+.radius-controls {
+  padding: var(--space-xs) var(--space-md);
+  display: flex;
+  justify-content: center;
+  background-color: white;
+}
+
+.radius-info {
+  background-color: white;
+  padding: 0 var(--space-md) var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--neutral-700);
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Custom circle overlay for the map */
+.radius-circle {
+  display: none; /* Hide the old circle */
+}
+
+/* Fixed overlay container */
+.fixed-overlay-container {
+  pointer-events: none; /* Allow clicks to pass through */
+  z-index: 450; /* Above map tiles but below markers */
+}
+
+/* Center marker (hidden) */
+.radius-center-marker {
+  display: none; /* Hide the marker since we're using the map center */
+}
+
+/* Centered search button container */
+.radius-search-button-container {
+  display: flex;
+  justify-content: center;
+  padding: 0 var(--space-md) var(--space-md);
+  background-color: white;
+}
+
+#search-radius-button {
+  padding: var(--space-sm) var(--space-lg);
+  font-weight: 500;
+  transition: all 0.3s ease;
+  width: auto;
+  min-width: 180px;
+}
+
+#search-radius-button.active {
+  background-color: var(--primary-dark);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .radius-search-card .map {
+    height: 200px;
+  }
+
+  .radius-controls {
+    padding: var(--space-sm);
+  }
+}
+
+/* Notifications */
+.notification {
+  position: fixed;
+  bottom: var(--space-lg);
+  right: var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  background: white;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(100%);
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.notification.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.notification.success {
+  background: #48bb78;
+  color: white;
+}
+
+.notification.error {
+  background: #f56565;
+  color: white;
+}
+
+.notification.info {
+  background: var(--primary);
+  color: white;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 0.8s linear infinite;
+  margin-right: var(--space-xs);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Override default dropdown behavior for browsers */
+select {
+  /* The key property that controls dropdown direction in modern browsers */
+  transform-origin: center top;
+  /* Additional overrides for cross-browser compatibility */
+  position: relative !important;
+  z-index: 10;
+}
+
+/* Force dropdown to appear below the select element in all browsers */
+select option {
+  position: relative !important;
+  display: block;
 }

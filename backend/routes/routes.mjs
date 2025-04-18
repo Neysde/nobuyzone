@@ -5,7 +5,7 @@ import {
   multerUploads,
   singleImageUpload,
 } from "./image-upload.mjs";
-import postsRouter from "./posts.mjs";
+import postRouter from "./post-routes.mjs";
 import uiRouter from "./ui-routes.mjs";
 import userRouter from "./user-routes.mjs";
 import fetch from "node-fetch";
@@ -30,18 +30,24 @@ router.get("/api/mahalleler", async (req, res) => {
   try {
     const { iladi, ilce } = req.query;
     if (!iladi || !ilce) {
-      return res.status(400).json({ error: "City and district parameters are required" });
+      return res
+        .status(400)
+        .json({ error: "City and district parameters are required" });
     }
-    
+
     // Make request to external API
-    const response = await fetch(`https://tradres.com.tr/api/mahalleler?iladi=${encodeURIComponent(iladi)}&ilce=${encodeURIComponent(ilce)}`);
-    
+    const response = await fetch(
+      `https://tradres.com.tr/api/mahalleler?iladi=${encodeURIComponent(
+        iladi
+      )}&ilce=${encodeURIComponent(ilce)}`
+    );
+
     if (!response.ok) {
-      return res.status(response.status).json({ 
-        error: `Failed to fetch neighborhoods: ${response.statusText}` 
+      return res.status(response.status).json({
+        error: `Failed to fetch neighborhoods: ${response.statusText}`,
       });
     }
-    
+
     const data = await response.json();
     return res.json(data);
   } catch (error) {
@@ -50,7 +56,7 @@ router.get("/api/mahalleler", async (req, res) => {
   }
 });
 
-router.use(postsRouter);
+router.use(postRouter);
 router.use(uiRouter);
 router.use(userRouter);
 

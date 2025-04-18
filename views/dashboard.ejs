@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard | Barter</title>
+    <link rel="stylesheet" href="/css/header.css" />
+    <link rel="stylesheet" href="/css/footer.css" />
+    <link rel="stylesheet" href="/css/dashboard.css" />
+    <!-- Cropper.js CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css"
+    />
+  </head>
+  <body>
+    <main class="dashboard-page">
+      <div class="container">
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+          <a href="#postings" class="tab-link active" data-tab="postings">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
+              ></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            </svg>
+            Postings
+          </a>
+          <a href="#drafts" class="tab-link" data-tab="drafts">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
+              ></path>
+              <path
+                d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+              ></path>
+            </svg>
+            Drafts
+          </a>
+          <a href="#favorites" class="tab-link" data-tab="favorites">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"
+              ></path>
+            </svg>
+            Favorites
+          </a>
+          <a href="#messages" class="tab-link" data-tab="messages">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+              ></path>
+            </svg>
+            Messages
+          </a>
+          <a href="#account" class="tab-link" data-tab="account">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Account
+          </a>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+          <!-- Postings Tab -->
+          <div id="postings" class="tab-pane active">
+            <div class="card">
+              <div class="section-header">
+                <h2>Your Postings</h2>
+                <a href="/posting" class="button button-primary">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path d="M12 5v14M5 12h14"></path>
+                  </svg>
+                  New Posting
+                </a>
+              </div>
+
+              <% if (posts && posts.length > 0) { %>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Image</th>
+                      <th>Title</th>
+                      <th>Category</th>
+                      <th>Location</th>
+                      <th>Published</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% posts.forEach(post => { %>
+                    <tr class="post-row" data-post-id="<%= post._id %>">
+                      <td class="post-image">
+                        <a href="/post/<%= post._id %>">
+                          <img
+                            src="<%= post.images && post.images.length > 0 ? post.images[0].url : '/images/placeholder.jpg' %>"
+                            alt="<%= post.title %>"
+                          />
+                        </a>
+                      </td>
+                      <td class="post-title">
+                        <a href="/post/<%= post._id %>"><%= post.title %></a>
+                      </td>
+                      <td class="post-category">
+                        <span class="category-badge"
+                          ><%= post.category.charAt(0).toUpperCase() +
+                          post.category.slice(1) %></span
+                        >
+                      </td>
+                      <td class="post-location">
+                        <%= post.location.city %>, <%= post.location.district %>
+                      </td>
+                      <td class="post-date">
+                        <%= new Date(post.createdAt).toLocaleDateString("tr-TR")
+                        %>
+                      </td>
+                      <td class="post-actions">
+                        <button
+                          class="button button-small button-outline delete-post"
+                          data-post-id="<%= post._id %>"
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                          >
+                            <path
+                              d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                            ></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                          </svg>
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                    <% }); %>
+                  </tbody>
+                </table>
+              </div>
+              <% } else { %>
+              <div class="empty-state">
+                <svg
+                  width="64"
+                  height="64"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <path
+                    d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
+                  ></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                </svg>
+                <h3>No postings yet</h3>
+                <p>Create your first posting to start bartering</p>
+                <a href="/posting" class="button button-primary"
+                  >Create Posting</a
+                >
+              </div>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Drafts Tab -->
+          <div id="drafts" class="tab-pane">
+            <div class="card">
+              <div class="section-header">
+                <h2>Your Drafts</h2>
+              </div>
+
+              <% if (drafts && drafts.length > 0) { %>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Image</th>
+                      <th>Title</th>
+                      <th>Category</th>
+                      <th>Location</th>
+                      <th>Last Edited</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% drafts.forEach(draft => { %>
+                    <tr
+                      class="post-row draft-row"
+                      data-post-id="<%= draft._id %>"
+                    >
+                      <td class="post-image">
+                        <a href="/posting?draft=<%= draft._id %>">
+                          <img
+                            src="<%= draft.images && draft.images.length > 0 ? draft.images[0].url : '/images/placeholder.jpg' %>"
+                            alt="<%= draft.title || 'Draft' %>"
+                          />
+                        </a>
+                      </td>
+                      <td class="post-title">
+                        <a href="/posting?draft=<%= draft._id %>">
+                          <%= draft.title || 'Untitled Draft' %>
+                        </a>
+                      </td>
+                      <td class="post-category">
+                        <% if (draft.category) { %>
+                        <span class="category-badge"
+                          ><%= draft.category.charAt(0).toUpperCase() +
+                          draft.category.slice(1) %></span
+                        >
+                        <% } else { %>
+                        <span class="category-badge category-empty">None</span>
+                        <% } %>
+                      </td>
+                      <td class="post-location">
+                        <% if (draft.location && draft.location.city) { %> <%=
+                        draft.location.city %>, <%= draft.location.district %>
+                        <% } else { %> Not specified <% } %>
+                      </td>
+                      <td class="post-date">
+                        <%= new
+                        Date(draft.updatedAt).toLocaleDateString("tr-TR") %>
+                      </td>
+                      <td class="post-actions">
+                        <button
+                          class="button button-small button-outline delete-draft"
+                          data-post-id="<%= draft._id %>"
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                          >
+                            <path
+                              d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                            ></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                          </svg>
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                    <% }); %>
+                  </tbody>
+                </table>
+              </div>
+              <% } else { %>
+              <div class="empty-state">
+                <svg
+                  width="64"
+                  height="64"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <path
+                    d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
+                  ></path>
+                  <path
+                    d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                  ></path>
+                </svg>
+                <h3>No drafts saved</h3>
+                <p>Your saved drafts will appear here</p>
+              </div>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Favorites Tab -->
+          <div id="favorites" class="tab-pane">
+            <div class="card">
+              <div class="section-header">
+                <h2>Your Favorites</h2>
+              </div>
+
+              <% if (favorites && favorites.length > 0) { %>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Image</th>
+                      <th>Title</th>
+                      <th>Category</th>
+                      <th>Location</th>
+                      <th>Added</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% favorites.forEach(favorite => { %>
+                    <tr
+                      class="post-row"
+                      data-post-id="<%= favorite.post._id %>"
+                    >
+                      <td class="post-image">
+                        <a href="/post/<%= favorite.post._id %>">
+                          <img
+                            src="<%= favorite.post.images && favorite.post.images.length > 0 ? favorite.post.images[0].url : '/images/placeholder.jpg' %>"
+                            alt="<%= favorite.post.title %>"
+                          />
+                        </a>
+                      </td>
+                      <td class="post-title">
+                        <a href="/post/<%= favorite.post._id %>"
+                          ><%= favorite.post.title %></a
+                        >
+                      </td>
+                      <td class="post-category">
+                        <span class="category-badge"
+                          ><%= favorite.post.category.charAt(0).toUpperCase() +
+                          favorite.post.category.slice(1) %></span
+                        >
+                      </td>
+                      <td class="post-location">
+                        <%= favorite.post.location.city %>, <%=
+                        favorite.post.location.district %>
+                      </td>
+                      <td class="post-date">
+                        <%= new
+                        Date(favorite.addedAt).toLocaleDateString("tr-TR") %>
+                      </td>
+                      <td class="post-actions">
+                        <button
+                          class="button button-small button-outline remove-favorite"
+                          data-post-id="<%= favorite.post._id %>"
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                          >
+                            <path
+                              d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"
+                            ></path>
+                          </svg>
+                          Unfavorite
+                        </button>
+                      </td>
+                    </tr>
+                    <% }); %>
+                  </tbody>
+                </table>
+              </div>
+              <% } else { %>
+              <div class="empty-state">
+                <svg
+                  width="64"
+                  height="64"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <path
+                    d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"
+                  ></path>
+                </svg>
+                <h3>No favorites yet</h3>
+                <p>Items you favorite will appear here</p>
+                <a href="/find-posts" class="button button-primary"
+                  >Browse Items</a
+                >
+              </div>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Messages Tab -->
+          <div id="messages" class="tab-pane">
+            <div class="card">
+              <div class="section-header">
+                <h2>Your Messages</h2>
+              </div>
+
+              <div class="empty-state">
+                <svg
+                  width="64"
+                  height="64"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <path
+                    d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+                  ></path>
+                </svg>
+                <h3>No messages yet</h3>
+                <p>Your conversations will appear here</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Account Tab -->
+          <div id="account" class="tab-pane">
+            <div class="card profile-section">
+              <div class="profile-header">
+                <div class="profile-avatar-container">
+                  <div class="profile-avatar">
+                    <% if (user.profilePicture && user.profilePicture.url) { %>
+                    <img
+                      src="<%= user.profilePicture.url %>"
+                      alt="<%= user.firstName %>'s profile"
+                    />
+                    <% } else { %>
+                    <div class="avatar-placeholder">
+                      <span
+                        ><%= user.firstName.charAt(0) %><%=
+                        user.lastName.charAt(0) %></span
+                      >
+                    </div>
+                    <% } %>
+                  </div>
+                  <button
+                    id="upload-photo-btn"
+                    class="button button-small button-outline"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <path
+                        d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
+                      ></path>
+                    </svg>
+                    Upload Photo
+                  </button>
+                </div>
+                <div class="profile-info">
+                  <h2 class="profile-name">
+                    <%= user.firstName %> <%= user.lastName %>
+                  </h2>
+                  <p class="profile-username">@<%= user.username %></p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="section-header">
+                <h2>Account Details</h2>
+              </div>
+
+              <div class="account-details">
+                <div class="account-field">
+                  <div class="field-label">Username</div>
+                  <div class="field-value">
+                    <span id="username-value"><%= user.username %></span>
+                    <div
+                      id="username-edit-container"
+                      class="edit-container"
+                      style="display: none"
+                    >
+                      <input
+                        type="text"
+                        id="username-edit"
+                        value="<%= user.username %>"
+                      />
+                      <div class="edit-actions">
+                        <button
+                          id="save-username"
+                          class="button button-small button-primary"
+                        >
+                          Save
+                        </button>
+                        <button
+                          id="cancel-username-edit"
+                          class="button button-small button-outline"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      id="edit-username-btn"
+                      class="button button-small button-outline"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
+                        ></path>
+                        <path
+                          d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                        ></path>
+                      </svg>
+                      Change Username
+                    </button>
+                  </div>
+                </div>
+
+                <div class="account-field">
+                  <div class="field-label">First Name</div>
+                  <div class="field-value"><%= user.firstName %></div>
+                </div>
+
+                <div class="account-field">
+                  <div class="field-label">Last Name</div>
+                  <div class="field-value"><%= user.lastName %></div>
+                </div>
+
+                <div class="account-field">
+                  <div class="field-label">Email</div>
+                  <div class="field-value"><%= user.email %></div>
+                </div>
+
+                <div class="account-field">
+                  <div class="field-label">Password</div>
+                  <div class="field-value">
+                    <span>••••••••</span>
+                    <a
+                      href="/passwordreset"
+                      class="button button-small button-outline"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <rect
+                          x="3"
+                          y="11"
+                          width="18"
+                          height="11"
+                          rx="2"
+                          ry="2"
+                        ></rect>
+                        <path d="M7 11V7a5 5 0 0110 0v4"></path>
+                      </svg>
+                      Change Password
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Profile Photo Cropper Modal -->
+    <div id="photo-cropper-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Crop Profile Photo</h3>
+          <button type="button" class="close-button" id="close-cropper">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="cropper-container">
+            <img id="image-to-crop" src="" alt="Image to crop" />
+          </div>
+          <div class="cropper-instructions">
+            <p>
+              Drag to reposition. Drag handles to resize. Double-click to switch
+              between crop and move modes.
+            </p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="button button-outline" id="cancel-crop">
+            Cancel
+          </button>
+          <button type="button" class="button button-primary" id="apply-crop">
+            Apply Crop
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden file input for profile photo upload -->
+    <input
+      type="file"
+      id="profile-photo-input"
+      accept="image/*"
+      style="display: none"
+    />
+
+    <!-- Cropper.js -->
+    <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
+    <script src="/js/dashboard.js"></script>
+  </body>
+</html>
