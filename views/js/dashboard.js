@@ -308,6 +308,7 @@ function initProfilePhoto() {
   const imageToCrop = document.getElementById("image-to-crop");
 
   let cropper = null;
+  let currentImageFile = null;
 
   // Open file dialog when upload button is clicked
   uploadBtn.addEventListener("click", function () {
@@ -317,12 +318,29 @@ function initProfilePhoto() {
   // Handle file selection
   fileInput.addEventListener("change", function (e) {
     if (e.target.files && e.target.files[0]) {
-      openImageCropper(e.target.files[0]);
+      // Check file type
+      const file = e.target.files[0];
+      const fileType = file.type;
+      if (!fileType.startsWith("image/")) {
+        showNotification("Please select an image file", "error");
+        return;
+      }
+
+      // Check file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        showNotification("Image file size must be less than 5MB", "error");
+        return;
+      }
+
+      openImageCropper(file);
     }
   });
 
   // Function to open the image cropper
   function openImageCropper(file) {
+    currentImageFile = file;
+
     // Read the file into the cropper
     const reader = new FileReader();
     reader.onload = function (e) {
@@ -345,7 +363,7 @@ function initProfilePhoto() {
           aspectRatio: 1, // Force 1:1 aspect ratio for profile photo
           viewMode: 1, // Restrict the crop box to not exceed the size of the canvas
           dragMode: "move", // Move the canvas by default instead of crop
-          autoCropArea: 0.8, // The size of the crop box relative to the canvas size (0.8 = 80%)
+          autoCropArea: 0.9, // The size of the crop box relative to the canvas size (0.9 = 90%)
           restore: false, // Don't restore after resize
           guides: true, // Show the dashed lines for guiding
           center: true, // Show the center indicator for guiding
@@ -353,6 +371,8 @@ function initProfilePhoto() {
           cropBoxMovable: true, // Enable to move the crop box
           cropBoxResizable: true, // Enable to resize the crop box
           toggleDragModeOnDblclick: true, // Toggle drag mode between "crop" and "move" when double click on the cropper
+          responsive: true, // Re-render the cropper when resizing the window
+          background: true, // Show the grid background of the container
         });
       };
     };
@@ -366,14 +386,19 @@ function initProfilePhoto() {
       return;
     }
 
+    // Show loading state
+    showLoadingState();
+
     // Get a canvas with the cropped image
     const canvas = cropper.getCroppedCanvas({
-      width: 320, // Set width of output
-      height: 320, // Set height of output
+      width: 400, // Set width of output for consistent size
+      height: 400, // Set height of output for consistent size
       fillColor: "#fff", // Fill color for transparent areas
+      imageSmoothingEnabled: true,
+      imageSmoothingQuality: "high",
     });
 
-    // Generate data URL from canvas
+    // Generate data URL from canvas with high quality
     const croppedImageDataUrl = canvas.toDataURL("image/jpeg", 0.95);
 
     // Send the cropped image to the server
@@ -395,6 +420,7 @@ function initProfilePhoto() {
 
     // Reset file input to allow selecting the same file again
     fileInput.value = "";
+    currentImageFile = null;
   }
 
   // Set up cropper button events
@@ -405,8 +431,6 @@ function initProfilePhoto() {
   // Upload profile photo to the server
   async function uploadProfilePhoto(dataUrl) {
     try {
-      showLoadingState();
-
       // Convert data URL to blob
       const blob = dataURLtoBlob(dataUrl);
 

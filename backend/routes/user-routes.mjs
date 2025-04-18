@@ -9,6 +9,7 @@ import nodemailer from "nodemailer";
 import Favorite from "../mongoose/favorite.mjs";
 import Post from "../mongoose/post.mjs";
 import { isAuthenticated } from "../middlewares.mjs";
+import fetch from "node-fetch";
 
 const router = express.Router();
 
@@ -313,6 +314,33 @@ router.patch("/api/user/profile-picture", isAuthenticated, async (req, res) => {
         success: false,
         error: "Image URL and publicId are required",
       });
+    }
+
+    // Find the current user to get the old profile picture
+    const user = await User.findById(req.user._id);
+
+    // Delete the old profile picture from Cloudinary if it exists
+    if (user && user.profilePicture && user.profilePicture.publicId) {
+      try {
+        // Use the existing delete endpoint via direct API call
+        const deleteUrl = `${req.protocol}://${req.get("host")}/api/delete/${
+          user.profilePicture.publicId
+        }`;
+        const deleteResponse = await fetch(deleteUrl, {
+          method: "DELETE",
+        });
+
+        if (deleteResponse.ok) {
+          console.log(
+            `Deleted old profile picture: ${user.profilePicture.publicId}`
+          );
+        } else {
+          console.error("Failed to delete old profile picture");
+        }
+      } catch (deleteError) {
+        console.error("Error deleting old profile picture:", deleteError);
+        // Continue with the update even if deletion fails
+      }
     }
 
     // Update user profile with new picture information
