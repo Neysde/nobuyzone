@@ -66,7 +66,7 @@ function initPostActions() {
       // Only navigate if the click wasn't on a button
       if (!e.target.closest("button")) {
         const postId = this.dataset.postId;
-        window.location.href = `/post/${postId}`;
+        window.location.href = `/posts/${postId}`;
       }
     });
   });

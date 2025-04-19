@@ -68,10 +68,7 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
       category,
       condition,
       description,
-      city,
-      district,
-      neighborhood,
-      street,
+      location: { city, district, neighborhood, street }, //location properties are nested in the location object!!!
       latitude,
       longitude,
       contact,
@@ -113,13 +110,19 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
       condition,
       description,
       location: {
-        city: city ? city.trim() : "",
-        district: district ? district.trim() : "",
-        neighborhood: neighborhood ? neighborhood.trim() : "",
-        street,
+        // Ensure we have valid strings for all required location fields
+        city: city && city.trim() ? city.trim() : "",
+        district: district && district.trim() ? district.trim() : "",
+        neighborhood:
+          neighborhood && neighborhood.trim() ? neighborhood.trim() : "",
+        street: street && street.trim() ? street.trim() : "",
         coordinates: {
-          latitude: parseFloat(latitude),
-          longitude: parseFloat(longitude),
+          latitude:
+            latitude && !isNaN(parseFloat(latitude)) ? parseFloat(latitude) : 0,
+          longitude:
+            longitude && !isNaN(parseFloat(longitude))
+              ? parseFloat(longitude)
+              : 0,
         },
       },
       images,
@@ -547,53 +550,42 @@ router.delete("/api/posts/:id", isAuthenticated, async (req, res) => {
     if (post.images && post.images.length > 0) {
       const deletePromises = post.images
         .filter((image) => image.publicId) // Only process images with publicId
-        .map((image) => {
-          return new Promise((resolve) => {
-            // Create an HTTP request to the internal API endpoint
-            const options = {
-              hostname: req.hostname,
-              port: process.env.PORT || 5000,
-              path: `/api/delete/${encodeURIComponent(image.publicId)}`,
+        .map(async (image) => {
+          try {
+            // Construct a full URL for the fetch request
+            // Get the protocol (http/https) and host from the request
+            const protocol = req.protocol; // 'http' or 'https'
+            const host = req.get("host");
+            const deleteUrl = `${protocol}://${host}/api/delete/${encodeURIComponent(
+              image.publicId
+            )}`;
+
+            const response = await fetch(deleteUrl, {
               method: "DELETE",
               headers: {
-                // Pass the authorization header to maintain the user's session
-                Authorization: req.headers.authorization || "",
+                "Content-Type": "application/json",
+                // Include auth cookies from the original request
                 Cookie: req.headers.cookie || "",
               },
-            };
-
-            const deleteReq = http.request(options, (deleteRes) => {
-              let responseData = "";
-
-              deleteRes.on("data", (chunk) => {
-                responseData += chunk;
-              });
-
-              deleteRes.on("end", () => {
-                if (deleteRes.statusCode >= 200 && deleteRes.statusCode < 300) {
-                  console.log(
-                    `Deleted image ${image.publicId} from Cloudinary`
-                  );
-                } else {
-                  console.error(
-                    `Error deleting image ${image.publicId}:`,
-                    responseData
-                  );
-                }
-                resolve(); // Always resolve to continue with post deletion
-              });
+              // Include credentials to send cookies with the request
+              credentials: "same-origin",
             });
 
-            deleteReq.on("error", (error) => {
+            if (response.ok) {
+              console.log(`Deleted image ${image.publicId} from Cloudinary`);
+            } else {
+              const errorData = await response.json();
               console.error(
-                `Error with delete request for image ${image.publicId}:`,
-                error
+                `Error deleting image ${image.publicId}:`,
+                errorData
               );
-              resolve(); // Always resolve to continue with post deletion
-            });
-
-            deleteReq.end();
-          });
+            }
+          } catch (error) {
+            console.error(
+              `Error with delete request for image ${image.publicId}:`,
+              error
+            );
+          }
         });
 
       // Wait for all image deletion operations to complete
@@ -796,7 +788,6 @@ router.post("/api/post-drafts", isAuthenticated, async (req, res) => {
     draftData.createdBy = req.user._id;
 
     // Ensure location data is properly structured to prevent validation errors
-    // If no location data is present, provide empty strings for required fields
     if (!draftData.location) {
       draftData.location = {
         city: "",

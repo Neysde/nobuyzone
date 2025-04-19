@@ -611,10 +611,19 @@ document.addEventListener("DOMContentLoaded", function () {
     // Skip updating if user is actively editing an address field
     if (isEditingAddressField) return;
 
-    city.value = address.province || "";
+    // Set values from geocoding with simple fallbacks
+    city.value = address.province || address.city || "";
     district.value = address.town || "";
     neighborhood.value = address.suburb || "";
     street.value = address.road || "";
+
+    // Log the values for debugging
+    console.log("Updated address fields from geocoding:", {
+      city: city.value,
+      district: district.value,
+      neighborhood: neighborhood.value,
+      street: street.value,
+    });
 
     // Add visual feedback
     [city, district, neighborhood, street].forEach((field) => {
@@ -874,6 +883,11 @@ document.addEventListener("DOMContentLoaded", function () {
         const position = marker.getLatLng();
         formData.append("latitude", position.lat);
         formData.append("longitude", position.lng);
+        console.log("Added marker coordinates:", position.lat, position.lng);
+      } else {
+        console.warn("No map marker found - using default coordinates (0,0)");
+        formData.append("latitude", 0);
+        formData.append("longitude", 0);
       }
 
       // Convert FormData to JSON for better compatibility
@@ -915,10 +929,14 @@ document.addEventListener("DOMContentLoaded", function () {
         neighborhood: neighborhoodField ? neighborhoodField.value : "",
         street: streetField ? streetField.value : "",
         coordinates: {
-          latitude: formDataObj.latitude ? parseFloat(formDataObj.latitude) : 0,
-          longitude: formDataObj.longitude
-            ? parseFloat(formDataObj.longitude)
-            : 0,
+          latitude:
+            formDataObj.latitude && !isNaN(parseFloat(formDataObj.latitude))
+              ? parseFloat(formDataObj.latitude)
+              : 0,
+          longitude:
+            formDataObj.longitude && !isNaN(parseFloat(formDataObj.longitude))
+              ? parseFloat(formDataObj.longitude)
+              : 0,
         },
       };
 
@@ -1209,6 +1227,17 @@ document.addEventListener("DOMContentLoaded", function () {
         const position = marker.getLatLng();
         formData.append("latitude", position.lat);
         formData.append("longitude", position.lng);
+        console.log(
+          "Added marker coordinates to draft:",
+          position.lat,
+          position.lng
+        );
+      } else {
+        console.warn(
+          "No map marker found for draft - using default coordinates (0,0)"
+        );
+        formData.append("latitude", 0);
+        formData.append("longitude", 0);
       }
 
       // Convert FormData to JSON for better compatibility
@@ -1245,10 +1274,14 @@ document.addEventListener("DOMContentLoaded", function () {
         neighborhood: neighborhoodField ? neighborhoodField.value : "",
         street: streetField ? streetField.value : "",
         coordinates: {
-          latitude: formDataObj.latitude ? parseFloat(formDataObj.latitude) : 0,
-          longitude: formDataObj.longitude
-            ? parseFloat(formDataObj.longitude)
-            : 0,
+          latitude:
+            formDataObj.latitude && !isNaN(parseFloat(formDataObj.latitude))
+              ? parseFloat(formDataObj.latitude)
+              : 0,
+          longitude:
+            formDataObj.longitude && !isNaN(parseFloat(formDataObj.longitude))
+              ? parseFloat(formDataObj.longitude)
+              : 0,
         },
       };
 
@@ -1414,6 +1447,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const requiredFields = form.querySelectorAll("[required]");
     let isValid = true;
 
+    // Validate all required fields including location fields
     requiredFields.forEach((field) => {
       if (!field.value.trim()) {
         markFieldAsError(field);
@@ -1422,6 +1456,12 @@ document.addEventListener("DOMContentLoaded", function () {
         clearFieldError(field);
       }
     });
+
+    // Make sure we have coordinates
+    if (!marker) {
+      showNotification("Please set a location on the map", "error");
+      isValid = false;
+    }
 
     if (!isValid) {
       showNotification("Please fill in all required fields", "error");
