@@ -50,6 +50,15 @@ passport.use(
 //!!!!!Initialize passport
 app.use(passport.initialize());
 
+// Middleware to check authentication status without redirecting
+app.use((req, res, next) => {
+  passport.authenticate("jwt", { session: false }, (err, user) => {
+    // Attach user to request object if authenticated
+    req.user = user || null;
+    next();
+  })(req, res, next);
+});
+
 // Set up views directory and serve static files from it
 app.set("views", path.join(__dirname, "../views"));
 app.use(express.static(path.join(__dirname, "../views")));
@@ -85,7 +94,7 @@ app.get("/posting", isAuthenticated, async (req, res) => {
 
     // Render the posting page as is if no draft ID was provided
     if (!draftId) {
-      return res.render("posting.ejs");
+      return res.render("posting.ejs", { user: req.user });
     }
 
     // Fetch the draft post if an ID was provided - use Post instead of mongoose.model("Post")
@@ -107,7 +116,7 @@ app.get("/posting", isAuthenticated, async (req, res) => {
 
     // If no draft found or not owned by current user, render empty form
     if (!draft) {
-      return res.render("posting.ejs");
+      return res.render("posting.ejs", { user: req.user });
     }
 
     // Pass the draft data to the template
@@ -119,15 +128,15 @@ app.get("/posting", isAuthenticated, async (req, res) => {
       const draftJson = JSON.stringify(draftObject);
       console.log("Draft JSON length:", draftJson.length);
 
-      res.render("posting.ejs", { draft: draftJson });
+      res.render("posting.ejs", { draft: draftJson, user: req.user });
     } catch (serializationError) {
       console.error("Error serializing draft data:", serializationError);
       // Fallback to plain rendering if there's an issue with serialization
-      res.render("posting.ejs");
+      res.render("posting.ejs", { user: req.user });
     }
   } catch (error) {
     console.error("Error rendering posting page:", error);
-    res.render("posting.ejs");
+    res.render("posting.ejs", { user: req.user });
   }
 });
 

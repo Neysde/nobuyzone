@@ -2,54 +2,72 @@ import express from "express";
 import Post from "../mongoose/post.mjs";
 import User from "../mongoose/user.mjs";
 import { isAuthenticated } from "../middlewares.mjs";
+import passport from "passport";
 
 const router = express.Router();
 
 // Find posts page
-router.get("/find-posts", async (req, res) => {
-  try {
-    const posts = await Post.find({ status: "active" }).sort({ createdAt: -1 });
+router.get("/find-posts", (req, res, next) => {
+  //Authenticate without redirecting - just check if user is logged in
+  passport.authenticate("jwt", { session: false }, async (err, user) => {
+    if (err) {
+      console.error("Authentication error:", err);
+      return next(err);
+    }
 
-    //Count posts by category for sidebar display THIS will be used later for other purposes!!!
-    const categoryCounts = await Post.aggregate([
-      { $match: { status: "active" } },
-      { $group: { _id: "$category", count: { $sum: 1 } } },
-    ]);
+    try {
+      const posts = await Post.find({ status: "active" }).sort({
+        createdAt: -1,
+      });
 
-    //Transform category counts into a format easier to use in the template
-    const categories = {};
-    categoryCounts.forEach((cat) => {
-      categories[cat._id] = cat.count;
-    });
+      //Count posts by category for sidebar display THIS will be used later for other purposes!!!
+      const categoryCounts = await Post.aggregate([
+        { $match: { status: "active" } },
+        { $group: { _id: "$category", count: { $sum: 1 } } },
+      ]);
 
-    // Total count for "All Categories"
-    const totalCount = await Post.countDocuments({ status: "active" });
+      //Transform category counts into a format easier to use in the template
+      const categories = {};
+      categoryCounts.forEach((cat) => {
+        categories[cat._id] = cat.count;
+      });
 
-    res.render("find-posts", {
-      posts,
-      categories,
-      totalCount,
-      currentFilters: {
-        category: "all",
-        search: "",
-        city: "",
-        district: "",
-        neighborhood: "",
-        sort: "newest",
-        page: 1,
-      },
-    });
-  } catch (error) {
-    console.error("Error rendering find posts page:", error);
-    res.status(500).render("error", {
-      message: "Error loading posts",
-      error: { status: 500 },
-    });
-  }
+      // Total count for "All Categories"
+      const totalCount = await Post.countDocuments({ status: "active" });
+
+      // Fetch complete user data if user is authenticated
+      let userData = null;
+      if (user) {
+        userData = await User.findById(user._id);
+      }
+
+      res.render("find-posts", {
+        posts,
+        categories,
+        totalCount,
+        user: userData, // Pass the complete user object to the template
+        currentFilters: {
+          category: "all",
+          search: "",
+          city: "",
+          district: "",
+          neighborhood: "",
+          sort: "newest",
+          page: 1,
+        },
+      });
+    } catch (error) {
+      console.error("Error rendering find posts page:", error);
+      res.status(500).render("error", {
+        message: "Error loading posts",
+        error: { status: 500 },
+      });
+    }
+  })(req, res, next); // Immediately invoke the authenticate function
 });
 
-// Post detail page
-router.get("/posts/:id", isAuthenticated, async (req, res) => {
+//Post detail page
+router.get("/posts/:id", async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
 
@@ -77,14 +95,12 @@ router.get("/posts/:id", isAuthenticated, async (req, res) => {
           ? userData.flaggedPosts.map((id) => id.toString())
           : [];
 
-        user = {
-          _id: userData._id,
-          favorites: favorites,
-          flaggedPosts: flaggedPosts,
-          // Add convenience boolean flags for template rendering
-          hasFavorited: favorites.includes(postIdStr),
-          hasFlagged: flaggedPosts.includes(postIdStr),
-        };
+        // Create user object with ALL properties from userData plus the convenience flags
+        user = userData.toObject();
+
+        // Add convenience boolean flags for template rendering
+        user.hasFavorited = favorites.includes(postIdStr);
+        user.hasFlagged = flaggedPosts.includes(postIdStr);
       }
     }
 
@@ -164,12 +180,21 @@ router.get("/profile/drafts", async (req, res) => {
     // In a real application, you would use the authenticated user's ID
     const userId = req.user?._id;
 
+    // Fetch complete user data if user is authenticated
+    let userData = null;
+    if (userId) {
+      userData = await User.findById(userId);
+    }
+
     const drafts = await Post.find({
       createdBy: userId,
       status: "draft",
     }).sort({ updatedAt: -1 });
 
-    res.render("drafts", { drafts });
+    res.render("drafts", {
+      drafts,
+      user: userData,
+    });
   } catch (error) {
     console.error("Error rendering drafts page:", error);
     res.status(500).render("error", {

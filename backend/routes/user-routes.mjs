@@ -260,6 +260,13 @@ const sendEmail = async (email, subject, message) => {
   }
 };
 
+const logout = async (req, res) => {
+  res
+    .clearCookie("login")
+    .status(200)
+    .send({ message: "Logged out successfully" });
+};
+
 //login and register routes
 router.post("/api/login", login);
 
@@ -381,5 +388,7 @@ router.get("/api/user/current", isAuthenticated, async (req, res) => {
     });
   }
 });
+
+router.post("/api/logout", logout);
 
 export default router;

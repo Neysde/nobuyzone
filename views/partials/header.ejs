@@ -1,24 +1,64 @@
 <header class="header">
-    <div class="container">
-        <div class="header-top">
-            <div class="logo">
-                <a href="/">
-                    <svg class="cl-logo" width="48" height="48" viewBox="0 0 48 48" fill="none">
-                        <rect width="48" height="48" rx="8" fill="var(--primary)"/>
-                        <path d="M12 20H36M12 28H36" stroke="white" stroke-width="3"/>
-                    </svg>
-                    <span>barter</span>
-                </a>
+  <div class="container">
+    <div class="header-top">
+      <div class="logo">
+        <a href="/">
+          <svg
+            class="cl-logo"
+            width="48"
+            height="48"
+            viewBox="0 0 48 48"
+            fill="none"
+          >
+            <rect width="48" height="48" rx="8" fill="var(--primary)" />
+            <path d="M12 20H36M12 28H36" stroke="white" stroke-width="3" />
+          </svg>
+          <span>barter</span>
+        </a>
+      </div>
+      <div class="header-actions">
+        <!-- Create post button always visible -->
+        <a href="/posting" class="button button-primary">Create Post</a>
+
+        <% if (typeof user === 'undefined' || !user) { %>
+        <!-- Sign in button for non-authenticated users -->
+        <a href="/api/login" class="button button-outline">Sign In</a>
+        <% } else { %>
+        <!-- User profile button with dropdown for authenticated users -->
+        <div class="user-dropdown">
+          <a href="/dashboard/<%= user._id %>" class="user-button">
+            <div class="user-avatar">
+              <% if (user.profilePicture) { %>
+              <img
+                src="<%= user.profilePicture.url %>"
+                alt="<%= user.firstName %> <%= user.lastName %>"
+              />
+              <% } else { %>
+              <div class="avatar-placeholder">
+                <%= user.firstName ? user.firstName.charAt(0) : 'U' %>
+              </div>
+              <% } %>
             </div>
-            <div class="header-actions">
-                <a href="/post" class="button button-outline">My Posts</a>
-                <a href="/account" class="button button-primary">Account</a>
-            </div>
-        </div>
-        <% if (typeof breadcrumbs !== 'undefined') { %>
-        <div class="breadcrumbs">
-            <a href="/">Home</a> &gt; <span><%= breadcrumbs %></span>
+            <span><%= user.firstName %> <%= user.lastName %></span>
+          </a>
+          <div class="dropdown-menu">
+            <a href="/dashboard/<%= user._id %>#postings">Posts</a>
+            <a href="/dashboard/<%= user._id %>#drafts">Drafts</a>
+            <a href="/dashboard/<%= user._id %>#favorites">Favorites</a>
+            <a href="/dashboard/<%= user._id %>#messages">Messages</a>
+            <a href="/dashboard/<%= user._id %>#account">Account</a>
+            <a href="#" id="logout-link">Logout</a>
+          </div>
         </div>
         <% } %>
+      </div>
     </div>
-</header> 
+    <% if (typeof breadcrumbs !== 'undefined') { %>
+    <div class="breadcrumbs">
+      <a href="/">Home</a> &gt; <span><%= breadcrumbs %></span>
+    </div>
+    <% } %>
+  </div>
+  <!-- Header JavaScript for enhanced dropdown functionality -->
+  <script src="/js/header.js"></script>
+</header>

@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Barter App</title>
     <link rel="stylesheet" href="/css/layout.css" />
+    <link rel="stylesheet" href="/css/header.css" />
   </head>
   <body>
-    <%- include('partials/header') %>
+    <%- include('partials/header', { user: typeof user !== 'undefined' ? user :
+    null }) %>
 
     <main class="main-content"><%- body %></main>
 
