@@ -1,6 +1,15 @@
 document.addEventListener("DOMContentLoaded", function () {
   // Initialize variables
   const form = document.getElementById("posting-form");
+
+  // Prevent accidental form submission from buttons that aren't explicitly submit buttons
+  document.querySelectorAll("button:not([type])").forEach((button) => {
+    // Skip buttons that are within action-buttons (submit/draft buttons)
+    if (!button.closest(".action-buttons")) {
+      button.type = "button";
+    }
+  });
+
   const titleInput = document.getElementById("title");
   const titleCount = document.getElementById("titleCount");
   const imageUpload = document.getElementById("image-upload");
@@ -10,6 +19,7 @@ document.addEventListener("DOMContentLoaded", function () {
   let map = null;
   let marker = null;
   let uploadedImages = new Set(); //küme
+  let imageIds = new Set(); // Store IDs of existing images from the server
   const fullscreenToggle = document.getElementById("fullscreen-toggle");
   const mapContainer = document.getElementById("location-map");
   const city = document.getElementById("city");
@@ -42,9 +52,114 @@ document.addEventListener("DOMContentLoaded", function () {
   //State management for map transitions
   let isTransitioning = false;
   let pinnedLocation = null;
-  
+
   //Flag to track if user is actively editing an address field
   let isEditingAddressField = false;
+
+  // Check if we have draft data to populate
+  function loadDraftData() {
+    console.log("Checking for draft data...");
+    const draftDataElement = document.getElementById("draft-data");
+    console.log("Draft data element exists:", draftDataElement ? "yes" : "no");
+
+    if (!draftDataElement) return;
+
+    try {
+      const textContent = draftDataElement.textContent.trim();
+      console.log("Draft data content:", textContent);
+
+      const draftData = JSON.parse(textContent);
+      console.log("Parsed draft data:", draftData);
+
+      // Add draftId as a hidden field to the form
+      if (draftData._id) {
+        // First check if the field already exists
+        let draftIdField = document.getElementById("draft-id");
+        if (!draftIdField) {
+          // Create the hidden field
+          draftIdField = document.createElement("input");
+          draftIdField.type = "hidden";
+          draftIdField.id = "draft-id";
+          draftIdField.name = "draftId";
+          form.appendChild(draftIdField);
+        }
+        // Set the value
+        draftIdField.value = draftData._id;
+        console.log("Added draft ID to form:", draftData._id);
+      }
+
+      // Populate form fields with draft data
+      if (draftData.title) {
+        titleInput.value = draftData.title;
+        titleInput.dispatchEvent(new Event("input")); // Trigger character counter update
+      }
+
+      if (draftData.category) {
+        document.getElementById("category").value = draftData.category;
+      }
+
+      if (draftData.condition) {
+        document.getElementById("condition").value = draftData.condition;
+      }
+
+      if (draftData.description) {
+        document.getElementById("description").value = draftData.description;
+      }
+
+      // Set location fields
+      if (draftData.location) {
+        if (draftData.location.city) city.value = draftData.location.city;
+        if (draftData.location.district)
+          district.value = draftData.location.district;
+        if (draftData.location.neighborhood)
+          neighborhood.value = draftData.location.neighborhood;
+        if (draftData.location.street) street.value = draftData.location.street;
+
+        // Set map marker if coordinates exist
+        if (draftData.location.coordinates) {
+          const lat = draftData.location.coordinates.latitude;
+          const lng = draftData.location.coordinates.longitude;
+
+          if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+            // Wait for map to be fully initialized
+            setTimeout(() => {
+              map.setView([lat, lng], 15);
+              marker.setLatLng([lat, lng]);
+              pinnedLocation = marker.getLatLng();
+            }, 100);
+          }
+        }
+      }
+
+      // Set contact preference
+      if (draftData.contactPreference) {
+        const contactRadio = document.querySelector(
+          `input[name="contact"][value="${draftData.contactPreference}"]`
+        );
+        if (contactRadio) contactRadio.checked = true;
+      }
+
+      // Load images
+      if (draftData.images && draftData.images.length > 0) {
+        draftData.images.forEach((image) => {
+          if (image.url) {
+            const imageId =
+              Date.now() + Math.random().toString(36).slice(2, 11);
+            uploadedImages.add(imageId);
+            const preview = createImagePreview(
+              image.url,
+              imageId,
+              image.publicId
+            );
+            imagePreviews.appendChild(preview);
+          }
+        });
+        updateUploadState();
+      }
+    } catch (error) {
+      console.error("Error loading draft data:", error);
+    }
+  }
 
   async function waitForRateLimit() {
     const now = Date.now();
@@ -92,7 +207,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (isTransitioning) return; // Prevent updates during transition
       const pos = e.target.getLatLng();
       pinnedLocation = pos;
-      
+
       //Always save the position but only update fields if not editing
       try {
         if (!isEditingAddressField) {
@@ -110,10 +225,10 @@ document.addEventListener("DOMContentLoaded", function () {
     map.on("click", async function (e) {
       if (isTransitioning) return; //Prevent updates during transition
       pinnedLocation = e.latlng;
-      
+
       //Always update marker position
       marker.setLatLng(e.latlng);
-      
+
       //Only update address fields if not editing
       try {
         if (!isEditingAddressField) {
@@ -130,6 +245,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   //Initialize the map
   initMap();
+
+  // Call loadDraftData after map is initialized
+  loadDraftData();
 
   // Title character counter with enhanced feedback
   titleInput.addEventListener("input", function () {
@@ -158,6 +276,18 @@ document.addEventListener("DOMContentLoaded", function () {
   // Enhanced image upload handling
   function setupImageUpload() {
     const dropZone = imageUpload;
+
+    // Create and add image count display
+    const imageCountDisplay = document.createElement("div");
+    imageCountDisplay.className = "image-count";
+    imageCountDisplay.textContent = "0/5 images";
+    imageUpload.parentNode.insertBefore(
+      imageCountDisplay,
+      imageUpload.nextSibling
+    );
+
+    // Initialize count
+    updateImageCount();
 
     // Prevent default drag behaviors
     ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
@@ -247,7 +377,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const imageId = Date.now() + Math.random().toString(36).slice(2, 11);
       uploadedImages.add(imageId);
 
-      const preview = createImagePreview(e.target.result, imageId);
+      const preview = createImagePreview(e.target.result, imageId, null);
       imagePreviews.appendChild(preview);
 
       updateUploadState();
@@ -270,7 +400,7 @@ document.addEventListener("DOMContentLoaded", function () {
       document.body.classList.add("modal-open");
 
       // Wait for the image to load
-      imageToCrop.onload = function() {
+      imageToCrop.onload = function () {
         // Destroy existing cropper if it exists
         if (cropper) {
           cropper.destroy();
@@ -279,7 +409,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // Initialize the Cropper instance
         cropper = new Cropper(imageToCrop, {
           viewMode: 1, // Restrict the crop box to not exceed the size of the canvas
-          dragMode: 'move', // Move the canvas by default instead of crop
+          dragMode: "move", // Move the canvas by default instead of crop
           aspectRatio: NaN, // Free ratio
           autoCropArea: 1, // The size of the crop box relative to the canvas size (0.8 = 80%)
           restore: false, // Don't restore after resize
@@ -308,17 +438,17 @@ document.addEventListener("DOMContentLoaded", function () {
     const canvas = cropper.getCroppedCanvas({
       maxWidth: 4096, // Maximum width of output
       maxHeight: 4096, // Maximum height of output
-      fillColor: '#fff', // Fill color for transparent areas
+      fillColor: "#fff", // Fill color for transparent areas
     });
 
     // Generate data URL from canvas
-    const croppedImageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+    const croppedImageDataUrl = canvas.toDataURL("image/jpeg", 0.95);
 
     // Add to previews
     const imageId = Date.now() + Math.random().toString(36).slice(2, 11);
     uploadedImages.add(imageId);
 
-    const preview = createImagePreview(croppedImageDataUrl, imageId);
+    const preview = createImagePreview(croppedImageDataUrl, imageId, null);
     imagePreviews.appendChild(preview);
 
     updateUploadState();
@@ -331,12 +461,12 @@ document.addEventListener("DOMContentLoaded", function () {
   function closeCropper() {
     cropperModal.classList.remove("active");
     document.body.classList.remove("modal-open");
-    
+
     if (cropper) {
       cropper.destroy();
       cropper = null;
     }
-    
+
     currentImageFile = null;
   }
 
@@ -346,7 +476,7 @@ document.addEventListener("DOMContentLoaded", function () {
   applyCropBtn.addEventListener("click", applyImageCrop);
 
   // Create image preview element
-  function createImagePreview(src, id) {
+  function createImagePreview(src, id, publicId) {
     const div = document.createElement("div");
     div.className = "preview-item";
     div.dataset.imageId = id;
@@ -355,12 +485,42 @@ document.addEventListener("DOMContentLoaded", function () {
     img.src = src;
     img.dataset.originalSrc = src; // Store the original data URL for upload
 
+    // Store publicId if available (for Cloudinary deletion)
+    if (publicId) {
+      img.dataset.publicId = publicId;
+    }
+
     const removeBtn = document.createElement("button");
     removeBtn.className = "remove-btn";
+    removeBtn.type = "button"; // Explicitly set button type to prevent form submission
     removeBtn.innerHTML = "×";
-    removeBtn.addEventListener("click", (e) => {
-      e.stopPropagation(); //stops the event from bubbling up to the parent elements
+    removeBtn.addEventListener("click", async (e) => {
+      e.preventDefault(); // Prevent any form submission
+      e.stopPropagation(); // Stop event bubbling
+
+      // Check if this is an uploaded image with a publicId (not a new local image)
+      if (!src.startsWith("data:") && img.dataset.publicId) {
+        try {
+          // Use the existing delete endpoint instead of the posts-specific one
+          const deleteResponse = await fetch(
+            `/api/delete/${encodeURIComponent(img.dataset.publicId)}`,
+            {
+              method: "DELETE",
+            }
+          );
+
+          if (!deleteResponse.ok) {
+            console.error("Failed to delete image from Cloudinary");
+          } else {
+            console.log("Successfully deleted image from Cloudinary");
+          }
+        } catch (error) {
+          console.error("Error deleting image from Cloudinary:", error);
+        }
+      }
+
       uploadedImages.delete(id);
+      imageIds.delete(id); // Also remove from imageIds if it exists there
       div.remove();
       updateUploadState();
     });
@@ -376,6 +536,9 @@ document.addEventListener("DOMContentLoaded", function () {
     } else {
       imageUpload.classList.remove("max-reached");
     }
+
+    // Update the image count display
+    updateImageCount();
   }
 
   // Initialize image upload handling
@@ -447,7 +610,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function updateAddressFields(address) {
     // Skip updating if user is actively editing an address field
     if (isEditingAddressField) return;
-    
+
     city.value = address.province || "";
     district.value = address.town || "";
     neighborhood.value = address.suburb || "";
@@ -534,24 +697,24 @@ document.addEventListener("DOMContentLoaded", function () {
   // Handle address field updates
   let debounceTimer;
   const addressFields = [city, district, neighborhood, street];
-  
+
   addressFields.forEach((field) => {
     // Set flag when user focuses on input field
     field.addEventListener("focus", () => {
       isEditingAddressField = true;
     });
-    
+
     // Clear the flag when user leaves the field
     field.addEventListener("blur", () => {
       // Small delay to ensure field is actually blurred before allowing updates
       setTimeout(() => {
         // Only clear flag if no other address field is focused
-        if (!addressFields.some(f => document.activeElement === f)) {
+        if (!addressFields.some((f) => document.activeElement === f)) {
           isEditingAddressField = false;
         }
       }, 100);
     });
-    
+
     field.addEventListener("input", () => {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(async () => {
@@ -596,67 +759,96 @@ document.addEventListener("DOMContentLoaded", function () {
       // Get image files from the preview items
       const imageItems = document.querySelectorAll(".preview-item img");
 
-      // If we have images, upload them first
+      // If we have images, process them
       if (imageItems.length > 0) {
         submitBtn.innerHTML =
-          '<span class="loading-spinner"></span> Uploading images...';
+          '<span class="loading-spinner"></span> Processing images...';
 
         // Process each image
         for (let i = 0; i < imageItems.length; i++) {
           const imgElement = imageItems[i];
 
-          // Update progress message
-          submitBtn.innerHTML = `<span class="loading-spinner"></span> Uploading image ${
-            i + 1
-          }/${imageItems.length}...`;
-
-          // Get image data URL
+          // Get image data URL or source
           const dataUrl = imgElement.src;
 
-          // Skip if not a data URL (already uploaded)
-          if (!dataUrl.startsWith("data:")) continue;
+          // If this is an already uploaded image (not a data URL), add it directly to our arrays
+          if (!dataUrl.startsWith("data:")) {
+            // Extract the necessary information from the existing image URL
+            try {
+              const url = dataUrl;
 
-          try {
-            // Convert data URL to blob (binary large object)
-            const blob = await fetch(dataUrl).then((r) => r.blob());
+              // Try to find publicId from data attribute if available
+              let publicId = imgElement.dataset.publicId;
 
-            // Create form data for this image
-            const imageFormData = new FormData();
-            imageFormData.append("image", blob, "image.jpg");
+              // If no public ID in data attribute, try to extract from URL
+              if (!publicId) {
+                // Extract the public ID from the URL path
+                const urlParts = url.split("/");
+                publicId = urlParts[urlParts.length - 1].split(".")[0]; // Get last part without extension
+                if (urlParts[urlParts.length - 2]) {
+                  publicId = urlParts[urlParts.length - 2] + "/" + publicId; // Include folder
+                }
+              }
 
-            // Upload image using the dedicated endpoint
-            const uploadResponse = await fetch("/api/posts/upload-image", {
-              method: "POST",
-              body: imageFormData,
-            });
+              // Add to our lists
+              imageUrls.push(url);
+              imageIds.push(publicId);
 
-            if (!uploadResponse.ok) {
-              const errorData = await uploadResponse.json();
-              console.error("Image upload error:", errorData);
-              throw new Error(errorData.error || "Failed to upload image");
+              continue; // Skip to next image
+            } catch (error) {
+              console.error("Error processing existing image:", error);
             }
+          }
 
-            const imageResult = await uploadResponse.json();
+          // For new images (those starting with data:), upload them
+          if (dataUrl.startsWith("data:")) {
+            // Update progress message
+            submitBtn.innerHTML = `<span class="loading-spinner"></span> Uploading image ${
+              i + 1
+            }/${imageItems.length}...`;
 
-            if (imageResult.success) {
-              imageUrls.push(imageResult.data.url);
-              imageIds.push(imageResult.data.public_id);
-            } else {
-              console.error(
-                "Image upload response not successful:",
-                imageResult
-              );
-              throw new Error(
-                "Failed to upload image: " +
-                  (imageResult.error || "Unknown error")
+            try {
+              // Convert data URL to blob (binary large object)
+              const blob = await fetch(dataUrl).then((r) => r.blob());
+
+              // Create form data for this image
+              const imageFormData = new FormData();
+              imageFormData.append("image", blob, "image.jpg");
+
+              // Upload image using the dedicated endpoint
+              const uploadResponse = await fetch("/api/posts/upload-image", {
+                method: "POST",
+                body: imageFormData,
+              });
+
+              if (!uploadResponse.ok) {
+                const errorData = await uploadResponse.json();
+                console.error("Image upload error:", errorData);
+                throw new Error(errorData.error || "Failed to upload image");
+              }
+
+              const imageResult = await uploadResponse.json();
+
+              if (imageResult.success) {
+                imageUrls.push(imageResult.data.url);
+                imageIds.push(imageResult.data.public_id);
+              } else {
+                console.error(
+                  "Image upload response not successful:",
+                  imageResult
+                );
+                throw new Error(
+                  "Failed to upload image: " +
+                    (imageResult.error || "Unknown error")
+                );
+              }
+            } catch (error) {
+              console.error("Error processing image:", error);
+              showNotification(
+                "Error uploading image: " + error.message,
+                "error"
               );
             }
-          } catch (error) {
-            console.error("Error processing image:", error);
-            showNotification(
-              "Error uploading image: " + error.message,
-              "error"
-            );
           }
         }
 
@@ -666,6 +858,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
       // Now create the form data for the post
       const formData = new FormData(form);
+
+      // Debug: Log form entries before processing
+      console.log("Form fields before processing:");
+      for (const [key, value] of formData.entries()) {
+        console.log(`${key}: ${value}`);
+      }
 
       // Add image URLs and public IDs to the form data
       imageUrls.forEach((url) => formData.append("imageUrls", url));
@@ -692,37 +890,186 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
 
-      console.log("Submitting post data:", formDataObj);
+      console.log("Final data being sent to server:", formDataObj);
 
-      const response = await fetch("/api/posts", {
-        method: "POST",
+      // Determine if this is a new post or updating a draft
+      const draftId = formDataObj.draftId;
+      const apiUrl = draftId ? `/api/posts/${draftId}` : "/api/posts";
+      const method = draftId ? "PUT" : "POST";
+
+      // If we're updating an existing draft, set the _id field in the format expected by the backend
+      if (draftId) {
+        formDataObj._id = draftId;
+      }
+
+      // Organize location data properly - get values directly from form elements to avoid issues
+      const cityField = form.querySelector("#city");
+      const districtField = form.querySelector("#district");
+      const neighborhoodField = form.querySelector("#neighborhood");
+      const streetField = form.querySelector("#street");
+
+      // Get values directly from the form fields
+      formDataObj.location = {
+        city: cityField ? cityField.value : "",
+        district: districtField ? districtField.value : "",
+        neighborhood: neighborhoodField ? neighborhoodField.value : "",
+        street: streetField ? streetField.value : "",
+        coordinates: {
+          latitude: formDataObj.latitude ? parseFloat(formDataObj.latitude) : 0,
+          longitude: formDataObj.longitude
+            ? parseFloat(formDataObj.longitude)
+            : 0,
+        },
+      };
+
+      // Check if the location fields are actually present and contain values
+      const locationFieldsPresent =
+        form.querySelector("#city") &&
+        form.querySelector("#district") &&
+        form.querySelector("#neighborhood") &&
+        form.querySelector("#street");
+
+      console.log("Location fields present in form:", locationFieldsPresent);
+
+      // Check the actual IDs and names of the fields in the form
+      const cityFieldInForm = form.querySelector("#city");
+      const districtFieldInForm = form.querySelector("#district");
+      const neighborhoodFieldInForm = form.querySelector("#neighborhood");
+      const streetFieldInForm = form.querySelector("#street");
+
+      console.log(
+        "City field:",
+        cityFieldInForm
+          ? {
+              id: cityFieldInForm.id,
+              name: cityFieldInForm.name,
+              value: cityFieldInForm.value,
+            }
+          : "Not found"
+      );
+      console.log(
+        "District field:",
+        districtFieldInForm
+          ? {
+              id: districtFieldInForm.id,
+              name: districtFieldInForm.name,
+              value: districtFieldInForm.value,
+            }
+          : "Not found"
+      );
+      console.log(
+        "Neighborhood field:",
+        neighborhoodFieldInForm
+          ? {
+              id: neighborhoodFieldInForm.id,
+              name: neighborhoodFieldInForm.name,
+              value: neighborhoodFieldInForm.value,
+            }
+          : "Not found"
+      );
+      console.log(
+        "Street field:",
+        streetFieldInForm
+          ? {
+              id: streetFieldInForm.id,
+              name: streetFieldInForm.name,
+              value: streetFieldInForm.value,
+            }
+          : "Not found"
+      );
+
+      if (locationFieldsPresent) {
+        console.log("Location field values:", {
+          city: form.querySelector("#city").value,
+          district: form.querySelector("#district").value,
+          neighborhood: form.querySelector("#neighborhood").value,
+          street: form.querySelector("#street").value,
+        });
+      } else {
+        console.warn("Some location fields are missing from the form");
+      }
+
+      // Log the raw location data before organizing
+      console.log("Raw form location data:", {
+        city: formDataObj.city,
+        district: formDataObj.district,
+        neighborhood: formDataObj.neighborhood,
+        street: formDataObj.street,
+        latitude: formDataObj.latitude,
+        longitude: formDataObj.longitude,
+      });
+
+      // Log the structured location data
+      console.log("Structured location data:", formDataObj.location);
+
+      // Verify the location object is properly formed
+      if (!formDataObj.location || typeof formDataObj.location !== "object") {
+        console.error("Location object is not properly formed!");
+        formDataObj.location = {
+          city: "",
+          district: "",
+          neighborhood: "",
+          street: "",
+          coordinates: { latitude: 0, longitude: 0 },
+        };
+      }
+
+      // Ensure coordinates exist within location
+      if (!formDataObj.location.coordinates) {
+        formDataObj.location.coordinates = { latitude: 0, longitude: 0 };
+      }
+
+      // Remove the individual location fields since they're now in the location object
+      delete formDataObj.city;
+      delete formDataObj.district;
+      delete formDataObj.neighborhood;
+      delete formDataObj.street;
+      delete formDataObj.latitude;
+      delete formDataObj.longitude;
+
+      const response = await fetch(apiUrl, {
+        method: method,
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formDataObj),
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        throw new Error("Network response was not ok");
+        const errorMessage =
+          responseData.error ||
+          responseData.message ||
+          "Network response was not ok";
+        console.error("Server error response:", responseData);
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json();
       showNotification("Post created successfully!", "success");
 
       // Redirect after a short delay to show the success message
       setTimeout(() => {
-        window.location.href = `/posts/${result.id}`;
+        window.location.href = `/posts/${
+          responseData.data?._id || responseData.id || draftId
+        }`;
       }, 1500);
     } catch (error) {
       console.error("Error:", error);
       showNotification("There was a problem creating your post", "error");
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = originalText;
+
+      // Make sure submitBtn exists before trying to modify it
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
     }
   });
 
   // Handle Save as Draft button
-  const saveAsDraftBtn = form.querySelector(".action-buttons button.button-outline");
+  const saveAsDraftBtn = form.querySelector(
+    ".action-buttons button.button-outline"
+  );
   saveAsDraftBtn.addEventListener("click", async (e) => {
     e.preventDefault();
 
@@ -747,67 +1094,96 @@ document.addEventListener("DOMContentLoaded", function () {
       // Get image files from the preview items
       const imageItems = document.querySelectorAll(".preview-item img");
 
-      // If we have images, upload them first
+      // If we have images, process them
       if (imageItems.length > 0) {
         saveAsDraftBtn.innerHTML =
-          '<span class="loading-spinner"></span> Uploading images...';
+          '<span class="loading-spinner"></span> Processing images...';
 
         // Process each image
         for (let i = 0; i < imageItems.length; i++) {
           const imgElement = imageItems[i];
 
-          // Update progress message
-          saveAsDraftBtn.innerHTML = `<span class="loading-spinner"></span> Uploading image ${
-            i + 1
-          }/${imageItems.length}...`;
-
-          // Get image data URL
+          // Get image data URL or source
           const dataUrl = imgElement.src;
 
-          // Skip if not a data URL (already uploaded)
-          if (!dataUrl.startsWith("data:")) continue;
+          // If this is an already uploaded image (not a data URL), add it directly to our arrays
+          if (!dataUrl.startsWith("data:")) {
+            // Extract the necessary information from the existing image URL
+            try {
+              const url = dataUrl;
 
-          try {
-            // Convert data URL to blob
-            const blob = await fetch(dataUrl).then((r) => r.blob());
+              // Try to find publicId from data attribute if available
+              let publicId = imgElement.dataset.publicId;
 
-            // Create form data for this image
-            const imageFormData = new FormData();
-            imageFormData.append("image", blob, "image.jpg");
+              // If no public ID in data attribute, try to extract from URL
+              if (!publicId) {
+                // Extract the public ID from the URL path
+                const urlParts = url.split("/");
+                publicId = urlParts[urlParts.length - 1].split(".")[0]; // Get last part without extension
+                if (urlParts[urlParts.length - 2]) {
+                  publicId = urlParts[urlParts.length - 2] + "/" + publicId; // Include folder
+                }
+              }
 
-            // Upload image using the dedicated endpoint
-            const uploadResponse = await fetch("/api/posts/upload-image", {
-              method: "POST",
-              body: imageFormData,
-            });
+              // Add to our lists
+              imageUrls.push(url);
+              imageIds.push(publicId);
 
-            if (!uploadResponse.ok) {
-              const errorData = await uploadResponse.json();
-              console.error("Image upload error:", errorData);
-              throw new Error(errorData.error || "Failed to upload image");
+              continue; // Skip to next image
+            } catch (error) {
+              console.error("Error processing existing image:", error);
             }
+          }
 
-            const imageResult = await uploadResponse.json();
+          // For new images (those starting with data:), upload them
+          if (dataUrl.startsWith("data:")) {
+            // Update progress message
+            saveAsDraftBtn.innerHTML = `<span class="loading-spinner"></span> Uploading image ${
+              i + 1
+            }/${imageItems.length}...`;
 
-            if (imageResult.success) {
-              imageUrls.push(imageResult.data.url);
-              imageIds.push(imageResult.data.public_id);
-            } else {
-              console.error(
-                "Image upload response not successful:",
-                imageResult
-              );
-              throw new Error(
-                "Failed to upload image: " +
-                  (imageResult.error || "Unknown error")
+            try {
+              // Convert data URL to blob
+              const blob = await fetch(dataUrl).then((r) => r.blob());
+
+              // Create form data for this image
+              const imageFormData = new FormData();
+              imageFormData.append("image", blob, "image.jpg");
+
+              // Upload image using the dedicated endpoint
+              const uploadResponse = await fetch("/api/posts/upload-image", {
+                method: "POST",
+                body: imageFormData,
+              });
+
+              if (!uploadResponse.ok) {
+                const errorData = await uploadResponse.json();
+                console.error("Image upload error:", errorData);
+                throw new Error(errorData.error || "Failed to upload image");
+              }
+
+              const imageResult = await uploadResponse.json();
+
+              if (imageResult.success) {
+                imageUrls.push(imageResult.data.url);
+                imageIds.push(imageResult.data.public_id);
+              } else {
+                console.error(
+                  "Image upload response not successful:",
+                  imageResult
+                );
+                throw new Error(
+                  "Failed to upload image: " +
+                    (imageResult.error || "Unknown error")
+                );
+              }
+            } catch (error) {
+              console.error("Error processing image:", error);
+              showNotification(
+                "Error uploading image: " + error.message,
+                "error"
               );
             }
-          } catch (error) {
-            console.error("Error processing image:", error);
-            showNotification(
-              "Error uploading image: " + error.message,
-              "error"
-            );
           }
         }
 
@@ -817,6 +1193,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const formData = new FormData(form);
       formData.append("isDraft", "true");
+
+      // Debug: Log form entries before processing
+      console.log("Form fields before processing:");
+      for (const [key, value] of formData.entries()) {
+        console.log(`${key}: ${value}`);
+      }
 
       // Add image URLs and public IDs to the form data
       imageUrls.forEach((url) => formData.append("imageUrls", url));
@@ -845,30 +1227,185 @@ document.addEventListener("DOMContentLoaded", function () {
 
       console.log("Saving draft data:", formDataObj); //will be removed later
 
-      const response = await fetch("/api/posts", {
-        method: "POST",
+      // If we're updating an existing draft, set the _id field in the format expected by the backend
+      if (formDataObj.draftId) {
+        formDataObj._id = formDataObj.draftId;
+      }
+
+      // Organize location data properly - get values directly from form elements to avoid issues
+      const cityField = form.querySelector("#city");
+      const districtField = form.querySelector("#district");
+      const neighborhoodField = form.querySelector("#neighborhood");
+      const streetField = form.querySelector("#street");
+
+      // Get values directly from the form fields
+      formDataObj.location = {
+        city: cityField ? cityField.value : "",
+        district: districtField ? districtField.value : "",
+        neighborhood: neighborhoodField ? neighborhoodField.value : "",
+        street: streetField ? streetField.value : "",
+        coordinates: {
+          latitude: formDataObj.latitude ? parseFloat(formDataObj.latitude) : 0,
+          longitude: formDataObj.longitude
+            ? parseFloat(formDataObj.longitude)
+            : 0,
+        },
+      };
+
+      // Check if the location fields are actually present and contain values
+      const locationFieldsPresent =
+        form.querySelector("#city") &&
+        form.querySelector("#district") &&
+        form.querySelector("#neighborhood") &&
+        form.querySelector("#street");
+
+      console.log("Location fields present in form:", locationFieldsPresent);
+
+      // Check the actual IDs and names of the fields in the form
+      const cityFieldInForm = form.querySelector("#city");
+      const districtFieldInForm = form.querySelector("#district");
+      const neighborhoodFieldInForm = form.querySelector("#neighborhood");
+      const streetFieldInForm = form.querySelector("#street");
+
+      console.log(
+        "City field:",
+        cityFieldInForm
+          ? {
+              id: cityFieldInForm.id,
+              name: cityFieldInForm.name,
+              value: cityFieldInForm.value,
+            }
+          : "Not found"
+      );
+      console.log(
+        "District field:",
+        districtFieldInForm
+          ? {
+              id: districtFieldInForm.id,
+              name: districtFieldInForm.name,
+              value: districtFieldInForm.value,
+            }
+          : "Not found"
+      );
+      console.log(
+        "Neighborhood field:",
+        neighborhoodFieldInForm
+          ? {
+              id: neighborhoodFieldInForm.id,
+              name: neighborhoodFieldInForm.name,
+              value: neighborhoodFieldInForm.value,
+            }
+          : "Not found"
+      );
+      console.log(
+        "Street field:",
+        streetFieldInForm
+          ? {
+              id: streetFieldInForm.id,
+              name: streetFieldInForm.name,
+              value: streetFieldInForm.value,
+            }
+          : "Not found"
+      );
+
+      if (locationFieldsPresent) {
+        console.log("Location field values:", {
+          city: form.querySelector("#city").value,
+          district: form.querySelector("#district").value,
+          neighborhood: form.querySelector("#neighborhood").value,
+          street: form.querySelector("#street").value,
+        });
+      } else {
+        console.warn("Some location fields are missing from the form");
+      }
+
+      // Log the raw location data before organizing
+      console.log("Raw form location data:", {
+        city: formDataObj.city,
+        district: formDataObj.district,
+        neighborhood: formDataObj.neighborhood,
+        street: formDataObj.street,
+        latitude: formDataObj.latitude,
+        longitude: formDataObj.longitude,
+      });
+
+      // Log the structured location data
+      console.log("Structured location data:", formDataObj.location);
+
+      // Verify the location object is properly formed
+      if (!formDataObj.location || typeof formDataObj.location !== "object") {
+        console.error("Location object is not properly formed!");
+        formDataObj.location = {
+          city: "",
+          district: "",
+          neighborhood: "",
+          street: "",
+          coordinates: { latitude: 0, longitude: 0 },
+        };
+      }
+
+      // Ensure coordinates exist within location
+      if (!formDataObj.location.coordinates) {
+        formDataObj.location.coordinates = { latitude: 0, longitude: 0 };
+      }
+
+      // Remove the individual location fields since they're now in the location object
+      delete formDataObj.city;
+      delete formDataObj.district;
+      delete formDataObj.neighborhood;
+      delete formDataObj.street;
+      delete formDataObj.latitude;
+      delete formDataObj.longitude;
+
+      // Determine if this is a new draft or updating an existing one
+      const draftId = formDataObj.draftId;
+      // Use the new dedicated endpoint for drafts
+      const apiUrl = "/api/post-drafts";
+      const method = "POST";
+
+      // Always set isDraft to true when saving as draft
+      formDataObj.isDraft = "true";
+
+      // If we're updating an existing draft, set the _id field in the format expected by the backend
+      if (draftId) {
+        formDataObj._id = draftId;
+      }
+
+      const response = await fetch(apiUrl, {
+        method: method,
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formDataObj),
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        throw new Error("Network response was not ok");
+        const errorMessage =
+          responseData.error ||
+          responseData.message ||
+          "Network response was not ok";
+        console.error("Server error response:", responseData);
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json();
       showNotification("Draft saved successfully!", "success");
+      console.log("Draft saved successfully:", responseData);
 
       // Redirect to drafts page after a short delay
       setTimeout(() => {
-        window.location.href = "/profile/drafts";
+        redirectWithUserId("dashboard", "#drafts");
       }, 1500);
     } catch (error) {
       console.error("Error:", error);
       showNotification("There was a problem saving your draft", "error");
-      saveAsDraftBtn.disabled = false;
-      saveAsDraftBtn.innerHTML = originalText;
+
+      // Make sure saveAsDraftBtn exists before trying to modify it
+      if (saveAsDraftBtn) {
+        saveAsDraftBtn.disabled = false;
+        saveAsDraftBtn.innerHTML = originalText;
+      }
     }
   });
 
@@ -911,6 +1448,33 @@ document.addEventListener("DOMContentLoaded", function () {
     const errorMessage = field.parentNode.querySelector(".error-message");
     if (errorMessage) {
       errorMessage.remove();
+    }
+  }
+
+  //redirection with userId - more generic version
+  async function redirectWithUserId(baseEndpoint, hashOrQuery) {
+    try {
+      const response = await fetch("/api/user/current");
+      if (!response.ok) {
+        throw new Error("Failed to get user ID");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        //Construct the URL with the provided baseEndpoint and optional hash/query
+        let url = `/${baseEndpoint}/${data.userId}`;
+
+        //Add hash or query parameters if provided
+        if (hashOrQuery) {
+          url += hashOrQuery;
+        }
+
+        window.location.href = url;
+      } else {
+        console.error("Error:", data.error);
+      }
+    } catch (error) {
+      console.error(`Error redirecting to ${baseEndpoint}:`, error);
     }
   }
 
@@ -972,9 +1536,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   //Prevent Enter key from submitting the form in input fields
   //This prevents the page from reloading and losing uploaded images
-  document.querySelectorAll('form input[type="text"]').forEach(input => {
-    input.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') {
+  document.querySelectorAll('form input[type="text"]').forEach((input) => {
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
         e.preventDefault();
         //Optionally focus the next input field
         const formElements = Array.from(form.elements);
@@ -985,4 +1549,101 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   });
+
+  /**
+   * Updates the image count display to show currently uploaded images out of max allowed
+   */
+  function updateImageCount() {
+    // Check if the element exists
+    const countDisplay = document.querySelector(".image-count");
+    if (!countDisplay) return;
+
+    // Get the current count from either uploadedImages or imageIds, depending on context
+    let currentCount;
+
+    // First try with uploadedImages which is used for newly added images
+    if (uploadedImages && typeof uploadedImages.size === "number") {
+      currentCount = uploadedImages.size;
+    }
+    // Then try with imageIds which is used in populateExistingImages
+    else if (imageIds && typeof imageIds.size === "number") {
+      currentCount = imageIds.size;
+    }
+    // Fallback - count preview elements
+    else {
+      currentCount = document.querySelectorAll(".preview-item").length;
+    }
+
+    // Update the display text
+    countDisplay.textContent = `${currentCount}/5 images`;
+
+    // Visual feedback - change color when approaching limit
+    if (currentCount >= 5) {
+      countDisplay.classList.add("max-reached");
+    } else {
+      countDisplay.classList.remove("max-reached");
+    }
+  }
+
+  /**
+   * Populates the image preview container with existing images
+   * @param {Array} images - Array of image objects from the server
+   */
+  function populateExistingImages(images) {
+    if (!images || !Array.isArray(images) || images.length === 0) return;
+
+    // Clear existing image IDs
+    imageIds.clear();
+
+    // Process each image
+    images.forEach((image) => {
+      if (image.url && image.id) {
+        const imageId = image.id;
+        imageIds.add(imageId);
+
+        // Create preview with the image's Cloudinary public ID for deletion
+        const preview = createImagePreview(
+          image.url,
+          imageId,
+          image.publicId || extractPublicIdFromUrl(image.url)
+        );
+
+        // Add preview to container
+        imagePreviews.appendChild(preview);
+      }
+    });
+
+    // Update image count display
+    updateImageCount();
+  }
+
+  /**
+   * Extract the Cloudinary public ID from a URL
+   * @param {string} url - The Cloudinary URL
+   * @returns {string|null} - The public ID or null if not found
+   */
+  function extractPublicIdFromUrl(url) {
+    if (!url || typeof url !== "string") return null;
+
+    // Typical Cloudinary URL format: https://res.cloudinary.com/[cloud_name]/image/upload/v[version]/[public_id].[extension]
+    try {
+      // Extract the path after /upload/
+      const uploadIndex = url.indexOf("/upload/");
+      if (uploadIndex === -1) return null;
+
+      // Get everything after /upload/
+      const afterUpload = url.substring(uploadIndex + 8);
+
+      // Remove version if present (v1234567890/)
+      const withoutVersion = afterUpload.replace(/^v\d+\//, "");
+
+      // Remove file extension
+      const publicId = withoutVersion.replace(/\.[^.]+$/, "");
+
+      return publicId;
+    } catch (error) {
+      console.error("Error extracting public ID from URL:", error);
+      return null;
+    }
+  }
 });

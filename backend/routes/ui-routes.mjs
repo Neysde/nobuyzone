@@ -2,6 +2,7 @@ import express from "express";
 import Post from "../mongoose/post.mjs";
 import User from "../mongoose/user.mjs";
 import Favorite from "../mongoose/favorite.mjs";
+import { isAuthenticated } from "../middlewares.mjs";
 
 const router = express.Router();
 
@@ -71,7 +72,7 @@ router.get("/posts/:id", async (req, res) => {
 });
 
 // Dashboard page for user
-router.get("/dashboard/:id", async (req, res) => {
+router.get("/dashboard/:id", isAuthenticated, async (req, res) => {
   try {
     // Get the user id from the route parameter
     const userId = req.params.id;

@@ -13,7 +13,10 @@
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     />
     <!-- Cropper.js CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css">
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css"
+    />
   </head>
   <body>
     <main class="posting-page">
@@ -23,6 +26,12 @@
           class="posting-form"
           enctype="multipart/form-data"
         >
+          <% if (typeof draft !== 'undefined') { %>
+          <script id="draft-data" type="application/json">
+            <%- draft %>
+          </script>
+          <% } %>
+
           <!-- Main Content Grid -->
           <div class="posting-grid">
             <!-- Left Column - Main Content -->
@@ -311,7 +320,8 @@
           </div>
           <div class="cropper-instructions">
             <p>
-              Drag to reposition. Drag handles to resize. Double-click to switch between crop and move modes.
+              Drag to reposition. Drag handles to resize. Double-click to switch
+              between crop and move modes.
             </p>
           </div>
         </div>

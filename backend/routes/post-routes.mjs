@@ -1,6 +1,7 @@
 import express from "express";
 import Post from "../mongoose/post.mjs";
 import { isAuthenticated } from "../middlewares.mjs";
+import http from "http";
 
 const router = express.Router();
 
@@ -448,10 +449,61 @@ router.put("/api/posts/:id", isAuthenticated, async (req, res) => {
       });
     }
 
+    // Prepare the update data
+    const updateData = { ...req.body };
+
+    // Process images - create proper image objects from URLs and IDs arrays
+    if (updateData.imageUrls && updateData.imageIds) {
+      // Handle both array and string cases
+      const urls = Array.isArray(updateData.imageUrls)
+        ? updateData.imageUrls
+        : [updateData.imageUrls];
+      const ids = Array.isArray(updateData.imageIds)
+        ? updateData.imageIds
+        : [updateData.imageIds];
+
+      // Create new array of image objects
+      const images = [];
+      for (let i = 0; i < urls.length; i++) {
+        if (urls[i] && ids[i]) {
+          images.push({
+            url: urls[i],
+            publicId: ids[i],
+          });
+        }
+      }
+
+      // Replace the imageUrls and imageIds with the proper images array
+      updateData.images = images;
+      delete updateData.imageUrls;
+      delete updateData.imageIds;
+    }
+
+    // Handle draft status - maintain existing status if it's a draft unless explicitly changing
+    if (post.status === "draft" && !updateData.isDraft) {
+      // Keep as draft unless explicitly set to publish
+      updateData.status = "draft";
+    } else if (updateData.isDraft === "true") {
+      // If isDraft is true, set status to draft
+      updateData.status = "draft";
+    } else if (updateData.isDraft === "false") {
+      // If isDraft is false, set status to active
+      updateData.status = "active";
+    }
+
+    // Remove the isDraft field as we've handled it
+    delete updateData.isDraft;
+
+    // Remove the draftId field if it exists
+    delete updateData.draftId;
+
+    // Log the update for debugging
+    console.log("Updating post with data:", updateData);
+
     // Update post
     const updatedPost = await Post.findByIdAndUpdate(
       req.params.id,
-      { ...req.body },
+      updateData,
       { new: true }
     );
 
@@ -489,6 +541,63 @@ router.delete("/api/posts/:id", isAuthenticated, async (req, res) => {
         success: false,
         message: "Not authorized to delete this post",
       });
+    }
+
+    // Delete images from Cloudinary using the existing /api/delete/:public_id endpoint
+    if (post.images && post.images.length > 0) {
+      const deletePromises = post.images
+        .filter((image) => image.publicId) // Only process images with publicId
+        .map((image) => {
+          return new Promise((resolve) => {
+            // Create an HTTP request to the internal API endpoint
+            const options = {
+              hostname: req.hostname,
+              port: process.env.PORT || 5000,
+              path: `/api/delete/${encodeURIComponent(image.publicId)}`,
+              method: "DELETE",
+              headers: {
+                // Pass the authorization header to maintain the user's session
+                Authorization: req.headers.authorization || "",
+                Cookie: req.headers.cookie || "",
+              },
+            };
+
+            const deleteReq = http.request(options, (deleteRes) => {
+              let responseData = "";
+
+              deleteRes.on("data", (chunk) => {
+                responseData += chunk;
+              });
+
+              deleteRes.on("end", () => {
+                if (deleteRes.statusCode >= 200 && deleteRes.statusCode < 300) {
+                  console.log(
+                    `Deleted image ${image.publicId} from Cloudinary`
+                  );
+                } else {
+                  console.error(
+                    `Error deleting image ${image.publicId}:`,
+                    responseData
+                  );
+                }
+                resolve(); // Always resolve to continue with post deletion
+              });
+            });
+
+            deleteReq.on("error", (error) => {
+              console.error(
+                `Error with delete request for image ${image.publicId}:`,
+                error
+              );
+              resolve(); // Always resolve to continue with post deletion
+            });
+
+            deleteReq.end();
+          });
+        });
+
+      // Wait for all image deletion operations to complete
+      await Promise.all(deletePromises);
     }
 
     // Delete post
@@ -531,6 +640,52 @@ router.delete("/api/drafts/:id", isAuthenticated, async (req, res) => {
         success: false,
         message: "Not authorized to delete this draft",
       });
+    }
+
+    // Delete images from Cloudinary using the delete API endpoint
+    if (draft.images && draft.images.length > 0) {
+      const deletePromises = draft.images
+        .filter((image) => image.publicId) // Only process images with publicId
+        .map(async (image) => {
+          try {
+            // Construct a full URL for the fetch request
+            // Get the protocol (http/https) and host from the request
+            const protocol = req.protocol; // 'http' or 'https'
+            const host = req.get("host");
+            const deleteUrl = `${protocol}://${host}/api/delete/${encodeURIComponent(
+              image.publicId
+            )}`;
+
+            const response = await fetch(deleteUrl, {
+              method: "DELETE",
+              headers: {
+                "Content-Type": "application/json",
+                // Include auth cookies from the original request
+                Cookie: req.headers.cookie || "",
+              },
+              // Include credentials to send cookies with the request
+              credentials: "same-origin",
+            });
+
+            if (response.ok) {
+              console.log(`Deleted image ${image.publicId} from Cloudinary`);
+            } else {
+              const errorData = await response.json();
+              console.error(
+                `Error deleting image ${image.publicId}:`,
+                errorData
+              );
+            }
+          } catch (error) {
+            console.error(
+              `Error with delete request for image ${image.publicId}:`,
+              error
+            );
+          }
+        });
+
+      // Wait for all image deletion operations to complete
+      await Promise.all(deletePromises);
     }
 
     // Delete draft
@@ -591,6 +746,155 @@ router.get("/api/user/drafts", isAuthenticated, async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Server error fetching user drafts",
+    });
+  }
+});
+
+/**
+ * Create or update a draft post
+ */
+router.post("/api/post-drafts", isAuthenticated, async (req, res) => {
+  try {
+    // Process the draft data
+    const draftData = { ...req.body };
+
+    console.log("Received draft data:", JSON.stringify(draftData, null, 2));
+    console.log(
+      "Location data received:",
+      JSON.stringify(draftData.location, null, 2)
+    );
+
+    // Process images - create proper image objects from URLs and IDs arrays
+    if (draftData.imageUrls && draftData.imageIds) {
+      // Handle both array and string cases
+      const urls = Array.isArray(draftData.imageUrls)
+        ? draftData.imageUrls
+        : [draftData.imageUrls];
+      const ids = Array.isArray(draftData.imageIds)
+        ? draftData.imageIds
+        : [draftData.imageIds];
+
+      // Create new array of image objects
+      const images = [];
+      for (let i = 0; i < urls.length; i++) {
+        if (urls[i] && ids[i]) {
+          images.push({
+            url: urls[i],
+            publicId: ids[i],
+          });
+        }
+      }
+
+      // Replace the imageUrls and imageIds with the proper images array
+      draftData.images = images;
+      delete draftData.imageUrls;
+      delete draftData.imageIds;
+    }
+
+    // Set draft status
+    draftData.status = "draft";
+    draftData.createdBy = req.user._id;
+
+    // Ensure location data is properly structured to prevent validation errors
+    // If no location data is present, provide empty strings for required fields
+    if (!draftData.location) {
+      draftData.location = {
+        city: "",
+        district: "",
+        neighborhood: "",
+        street: "",
+        coordinates: {
+          latitude: 0,
+          longitude: 0,
+        },
+      };
+    } else {
+      // Ensure all required location fields exist
+      draftData.location.city = draftData.location.city || "";
+      draftData.location.district = draftData.location.district || "";
+      draftData.location.neighborhood = draftData.location.neighborhood || "";
+      draftData.location.street = draftData.location.street || "";
+
+      // Ensure coordinates exist
+      if (!draftData.location.coordinates) {
+        draftData.location.coordinates = { latitude: 0, longitude: 0 };
+      }
+    }
+
+    // Make sure required fields have at least empty values for drafts
+    draftData.title = draftData.title || "Untitled Draft";
+    draftData.category = draftData.category || "other";
+    draftData.condition = draftData.condition || "good";
+    draftData.description = draftData.description || "";
+
+    // Set contact preference from the form's radio button selection
+    // The form field name is "contact" in the HTML
+    draftData.contactPreference = draftData.contact || "in-app";
+    delete draftData.contact; // Remove the original field after copying its value
+
+    // Log the draft data for debugging
+    console.log("Draft data:", draftData);
+
+    let result;
+    try {
+      if (draftData._id) {
+        // Update existing draft
+        const existingDraft = await Post.findById(draftData._id);
+
+        // Check if draft exists and user is authorized
+        if (!existingDraft) {
+          return res.status(404).json({
+            success: false,
+            message: "Draft not found",
+          });
+        }
+
+        if (existingDraft.createdBy.toString() !== req.user._id.toString()) {
+          return res.status(403).json({
+            success: false,
+            message: "Not authorized to update this draft",
+          });
+        }
+
+        // Update the draft
+        result = await Post.findByIdAndUpdate(draftData._id, draftData, {
+          new: true,
+          runValidators: false, // Skip validation for drafts
+        });
+      } else {
+        // Create new draft - use a direct approach to avoid mongoose validation
+        const newDraft = new Post(draftData);
+        result = await newDraft.save({ validateBeforeSave: false }); // Skip validation
+      }
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (mongoError) {
+      console.error("MongoDB error saving draft:", mongoError);
+
+      // Extract detailed validation errors if available
+      let errorDetails = {};
+      if (mongoError.name === "ValidationError") {
+        Object.keys(mongoError.errors).forEach((key) => {
+          errorDetails[key] = mongoError.errors[key].message;
+        });
+        console.error("Validation errors:", errorDetails);
+      }
+
+      return res.status(400).json({
+        success: false,
+        error: "Validation error: " + mongoError.message,
+        validationErrors: errorDetails,
+        details: mongoError,
+      });
+    }
+  } catch (error) {
+    console.error("Error saving draft:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error saving draft: " + error.message,
     });
   }
 });

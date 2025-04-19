@@ -421,4 +421,22 @@ router.post("/api/favorites", isAuthenticated, async (req, res) => {
   }
 });
 
+// Get current user ID for redirection
+router.get("/api/user/current", isAuthenticated, async (req, res) => {
+  try {
+    // Since isAuthenticated middleware already adds user to req.user,
+    // we can simply return the user ID from there
+    res.status(200).json({
+      success: true,
+      userId: req.user._id,
+    });
+  } catch (error) {
+    console.error("Error getting user ID:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to get user ID",
+    });
+  }
+});
+
 export default router;

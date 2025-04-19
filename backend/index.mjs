@@ -8,6 +8,7 @@ import cookieParser from "cookie-parser";
 import passport from "passport";
 import { Strategy } from "passport-jwt";
 import User from "./mongoose/user.mjs";
+import Post from "./mongoose/post.mjs";
 import { isAuthenticated } from "./middlewares.mjs";
 
 //we need to create our own __dirname because we are using mjs files. In js files we have __dirname as a global variable.
@@ -75,8 +76,59 @@ app.get("/", (req, res) => {
 
 app.use(routes);
 
-app.get("/posting", isAuthenticated, (req, res) => {
-  res.render("posting.ejs");
+app.get("/posting", isAuthenticated, async (req, res) => {
+  try {
+    // Check if a draft ID was provided
+    const draftId = req.query.draft;
+
+    console.log("Draft ID:", draftId);
+
+    // Render the posting page as is if no draft ID was provided
+    if (!draftId) {
+      return res.render("posting.ejs");
+    }
+
+    // Fetch the draft post if an ID was provided - use Post instead of mongoose.model("Post")
+    const draft = await Post.findOne({
+      _id: draftId,
+      createdBy: req.user._id,
+      status: "draft",
+    });
+
+    console.log("Found draft:", draft ? "yes" : "no");
+    if (draft) {
+      console.log("Draft title:", draft.title);
+      console.log("User ID:", req.user._id);
+      console.log(
+        "Matching user:",
+        draft.createdBy.toString() === req.user._id.toString()
+      );
+    }
+
+    // If no draft found or not owned by current user, render empty form
+    if (!draft) {
+      return res.render("posting.ejs");
+    }
+
+    // Pass the draft data to the template
+    try {
+      // Convert the Mongoose document to a plain JavaScript object
+      const draftObject = draft.toObject();
+
+      // Stringify the draft data for the template
+      const draftJson = JSON.stringify(draftObject);
+      console.log("Draft JSON length:", draftJson.length);
+
+      res.render("posting.ejs", { draft: draftJson });
+    } catch (serializationError) {
+      console.error("Error serializing draft data:", serializationError);
+      // Fallback to plain rendering if there's an issue with serialization
+      res.render("posting.ejs");
+    }
+  } catch (error) {
+    console.error("Error rendering posting page:", error);
+    res.render("posting.ejs");
+  }
 });
 
 app.listen(3000, () => {
