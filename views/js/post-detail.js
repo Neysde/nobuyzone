@@ -14,6 +14,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Handle touch events for better mobile interaction
   setupTouchInteractions();
+
+  //Initialize favorite and flag functionality
+  initializePostActions();
 });
 
 /**
@@ -681,5 +684,85 @@ function setupTouchInteractions() {
         if (prevBtn) prevBtn.click();
       }
     }
+  }
+}
+
+/**
+ * Initialize favorite and flag button functionality
+ */
+function initializePostActions() {
+  const favoriteBtn = document.getElementById("favorite-btn");
+  const flagBtn = document.getElementById("flag-btn");
+
+  // Setup favorite button
+  if (favoriteBtn) {
+    favoriteBtn.addEventListener("click", async function () {
+      try {
+        const postId = this.dataset.postId;
+
+        // Use the new toggle favorite endpoint
+        const response = await fetch(`/api/posts/${postId}/favorite`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // Update UI based on the response
+          if (data.isFavorited) {
+            favoriteBtn.classList.add("active");
+            showNotification("Added to favorites", "success");
+          } else {
+            favoriteBtn.classList.remove("active");
+            showNotification("Removed from favorites", "success");
+          }
+        } else {
+          const data = await response.json();
+          throw new Error(data.message || "Failed to update favorites");
+        }
+      } catch (error) {
+        console.error("Error toggling favorite:", error);
+        showNotification(error.message || "Error processing request", "error");
+      }
+    });
+  }
+
+  // Setup flag button
+  if (flagBtn) {
+    flagBtn.addEventListener("click", async function () {
+      try {
+        const postId = this.dataset.postId;
+
+        // Use the new toggle flag endpoint
+        const response = await fetch(`/api/posts/${postId}/flag`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // Update UI based on the response
+          if (data.isFlagged) {
+            flagBtn.classList.add("active");
+            showNotification("Post has been flagged", "success");
+          } else {
+            flagBtn.classList.remove("active");
+            showNotification("Post has been unflagged", "success");
+          }
+        } else {
+          const data = await response.json();
+          throw new Error(data.message || "Failed to update flag status");
+        }
+      } catch (error) {
+        console.error("Error toggling flag:", error);
+        showNotification(error.message || "Error processing request", "error");
+      }
+    });
   }
 }

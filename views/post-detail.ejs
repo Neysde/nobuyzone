@@ -167,6 +167,52 @@
 
           <!-- Right Column - Sidebar -->
           <div class="post-sidebar flex-column">
+            <!-- User Actions Card -->
+            <div class="card user-actions-card">
+              <h2>Actions</h2>
+              <div class="action-buttons">
+                <button
+                  id="favorite-btn"
+                  class="action-button <%= user && user.hasFavorited ? 'active' : '' %>"
+                  data-post-id="<%= post._id %>"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"
+                    ></path>
+                  </svg>
+                  <span>Favorite</span>
+                </button>
+                <button
+                  id="flag-btn"
+                  class="action-button <%= user && user.hasFlagged ? 'active' : '' %>"
+                  data-post-id="<%= post._id %>"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"
+                    ></path>
+                    <line x1="4" y1="22" x2="4" y2="15"></line>
+                  </svg>
+                  <span>Flag</span>
+                </button>
+              </div>
+            </div>
+
             <!-- Contact Card -->
             <div class="card contact-card">
               <h2>Contact Information</h2>

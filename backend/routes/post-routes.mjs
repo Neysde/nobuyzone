@@ -2,6 +2,7 @@ import express from "express";
 import Post from "../mongoose/post.mjs";
 import { isAuthenticated } from "../middlewares.mjs";
 import http from "http";
+import User from "../mongoose/user.mjs";
 
 const router = express.Router();
 
@@ -886,6 +887,130 @@ router.post("/api/post-drafts", isAuthenticated, async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Server error saving draft: " + error.message,
+    });
+  }
+});
+
+/**
+ * Toggle flag for a post
+ */
+router.post("/api/posts/:id/flag", isAuthenticated, async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const userId = req.user._id;
+
+    // Check if post exists
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found",
+      });
+    }
+
+    // Check if user has already flagged this post
+    const user = await User.findById(userId);
+    if (user.flaggedPosts && user.flaggedPosts.includes(postId)) {
+      // If already flagged, remove the flag (unflag)
+      await User.findByIdAndUpdate(
+        userId,
+        { $pull: { flaggedPosts: postId } },
+        { new: true }
+      );
+
+      // Decrement the post's flag count
+      await Post.findByIdAndUpdate(
+        postId,
+        { $inc: { flagCount: -1 } },
+        { new: true }
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Post unflagged successfully",
+        isFlagged: false,
+      });
+    }
+
+    // Add post to user's flagged posts
+    await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { flaggedPosts: postId } },
+      { new: true }
+    );
+
+    // Increment the post's flag count
+    await Post.findByIdAndUpdate(
+      postId,
+      { $inc: { flagCount: 1 } },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Post flagged successfully",
+      isFlagged: true,
+    });
+  } catch (error) {
+    console.error("Error toggling flag:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error toggling flag",
+    });
+  }
+});
+
+/**
+ * Toggle favorite for a post
+ */
+router.post("/api/posts/:id/favorite", isAuthenticated, async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const userId = req.user._id;
+
+    // Check if post exists
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found",
+      });
+    }
+
+    // Check if user has already favorited this post
+    const user = await User.findById(userId);
+    if (user.favorites && user.favorites.includes(postId)) {
+      // If already favorited, remove from favorites (unfavorite)
+      await User.findByIdAndUpdate(
+        userId,
+        { $pull: { favorites: postId } },
+        { new: true }
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Post removed from favorites",
+        isFavorited: false,
+      });
+    }
+
+    // Add post to user's favorites
+    await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { favorites: postId } },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Post added to favorites",
+      isFavorited: true,
+    });
+  } catch (error) {
+    console.error("Error toggling favorite:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error toggling favorite",
     });
   }
 });

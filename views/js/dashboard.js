@@ -245,8 +245,9 @@ async function removeFromFavorites(postId) {
   try {
     showLoadingState();
 
-    const response = await fetch(`/api/favorites/${postId}`, {
-      method: "DELETE",
+    // Use the new favorite toggle endpoint with POST method
+    const response = await fetch(`/api/posts/${postId}/favorite`, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
       },

@@ -23,7 +23,6 @@ const userSchema = new mongoose.Schema({
     required: [true, "Password is required"],
   },
   profilePicture: {
-    //will be added later
     url: {
       type: String,
       required: true,
@@ -37,8 +36,20 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-
-  //MAYBE WILL ADD POST AND DRAFT ID'S HERE.
+  //Store user's favorite posts
+  favorites: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Post",
+    },
+  ],
+  //Store posts that user has flagged
+  flaggedPosts: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Post",
+    },
+  ],
 });
 
 export default mongoose.model("User", userSchema, "users");

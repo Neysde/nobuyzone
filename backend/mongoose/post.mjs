@@ -85,6 +85,12 @@ const postSchema = new mongoose.Schema(
       default: "active",
     },
 
+    // Flag count for reporting inappropriate posts
+    flagCount: {
+      type: Number,
+      default: 0,
+    },
+
     // References and timestamps
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

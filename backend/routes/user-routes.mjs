@@ -6,7 +6,6 @@ import passwordComplexity from "joi-password-complexity";
 import jwt from "jsonwebtoken";
 import { hashPassword, comparePassword } from "../encryptpass.mjs";
 import nodemailer from "nodemailer";
-import Favorite from "../mongoose/favorite.mjs";
 import Post from "../mongoose/post.mjs";
 import { isAuthenticated } from "../middlewares.mjs";
 import fetch from "node-fetch";
@@ -362,62 +361,6 @@ router.patch("/api/user/profile-picture", isAuthenticated, async (req, res) => {
       success: false,
       error: "Failed to update profile picture: " + error.message,
     });
-  }
-});
-
-// Delete from favorites
-router.delete("/api/favorites/:postId", isAuthenticated, async (req, res) => {
-  try {
-    const { postId } = req.params;
-
-    // Delete the favorite
-    await Favorite.findOneAndDelete({
-      userId: req.user._id,
-      postId,
-    });
-
-    res.status(200).send({ message: "Removed from favorites" });
-  } catch (error) {
-    console.error("Error removing from favorites:", error);
-    res.status(500).send({ message: "Internal server error" });
-  }
-});
-
-// Add to favorites
-router.post("/api/favorites", isAuthenticated, async (req, res) => {
-  try {
-    const { postId } = req.body;
-
-    if (!postId) {
-      return res.status(400).send({ message: "Post ID is required" });
-    }
-
-    // Check if post exists
-    const post = await Post.findById(postId);
-    if (!post) {
-      return res.status(404).send({ message: "Post not found" });
-    }
-
-    // Check if already favorited
-    const existingFavorite = await Favorite.findOne({
-      userId: req.user._id,
-      postId,
-    });
-
-    if (existingFavorite) {
-      return res.status(409).send({ message: "Already in favorites" });
-    }
-
-    // Create new favorite
-    await new Favorite({
-      userId: req.user._id,
-      postId,
-    }).save();
-
-    res.status(201).send({ message: "Added to favorites" });
-  } catch (error) {
-    console.error("Error adding to favorites:", error);
-    res.status(500).send({ message: "Internal server error" });
   }
 });
 

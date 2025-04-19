@@ -1122,3 +1122,68 @@ video {
 .map.fullscreen .leaflet-control-container .leaflet-top {
   top: 60px;
 }
+
+/* User Actions Card Styles */
+.user-actions-card {
+  margin-bottom: var(--space-md);
+}
+
+.action-buttons {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--neutral-200);
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-md);
+  color: var(--neutral-700);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.action-button svg {
+  stroke-width: 2;
+  transition: all 0.2s ease;
+}
+
+.action-button.active {
+  background-color: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--neutral-800);
+}
+
+.action-button.active svg {
+  fill: var(--primary);
+  stroke: var(--primary-dark);
+}
+
+#favorite-btn.active svg {
+  fill: var(--primary);
+  stroke: var(--primary-dark);
+}
+
+#flag-btn.active svg {
+  fill: var(--primary);
+  stroke: var(--primary-dark);
+}
+
+@media (max-width: 480px) {
+  .action-buttons {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+}

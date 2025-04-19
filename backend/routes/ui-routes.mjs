@@ -1,7 +1,6 @@
 import express from "express";
 import Post from "../mongoose/post.mjs";
 import User from "../mongoose/user.mjs";
-import Favorite from "../mongoose/favorite.mjs";
 import { isAuthenticated } from "../middlewares.mjs";
 
 const router = express.Router();
@@ -50,7 +49,7 @@ router.get("/find-posts", async (req, res) => {
 });
 
 // Post detail page
-router.get("/posts/:id", async (req, res) => {
+router.get("/posts/:id", isAuthenticated, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
 
@@ -61,7 +60,38 @@ router.get("/posts/:id", async (req, res) => {
       });
     }
 
-    res.render("post-detail", { post });
+    //Create a user object if user is logged in
+    let user = null;
+    if (req.user) {
+      // Get a clean reference to the post ID as a string for comparison
+      const postIdStr = post._id.toString();
+
+      // Fetch the complete user data
+      const userData = await User.findById(req.user._id);
+      if (userData) {
+        // Convert favorites and flaggedPosts arrays to strings for direct comparison
+        const favorites = userData.favorites
+          ? userData.favorites.map((id) => id.toString())
+          : [];
+        const flaggedPosts = userData.flaggedPosts
+          ? userData.flaggedPosts.map((id) => id.toString())
+          : [];
+
+        user = {
+          _id: userData._id,
+          favorites: favorites,
+          flaggedPosts: flaggedPosts,
+          // Add convenience boolean flags for template rendering
+          hasFavorited: favorites.includes(postIdStr),
+          hasFlagged: flaggedPosts.includes(postIdStr),
+        };
+      }
+    }
+
+    res.render("post-detail", {
+      post,
+      user,
+    });
   } catch (error) {
     console.error("Error rendering post detail:", error);
     res.status(500).render("error", {
@@ -77,8 +107,11 @@ router.get("/dashboard/:id", isAuthenticated, async (req, res) => {
     // Get the user id from the route parameter
     const userId = req.params.id;
 
-    // Fetch the user data
-    const user = await User.findById(userId);
+    // Fetch the user data with populated favorites
+    const user = await User.findById(userId).populate({
+      path: "favorites",
+      select: "title category location images createdAt status",
+    });
 
     if (!user) {
       return res.status(404).render("error", {
@@ -99,24 +132,15 @@ router.get("/dashboard/:id", isAuthenticated, async (req, res) => {
       status: "draft",
     }).sort({ updatedAt: -1 });
 
-    // Fetch user's favorites with populated post data
-    const favoritesData = await Favorite.find({ userId: userId })
-      .populate({
-        path: "postId",
-        model: "Post",
-        select: "title category location images createdAt status",
-      })
-      .sort({ createdAt: -1 });
-
     // Transform favorites to match the expected format in the template
-    const favorites = favoritesData
-      .map((favorite) => {
+    const favorites = user.favorites
+      .filter((post) => post.status === "active") // Filter out inactive posts
+      .map((post) => {
         return {
-          post: favorite.postId,
-          addedAt: favorite.createdAt,
+          post: post,
+          addedAt: post.createdAt, // We don't have the exact date added as favorite
         };
-      })
-      .filter((favorite) => favorite.post.status === "active"); // Only include active posts
+      });
 
     // Render the dashboard template with all the data
     res.render("dashboard", {
