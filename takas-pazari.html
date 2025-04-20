@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Takasla</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Leaflet Harita CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+
+<body>
+    <header>
+        <a href="/index.html" class="back-home-btn">Anasayfaya Dön</a>
+        <h1>Takasla</h1>
+        <div class="takas-pazari-link-container">
+            <a href="/takas-pazari.html" class="takas-pazari-link">Takas Pazarlarını Görüntüle</a>
+        </div>
+
+        <nav class="search-bar">
+            <div class="search-left">
+                <form action="/results.html" method="GET">
+                    <input type="text" name="query" placeholder="Ne arıyorsun?" required>
+
+                    <select name="category" id="categorySelect">
+                        <option value="">Tüm Kategoriler</option>
+                    </select>
+
+                    <select name="location" id="locationSelect">
+                        <option value="">Şehir seçin</option>
+                    </select>
+
+                    <select name="district" id="districtSelect" disabled>
+                        <option value="">İlçe seçin</option>
+                    </select>
+
+                    <select name="radius">
+                        <option value="5">+5 km</option>
+                        <option value="10">+10 km</option>
+                        <option value="30">+30 km</option>
+                    </select>
+
+                    <button type="submit">Finden</button>
+                </form>
+            </div>
+            <div class="search-right">
+                <div class="profil-container" id="profilContainer">
+                    <a href="#" class="profil-link" id="profilLink">
+                        <i class="fas fa-user"></i> Profil
+                    </a>
+                    <ul class="dropdown-menu" id="dropdownMenu">
+                        <li><a href="/register.html">Hesap Oluştur</a></li>
+                        <li><a href="/login.html">Giriş Yap</a></li>
+                        <li><a href="/profil.html">Profili Görüntüle</a></li>
+                        <li><a href="/mesajlar.html">Mesajlar</a></li>
+                        <li><a href="/ilanlarim.html">İlanlarım</a></li>
+                    </ul>
+                </div>
+            </div>
+
+        </nav>
+    </header>
+
+    <main>
+        <div id="map"></div>
+    </main>
+
+    <footer>
+        <p class="copyright">Copyright 2025 Takasla</p>
+    </footer>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="map-pazarlar.js"></script>
+    <script src="kategoriler.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            // 1. KATEGORİLERİ YÜKLE
+            const categorySelect = document.getElementById("categorySelect");
+            if (typeof kategoriler !== "undefined") {
+                kategoriler.forEach(kategori => {
+                    const option = document.createElement("option");
+                    option.value = kategori;
+                    option.textContent = kategori;
+                    categorySelect.appendChild(option);
+                });
+            }
+
+            // 2. ŞEHİR ve İLÇELERİ YÜKLE
+            const citySelect = document.getElementById("locationSelect");
+            const districtSelect = document.getElementById("districtSelect");
+
+            try {
+                const [ilResponse, ilceResponse] = await Promise.all([
+                    fetch("il.json"),
+                    fetch("ilce.json")
+                ]);
+
+                const ilJson = await ilResponse.json();
+                const ilceJson = await ilceResponse.json();
+
+                const cities = ilJson.find(item => item.name === "il").data;
+                const districts = ilceJson.find(item => item.name === "ilce").data;
+
+                cities.forEach(city => {
+                    const option = document.createElement("option");
+                    option.value = city.id;
+                    option.textContent = city.name;
+                    citySelect.appendChild(option);
+                });
+
+                citySelect.addEventListener("change", () => {
+                    const selectedCityId = citySelect.value;
+                    districtSelect.innerHTML = '<option value="">İlçe seçin</option>';
+
+                    if (selectedCityId) {
+                        const filteredDistricts = districts.filter(ilce => ilce.il_id === selectedCityId);
+
+                        filteredDistricts.forEach(ilce => {
+                            const option = document.createElement("option");
+                            option.value = ilce.name;
+                            option.textContent = ilce.name;
+                            districtSelect.appendChild(option);
+                        });
+
+                        districtSelect.disabled = false;
+                    } else {
+                        districtSelect.disabled = true;
+                    }
+                });
+
+            } catch (error) {
+                console.error("Veriler yüklenemedi:", error);
+            }
+
+            // 3. PROFİL MENÜSÜ AÇ-KAPA
+            const profilContainer = document.getElementById("profilContainer");
+            const profilLink = document.getElementById("profilLink");
+
+            profilLink.addEventListener("click", (e) => {
+                e.preventDefault();
+                profilContainer.classList.toggle("active");
+            });
+
+            document.addEventListener("click", (e) => {
+                if (!profilContainer.contains(e.target)) {
+                    profilContainer.classList.remove("active");
+                }
+            });
+        });
+    </script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const profilContainer = document.getElementById("profilContainer");
+            const profilLink = document.getElementById("profilLink");
+
+            profilLink.addEventListener("click", (e) => {
+                e.preventDefault();
+                profilContainer.classList.toggle("active");
+            });
+
+            // Sayfa dışına tıklanırsa menüyü kapat
+            document.addEventListener("click", (e) => {
+                if (!profilContainer.contains(e.target)) {
+                    profilContainer.classList.remove("active");
+                }
+            });
+        });
+    </script>
+
+
+
+</body>
+
+</html>

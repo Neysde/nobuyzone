@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pazar Detayı</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+
+<body>
+    <header>
+        <a href="/index.html" class="back-home-btn">Anasayfaya Dön</a>
+        <h1>Takasla</h1>
+        <div class="takas-pazari-link-container">
+            <a href="/takas-pazari.html" class="takas-pazari-link">Takas Pazarlarını Görüntüle</a>
+        </div>
+
+        <nav class="search-bar">
+            <div class="search-left">
+                <form action="/results.html" method="GET">
+                    <input type="text" name="query" placeholder="Ne arıyorsun?" required>
+
+                    <select name="category" id="categorySelect">
+                        <option value="">Tüm Kategoriler</option>
+                    </select>
+
+                    <select name="location" id="locationSelect">
+                        <option value="">Şehir seçin</option>
+                    </select>
+
+                    <select name="district" id="districtSelect" disabled>
+                        <option value="">İlçe seçin</option>
+                    </select>
+
+                    <select name="radius">
+                        <option value="5">+5 km</option>
+                        <option value="10">+10 km</option>
+                        <option value="30">+30 km</option>
+                    </select>
+
+                    <button type="submit">Finden</button>
+                </form>
+            </div>
+            <div class="search-right">
+                <div class="profil-container" id="profilContainer">
+                    <a href="#" class="profil-link" id="profilLink">
+                        <i class="fas fa-user"></i> Profil
+                    </a>
+                    <ul class="dropdown-menu" id="dropdownMenu">
+                        <li><a href="/register.html">Hesap Oluştur</a></li>
+                        <li><a href="/login.html">Giriş Yap</a></li>
+                        <li><a href="/profil.html">Profili Görüntüle</a></li>
+                        <li><a href="/mesajlar.html">Mesajlar</a></li>
+                        <li><a href="/ilanlarim.html">İlanlarım</a></li>
+                    </ul>
+                </div>
+            </div>
+
+        </nav>
+    </header>
+
+
+    <main>
+        <div class="pazar-container" id="pazarContainer">
+            <h2 id="pazarName">Pazar Adı</h2>
+            <p id="pazarDescription">Açıklama bilgisi yükleniyor...</p>
+            <p><strong>Konum:</strong> <span id="pazarKonum">---</span></p>
+            <p><strong>Saat:</strong> <span id="pazarSaat">---</span></p>
+
+            <div id="mini-map"></div>
+
+            <div class="butonlar">
+                <button id="btnNavi">Navigasyonda Aç</button>
+                <button id="btnMap">Haritada Göster</button>
+                <button id="btnReport">Rapor Et</button>
+                <button id="btnShare">Paylaş</button>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2025 Takasla</p>
+    </footer>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const pazarId = urlParams.get("pazarId");
+
+        fetch('pazarlar.js')
+            .then(res => res.json())
+            .then(data => {
+                const pazar = data.find(p => p.id == pazarId);
+                if (!pazar) return;
+
+                document.getElementById("pazarName").textContent = pazar.name;
+                document.getElementById("pazarDescription").textContent = pazar.description || "Açıklama mevcut değil.";
+                document.getElementById("pazarKonum").textContent = `${pazar.city}, ${pazar.district}`;
+                document.getElementById("pazarSaat").textContent = pazar.time;
+
+                const map = L.map('mini-map').setView([pazar.lat, pazar.lng], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(map);
+                L.marker([pazar.lat, pazar.lng]).addTo(map);
+
+                // Butonlar
+                document.getElementById("btnNavi").onclick = () => {
+                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${pazar.lat},${pazar.lng}`, '_blank');
+                };
+
+                document.getElementById("btnMap").onclick = () => {
+                    window.open(`https://www.google.com/maps?q=${pazar.lat},${pazar.lng}`, '_blank');
+                };
+
+                document.getElementById("btnReport").onclick = () => {
+                    alert("Rapor etme sayfası/özelliği henüz aktif değil.");
+                };
+
+                document.getElementById("btnShare").onclick = async () => {
+                    try {
+                        await navigator.share({
+                            title: pazar.name,
+                            url: window.location.href
+                        });
+                    } catch (err) {
+                        alert("Paylaşım desteklenmiyor.");
+                    }
+                };
+            });
+    </script>
+</body>
+
+</html>
