@@ -71,11 +71,30 @@ const postSchema = new mongoose.Schema(
       },
     ],
 
-    // Contact preferences
-    contactPreference: {
-      type: String,
+    // Contact preferences - updated to support multiple preferences
+    contactPreferences: {
+      type: [String],
       enum: ["in-app", "email", "phone"],
-      default: "in-app",
+      default: ["in-app"],
+      validate: {
+        validator: function (preferences) {
+          // Ensure at least one preference is selected
+          return preferences && preferences.length > 0;
+        },
+        message: "At least one contact preference is required",
+      },
+    },
+
+    // Contact details
+    contactDetails: {
+      email: {
+        type: String,
+        trim: true,
+      },
+      phone: {
+        type: String,
+        trim: true,
+      },
     },
 
     // Status information

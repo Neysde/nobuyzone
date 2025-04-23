@@ -225,9 +225,18 @@
               <!-- Contact Preferences Card -->
               <div class="card contact-card">
                 <h2>Contact Preferences</h2>
+                <p class="contact-description">
+                  How would you like potential traders to contact you? Select at
+                  least one option.
+                </p>
                 <div class="contact-options">
                   <label class="contact-option">
-                    <input type="radio" name="contact" value="in-app" checked />
+                    <input
+                      type="checkbox"
+                      name="contactPreferences"
+                      value="in-app"
+                      checked
+                    />
                     <div class="option-content">
                       <span class="contact-icon">💬</span>
                       <div class="option-text">
@@ -237,7 +246,11 @@
                     </div>
                   </label>
                   <label class="contact-option">
-                    <input type="radio" name="contact" value="email" />
+                    <input
+                      type="checkbox"
+                      name="contactPreferences"
+                      value="email"
+                    />
                     <div class="option-content">
                       <span class="contact-icon">📧</span>
                       <div class="option-text">
@@ -247,7 +260,12 @@
                     </div>
                   </label>
                   <label class="contact-option">
-                    <input type="radio" name="contact" value="phone" />
+                    <input
+                      type="checkbox"
+                      name="contactPreferences"
+                      value="phone"
+                      id="phone-checkbox"
+                    />
                     <div class="option-content">
                       <span class="contact-icon">📱</span>
                       <div class="option-text">
@@ -256,6 +274,27 @@
                       </div>
                     </div>
                   </label>
+
+                  <!-- Phone number input that appears when phone option is selected -->
+                  <div
+                    id="phone-input-container"
+                    class="additional-input-container"
+                    style="display: none"
+                  >
+                    <div class="form-group">
+                      <label for="phone">Phone Number</label>
+                      <input
+                        type="tel"
+                        id="phone"
+                        name="phoneNumber"
+                        pattern="[0-9]{10,15}"
+                        placeholder="Enter your phone number"
+                      />
+                      <small class="input-help"
+                        >Format: 5XXXXXXXXX (without country code)</small
+                      >
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -72,7 +72,8 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
       location: { city, district, neighborhood, street }, //location properties are nested in the location object!!!
       latitude,
       longitude,
-      contact,
+      contactPreferences, // Now using array of preferences
+      phoneNumber, // Added phone number field
       isDraft,
       imageUrls,
       imageIds,
@@ -85,6 +86,13 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
         error: "Please provide all required fields",
       });
     }
+
+    // Validate contact preferences - ensure we have at least one preference
+    const preferences = Array.isArray(contactPreferences)
+      ? contactPreferences
+      : contactPreferences
+      ? [contactPreferences]
+      : ["in-app"]; // Default to in-app if nothing is provided
 
     // Process images from URLs and IDs arrays
     const images = [];
@@ -103,6 +111,15 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
         }
       }
     }
+
+    // Get user's email from the database for contact details
+    const user = await User.findById(req.user._id).select("email");
+
+    // Create contact details object
+    const contactDetails = {
+      email: user.email || "",
+      phone: phoneNumber || "",
+    };
 
     // Create new post
     const post = new Post({
@@ -127,7 +144,8 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
         },
       },
       images,
-      contactPreference: contact || "in-app",
+      contactPreferences: preferences,
+      contactDetails,
       status: isDraft === "true" ? "draft" : "active",
       createdBy: req.user._id,
     });
@@ -821,7 +839,7 @@ router.post("/api/post-drafts", isAuthenticated, async (req, res) => {
 
     // Set contact preference from the form's radio button selection
     // The form field name is "contact" in the HTML
-    draftData.contactPreference = draftData.contact || "in-app";
+    draftData.contactPreferences = draftData.contactPreferences || ["in-app"];
     delete draftData.contact; // Remove the original field after copying its value
 
     // Log the draft data for debugging
@@ -1011,6 +1029,85 @@ router.post("/api/posts/:id/favorite", isAuthenticated, async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Server error toggling favorite",
+    });
+  }
+});
+
+/**
+ * Get contact details for a post
+ * This endpoint is used to retrieve contact information securely
+ */
+router.get("/api/posts/:id/contact", isAuthenticated, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { method } = req.query;
+
+    // Validate request
+    if (!method || !["email", "phone"].includes(method)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid contact method requested",
+      });
+    }
+
+    // Find the post
+    const post = await Post.findById(id);
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found",
+      });
+    }
+
+    // Check if the requested contact method is available for this post
+    if (!post.contactPreferences.includes(method)) {
+      return res.status(400).json({
+        success: false,
+        message: `This post does not support ${method} contact`,
+      });
+    }
+
+    // Get contact details based on method
+    let contactInfo = {};
+
+    if (method === "email") {
+      // Find the post creator to get their email
+      if (post.contactDetails && post.contactDetails.email) {
+        contactInfo.email = post.contactDetails.email;
+      } else {
+        // Fallback to finding the user if email isn't in contactDetails
+        const postCreator = await User.findById(post.createdBy).select("email");
+        if (postCreator) {
+          contactInfo.email = postCreator.email;
+        } else {
+          return res.status(404).json({
+            success: false,
+            message: "User email information not found",
+          });
+        }
+      }
+    } else if (method === "phone") {
+      // Get phone from post's contact details
+      if (post.contactDetails && post.contactDetails.phone) {
+        contactInfo.phone = post.contactDetails.phone;
+      } else {
+        return res.status(404).json({
+          success: false,
+          message: "Phone information not available",
+        });
+      }
+    }
+
+    // Return the contact information
+    res.status(200).json({
+      success: true,
+      ...contactInfo,
+    });
+  } catch (error) {
+    console.error("Error retrieving contact details:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error retrieving contact details",
     });
   }
 });

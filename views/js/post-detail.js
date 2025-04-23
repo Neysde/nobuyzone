@@ -535,21 +535,343 @@ function initializeMap() {
  */
 function setupContactButton() {
   const contactBtn = document.getElementById("contact-btn");
+  const contactMethodBtns = document.querySelectorAll(".contact-method-btn");
 
-  if (!contactBtn) return;
+  // Set up the main contact button
+  if (contactBtn) {
+    contactBtn.addEventListener("click", function () {
+      // Check if there are multiple contact methods
+      const methods = document.querySelectorAll(".contact-method");
 
-  contactBtn.addEventListener("click", function () {
-    // This function would typically open a chat modal or navigate to a
-    // contact form. For now, we'll just log to console.
-    console.log("Contact seller button clicked");
+      // If there's only one method, trigger that method's button click
+      if (methods.length === 1) {
+        const methodBtn = methods[0].querySelector(".contact-method-btn");
+        if (methodBtn) {
+          methodBtn.click();
+          return;
+        }
+      }
 
-    // Example implementation:
-    // 1. Show a notification
-    showNotification("Contact feature will be available soon!", "info");
+      // If there are multiple methods or no method button was found
+      // Show a modal or dropdown to choose contact method
+      showNotification("Please select a specific contact method below", "info");
 
-    // 2. In the future, this could open a modal dialog or redirect to a chat page
-    // openContactModal() or window.location.href = '/chat/with-seller/' + sellerId;
-  });
+      // Highlight the contact methods
+      document.querySelectorAll(".contact-method").forEach((method) => {
+        method.classList.add("highlight-method");
+
+        // Remove highlight after a short delay
+        setTimeout(() => {
+          method.classList.remove("highlight-method");
+        }, 2000);
+      });
+    });
+  }
+
+  // Set up individual contact method buttons
+  if (contactMethodBtns.length > 0) {
+    contactMethodBtns.forEach((btn) => {
+      btn.addEventListener("click", async function () {
+        const method = this.dataset.method;
+        const postId = this.dataset.postId;
+
+        try {
+          // Make API call to get contact information
+          if (method === "in-app") {
+            // Handle in-app messaging
+            await handleInAppContact(postId);
+          } else if (method === "email" || method === "phone") {
+            // Get contact details through API
+            await getContactDetails(method, postId);
+          }
+        } catch (error) {
+          console.error(`Error handling ${method} contact:`, error);
+          showNotification(
+            `Unable to retrieve contact information. Please try again.`,
+            "error"
+          );
+        }
+      });
+    });
+  }
+
+  /**
+   * Handle in-app messaging
+   * @param {string} postId - The ID of the post
+   */
+  async function handleInAppContact(postId) {
+    try {
+      // Use the same approach as getContactDetails for consistent auth handling
+      let response;
+      try {
+        response = await fetch(`/api/posts/${postId}/contact?method=in-app`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          // Don't follow redirects
+          redirect: "manual",
+        });
+
+        // Detect redirects (redirect responses with status 3xx)
+        if (
+          response.type === "opaqueredirect" ||
+          (response.status >= 300 && response.status < 400)
+        ) {
+          // User is not authenticated, redirect to login page
+          const returnUrl = encodeURIComponent(window.location.pathname);
+          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          return;
+        }
+
+        // Check for 401/403 responses (authentication failures)
+        if (response.status === 401 || response.status === 403) {
+          // Redirect to login page with return URL
+          const returnUrl = encodeURIComponent(window.location.pathname);
+          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          return;
+        }
+
+        // If we reach here, user is authenticated
+        showNotification("Opening chat with seller...", "info");
+        window.location.href = `/messages?post=${postId}`;
+      } catch (fetchError) {
+        // Handle any fetch errors as authentication issues if they might be related
+        if (
+          fetchError instanceof TypeError ||
+          fetchError.message.includes("unexpected") ||
+          fetchError.message.includes("JSON")
+        ) {
+          // Network error or parsing error - likely auth issue
+          const returnUrl = encodeURIComponent(window.location.pathname);
+          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          return;
+        }
+        // Re-throw other errors
+        throw fetchError;
+      }
+    } catch (error) {
+      console.error("Error initiating chat:", error);
+      // Only show notification for errors that are not authentication related
+      if (!window.location.href.includes("/api/login")) {
+        showNotification(
+          "Could not start chat. Please try again later.",
+          "error"
+        );
+      }
+    }
+  }
+
+  /**
+   * Get contact details (email or phone) from the server
+   * @param {string} method - The contact method (email or phone)
+   * @param {string} postId - The ID of the post
+   */
+  async function getContactDetails(method, postId) {
+    try {
+      // First, check if we're authenticated by making a simple GET request
+      // that will be redirected if not authenticated
+      let response;
+      try {
+        response = await fetch(
+          `/api/posts/${postId}/contact?method=${method}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            // Don't follow redirects
+            redirect: "manual",
+          }
+        );
+
+        // Detect redirects (redirect responses with status 3xx)
+        // This happens when isAuthenticated middleware redirects to login page
+        if (
+          response.type === "opaqueredirect" ||
+          (response.status >= 300 && response.status < 400)
+        ) {
+          // User is not authenticated, redirect to login page
+          const returnUrl = encodeURIComponent(window.location.pathname);
+          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          return;
+        }
+
+        // Check for 401/403 responses (authentication failures)
+        if (response.status === 401 || response.status === 403) {
+          // Redirect to login page with return URL
+          const returnUrl = encodeURIComponent(window.location.pathname);
+          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          return;
+        }
+
+        // Check for other errors
+        if (!response.ok) {
+          const contentType = response.headers.get("content-type");
+          // Handle error differently based on content type
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            throw new Error(
+              errorData.message || `Failed to get ${method} information`
+            );
+          } else {
+            // For non-JSON responses, assume authentication failure
+            const returnUrl = encodeURIComponent(window.location.pathname);
+            window.location.href = `/api/login?returnTo=${returnUrl}`;
+            return;
+          }
+        }
+
+        // Try to parse the successful response
+        let data;
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          data = await response.json();
+        } else {
+          // If not JSON, assume authentication failure
+          const returnUrl = encodeURIComponent(window.location.pathname);
+          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          return;
+        }
+
+        // Show the information to the user
+        if (method === "email" && data.email) {
+          // For email, provide options to copy or mail to
+          showContactInfo(method, data.email);
+        } else if (method === "phone" && data.phone) {
+          // For phone, provide options to copy or call
+          showContactInfo(method, data.phone);
+        } else {
+          throw new Error(`No ${method} information available`);
+        }
+      } catch (fetchError) {
+        // Handle any fetch errors as authentication issues if they might be related
+        if (
+          fetchError instanceof TypeError ||
+          fetchError.message.includes("unexpected") ||
+          fetchError.message.includes("JSON")
+        ) {
+          // Network error or parsing error - likely auth issue
+          const returnUrl = encodeURIComponent(window.location.pathname);
+          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          return;
+        }
+        // Re-throw other errors
+        throw fetchError;
+      }
+    } catch (error) {
+      console.error(`Error retrieving ${method}:`, error);
+      // Only show notification for errors that are not authentication related
+      if (!window.location.href.includes("/api/login")) {
+        showNotification(
+          `Could not retrieve ${method}. Please try again later.`,
+          "error"
+        );
+      }
+    }
+  }
+
+  /**
+   * Display contact information to the user
+   * @param {string} type - The type of contact info (email or phone)
+   * @param {string} value - The contact value
+   */
+  function showContactInfo(type, value) {
+    // Create a modal element
+    const modal = document.createElement("div");
+    modal.className = "contact-modal";
+
+    // Determine title and action text based on type
+    const title = type === "email" ? "Seller Email" : "Seller Phone";
+    const actionText = type === "email" ? "Email Seller" : "Call Seller";
+    const actionUrl = type === "email" ? `mailto:${value}` : `tel:${value}`;
+
+    // Create modal content
+    modal.innerHTML = `
+      <div class="contact-modal-content">
+        <div class="contact-modal-header">
+          <h3>${title}</h3>
+          <button class="contact-modal-close">&times;</button>
+        </div>
+        <div class="contact-modal-body">
+          <p class="contact-value">${value}</p>
+          <div class="contact-actions">
+            <button class="button button-sm copy-btn" data-value="${value}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+              </svg>
+              Copy to Clipboard
+            </button>
+            <a href="${actionUrl}" class="button button-primary button-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                ${
+                  type === "email"
+                    ? '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline>'
+                    : '<path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"></path>'
+                }
+              </svg>
+              ${actionText}
+            </a>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Add modal to the page
+    document.body.appendChild(modal);
+
+    // Show the modal
+    setTimeout(() => {
+      modal.classList.add("active");
+    }, 10);
+
+    // Handle close button
+    const closeBtn = modal.querySelector(".contact-modal-close");
+    closeBtn.addEventListener("click", () => {
+      closeContactModal(modal);
+    });
+
+    // Handle clicks outside the modal content
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        closeContactModal(modal);
+      }
+    });
+
+    // Handle copy button
+    const copyBtn = modal.querySelector(".copy-btn");
+    copyBtn.addEventListener("click", () => {
+      // Copy the value to clipboard
+      navigator.clipboard
+        .writeText(value)
+        .then(() => {
+          showNotification(
+            `${
+              type.charAt(0).toUpperCase() + type.slice(1)
+            } copied to clipboard!`,
+            "success"
+          );
+        })
+        .catch((err) => {
+          console.error("Could not copy text: ", err);
+          showNotification("Failed to copy to clipboard", "error");
+        });
+    });
+  }
+
+  /**
+   * Close the contact information modal
+   * @param {HTMLElement} modal - The modal element to close
+   */
+  function closeContactModal(modal) {
+    modal.classList.remove("active");
+
+    // After animation completes, remove from DOM
+    setTimeout(() => {
+      modal.remove();
+    }, 300);
+  }
 }
 
 /**
@@ -706,7 +1028,22 @@ function initializePostActions() {
           headers: {
             "Content-Type": "application/json",
           },
+          // Don't follow redirects
+          redirect: "manual",
         });
+
+        // Handle authentication redirection
+        if (
+          response.type === "opaqueredirect" ||
+          (response.status >= 300 && response.status < 400) ||
+          response.status === 401 ||
+          response.status === 403
+        ) {
+          // User is not authenticated, redirect to login page
+          const returnUrl = encodeURIComponent(window.location.pathname);
+          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          return;
+        }
 
         if (response.ok) {
           const data = await response.json();
@@ -720,12 +1057,40 @@ function initializePostActions() {
             showNotification("Removed from favorites", "success");
           }
         } else {
-          const data = await response.json();
-          throw new Error(data.message || "Failed to update favorites");
+          // Try to parse error response if it's JSON
+          try {
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+              const data = await response.json();
+              throw new Error(data.message || "Failed to update favorites");
+            } else {
+              throw new Error("Failed to update favorites");
+            }
+          } catch (parseError) {
+            throw new Error("Failed to update favorites");
+          }
         }
       } catch (error) {
         console.error("Error toggling favorite:", error);
-        showNotification(error.message || "Error processing request", "error");
+
+        // Check if this is an auth-related error
+        if (
+          error instanceof TypeError ||
+          error.message.includes("Failed to fetch")
+        ) {
+          // Likely a network error or CORS issue, might be auth-related
+          const returnUrl = encodeURIComponent(window.location.pathname);
+          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          return;
+        }
+
+        // For other errors, show notification
+        if (!window.location.href.includes("/api/login")) {
+          showNotification(
+            error.message || "Error processing request",
+            "error"
+          );
+        }
       }
     });
   }
@@ -742,7 +1107,22 @@ function initializePostActions() {
           headers: {
             "Content-Type": "application/json",
           },
+          // Don't follow redirects
+          redirect: "manual",
         });
+
+        // Handle authentication redirection
+        if (
+          response.type === "opaqueredirect" ||
+          (response.status >= 300 && response.status < 400) ||
+          response.status === 401 ||
+          response.status === 403
+        ) {
+          // User is not authenticated, redirect to login page
+          const returnUrl = encodeURIComponent(window.location.pathname);
+          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          return;
+        }
 
         if (response.ok) {
           const data = await response.json();
@@ -756,12 +1136,40 @@ function initializePostActions() {
             showNotification("Post has been unflagged", "success");
           }
         } else {
-          const data = await response.json();
-          throw new Error(data.message || "Failed to update flag status");
+          // Try to parse error response if it's JSON
+          try {
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+              const data = await response.json();
+              throw new Error(data.message || "Failed to update flag status");
+            } else {
+              throw new Error("Failed to update flag status");
+            }
+          } catch (parseError) {
+            throw new Error("Failed to update flag status");
+          }
         }
       } catch (error) {
         console.error("Error toggling flag:", error);
-        showNotification(error.message || "Error processing request", "error");
+
+        // Check if this is an auth-related error
+        if (
+          error instanceof TypeError ||
+          error.message.includes("Failed to fetch")
+        ) {
+          // Likely a network error or CORS issue, might be auth-related
+          const returnUrl = encodeURIComponent(window.location.pathname);
+          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          return;
+        }
+
+        // For other errors, show notification
+        if (!window.location.href.includes("/api/login")) {
+          showNotification(
+            error.message || "Error processing request",
+            "error"
+          );
+        }
       }
     });
   }

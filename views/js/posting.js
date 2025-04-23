@@ -56,6 +56,9 @@ document.addEventListener("DOMContentLoaded", function () {
   //Flag to track if user is actively editing an address field
   let isEditingAddressField = false;
 
+  // Setup for handling multiple contact preferences
+  setupContactPreferences();
+
   // Check if we have draft data to populate
   function loadDraftData() {
     console.log("Checking for draft data...");
@@ -131,12 +134,63 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
 
-      // Set contact preference
-      if (draftData.contactPreference) {
-        const contactRadio = document.querySelector(
-          `input[name="contact"][value="${draftData.contactPreference}"]`
+      // Set contact preferences (updated for multiple selection)
+      if (
+        draftData.contactPreferences &&
+        Array.isArray(draftData.contactPreferences)
+      ) {
+        draftData.contactPreferences.forEach((preference) => {
+          const contactCheckbox = document.querySelector(
+            `input[name="contactPreferences"][value="${preference}"]`
+          );
+          if (contactCheckbox) {
+            contactCheckbox.checked = true;
+
+            // If phone is selected, also make sure to show the input field
+            if (
+              preference === "phone" &&
+              draftData.contactDetails &&
+              draftData.contactDetails.phone
+            ) {
+              const phoneInput = document.getElementById("phone");
+              if (phoneInput) {
+                phoneInput.value = draftData.contactDetails.phone;
+              }
+              // Trigger the change event to update visibility
+              if (document.getElementById("phone-checkbox")) {
+                document
+                  .getElementById("phone-checkbox")
+                  .dispatchEvent(new Event("change"));
+              }
+            }
+          }
+        });
+      } else if (draftData.contactPreference) {
+        // Handle legacy single preference format
+        const contactCheckbox = document.querySelector(
+          `input[name="contactPreferences"][value="${draftData.contactPreference}"]`
         );
-        if (contactRadio) contactRadio.checked = true;
+        if (contactCheckbox) {
+          contactCheckbox.checked = true;
+
+          // If phone is selected, also make sure to show the input field
+          if (
+            draftData.contactPreference === "phone" &&
+            draftData.contactDetails &&
+            draftData.contactDetails.phone
+          ) {
+            const phoneInput = document.getElementById("phone");
+            if (phoneInput) {
+              phoneInput.value = draftData.contactDetails.phone;
+            }
+            // Trigger the change event to update visibility
+            if (document.getElementById("phone-checkbox")) {
+              document
+                .getElementById("phone-checkbox")
+                .dispatchEvent(new Event("change"));
+            }
+          }
+        }
       }
 
       // Load images
@@ -751,169 +805,105 @@ document.addEventListener("DOMContentLoaded", function () {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    // Validate form before submission
     if (!validateForm()) {
-      return;
+      return false;
     }
 
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span class="loading-spinner"></span> Posting...';
+    const loader = showLoadingState();
 
     try {
-      // First, upload any images
-      const imageUrls = [];
-      const imageIds = [];
-
-      // Get image files from the preview items
-      const imageItems = document.querySelectorAll(".preview-item img");
-
-      // If we have images, process them
-      if (imageItems.length > 0) {
-        submitBtn.innerHTML =
-          '<span class="loading-spinner"></span> Processing images...';
-
-        // Process each image
-        for (let i = 0; i < imageItems.length; i++) {
-          const imgElement = imageItems[i];
-
-          // Get image data URL or source
-          const dataUrl = imgElement.src;
-
-          // If this is an already uploaded image (not a data URL), add it directly to our arrays
-          if (!dataUrl.startsWith("data:")) {
-            // Extract the necessary information from the existing image URL
-            try {
-              const url = dataUrl;
-
-              // Try to find publicId from data attribute if available
-              let publicId = imgElement.dataset.publicId;
-
-              // If no public ID in data attribute, try to extract from URL
-              if (!publicId) {
-                // Extract the public ID from the URL path
-                const urlParts = url.split("/");
-                publicId = urlParts[urlParts.length - 1].split(".")[0]; // Get last part without extension
-                if (urlParts[urlParts.length - 2]) {
-                  publicId = urlParts[urlParts.length - 2] + "/" + publicId; // Include folder
-                }
-              }
-
-              // Add to our lists
-              imageUrls.push(url);
-              imageIds.push(publicId);
-
-              continue; // Skip to next image
-            } catch (error) {
-              console.error("Error processing existing image:", error);
-            }
-          }
-
-          // For new images (those starting with data:), upload them
-          if (dataUrl.startsWith("data:")) {
-            // Update progress message
-            submitBtn.innerHTML = `<span class="loading-spinner"></span> Uploading image ${
-              i + 1
-            }/${imageItems.length}...`;
-
-            try {
-              // Convert data URL to blob (binary large object)
-              const blob = await fetch(dataUrl).then((r) => r.blob());
-
-              // Create form data for this image
-              const imageFormData = new FormData();
-              imageFormData.append("image", blob, "image.jpg");
-
-              // Upload image using the dedicated endpoint
-              const uploadResponse = await fetch("/api/posts/upload-image", {
-                method: "POST",
-                body: imageFormData,
-              });
-
-              if (!uploadResponse.ok) {
-                const errorData = await uploadResponse.json();
-                console.error("Image upload error:", errorData);
-                throw new Error(errorData.error || "Failed to upload image");
-              }
-
-              const imageResult = await uploadResponse.json();
-
-              if (imageResult.success) {
-                imageUrls.push(imageResult.data.url);
-                imageIds.push(imageResult.data.public_id);
-              } else {
-                console.error(
-                  "Image upload response not successful:",
-                  imageResult
-                );
-                throw new Error(
-                  "Failed to upload image: " +
-                    (imageResult.error || "Unknown error")
-                );
-              }
-            } catch (error) {
-              console.error("Error processing image:", error);
-              showNotification(
-                "Error uploading image: " + error.message,
-                "error"
-              );
-            }
-          }
-        }
-
-        submitBtn.innerHTML =
-          '<span class="loading-spinner"></span> Creating post...';
-      }
-
-      // Now create the form data for the post
+      // Get form data
       const formData = new FormData(form);
 
-      // Debug: Log form entries before processing
-      console.log("Form fields before processing:");
-      for (const [key, value] of formData.entries()) {
-        console.log(`${key}: ${value}`);
-      }
+      // Fix for multiple contact preferences
+      // Remove single contactPreferences value if it exists in formData
+      formData.delete("contactPreferences");
 
-      // Add image URLs and public IDs to the form data
-      imageUrls.forEach((url) => formData.append("imageUrls", url));
-      imageIds.forEach((id) => formData.append("imageIds", id));
+      // Get all checked contact preference checkboxes and add them to formData
+      const checkedPreferences = document.querySelectorAll(
+        'input[name="contactPreferences"]:checked'
+      );
+      checkedPreferences.forEach((checkbox) => {
+        formData.append("contactPreferences", checkbox.value);
+      });
 
-      // Add coordinates if marker exists
+      // Build location object
+      const location = {
+        city: formData.get("city"),
+        district: formData.get("district"),
+        neighborhood: formData.get("neighborhood"),
+        street: formData.get("street"),
+      };
+
+      // Get coordinates from the marker
       if (marker) {
         const position = marker.getLatLng();
         formData.append("latitude", position.lat);
         formData.append("longitude", position.lng);
-        console.log("Added marker coordinates:", position.lat, position.lng);
-      } else {
-        console.warn("No map marker found - using default coordinates (0,0)");
-        formData.append("latitude", 0);
-        formData.append("longitude", 0);
       }
 
-      // Convert FormData to JSON for better compatibility
-      const formDataObj = {};
-      for (const [key, value] of formData.entries()) {
-        // Handle multiple values for the same key (arrays like imageUrls and imageIds)
-        if (key === "imageUrls" || key === "imageIds") {
-          if (!formDataObj[key]) {
-            formDataObj[key] = [];
+      // Convert FormData to JSON object for the API
+      const jsonData = {
+        title: formData.get("title"),
+        category: formData.get("category"),
+        condition: formData.get("condition"),
+        description: formData.get("description"),
+        location,
+        latitude: formData.get("latitude"),
+        longitude: formData.get("longitude"),
+        // Use the array of contact preferences we just set up
+        contactPreferences: Array.from(checkedPreferences).map(
+          (checkbox) => checkbox.value
+        ),
+        phoneNumber: formData.get("phoneNumber"),
+      };
+
+      // Add image data if available
+      if (uploadedImages && uploadedImages.size > 0) {
+        const imageUrls = [];
+        const imageIds = [];
+
+        uploadedImages.forEach((data) => {
+          imageUrls.push(data.url);
+          imageIds.push(data.publicId);
+        });
+
+        jsonData.imageUrls = imageUrls;
+        jsonData.imageIds = imageIds;
+      } else {
+        // Check for existing images in preview items if uploadedImages is not available
+        const previewItems = document.querySelectorAll(".preview-item img");
+        if (previewItems.length > 0) {
+          const imageUrls = [];
+          const imageIds = [];
+
+          previewItems.forEach((img) => {
+            const url = img.src;
+            const publicId =
+              img.dataset.publicId || extractPublicIdFromUrl(url);
+
+            if (url && publicId) {
+              imageUrls.push(url);
+              imageIds.push(publicId);
+            }
+          });
+
+          if (imageUrls.length > 0 && imageIds.length > 0) {
+            jsonData.imageUrls = imageUrls;
+            jsonData.imageIds = imageIds;
           }
-          formDataObj[key].push(value);
-        } else {
-          formDataObj[key] = value;
         }
       }
 
-      console.log("Final data being sent to server:", formDataObj);
-
       // Determine if this is a new post or updating a draft
-      const draftId = formDataObj.draftId;
+      const draftId = formData.get("draftId");
       const apiUrl = draftId ? `/api/posts/${draftId}` : "/api/posts";
       const method = draftId ? "PUT" : "POST";
 
       // If we're updating an existing draft, set the _id field in the format expected by the backend
       if (draftId) {
-        formDataObj._id = draftId;
+        jsonData._id = draftId;
       }
 
       // Organize location data properly - get values directly from form elements to avoid issues
@@ -923,19 +913,19 @@ document.addEventListener("DOMContentLoaded", function () {
       const streetField = form.querySelector("#street");
 
       // Get values directly from the form fields
-      formDataObj.location = {
+      jsonData.location = {
         city: cityField ? cityField.value : "",
         district: districtField ? districtField.value : "",
         neighborhood: neighborhoodField ? neighborhoodField.value : "",
         street: streetField ? streetField.value : "",
         coordinates: {
           latitude:
-            formDataObj.latitude && !isNaN(parseFloat(formDataObj.latitude))
-              ? parseFloat(formDataObj.latitude)
+            jsonData.latitude && !isNaN(parseFloat(jsonData.latitude))
+              ? parseFloat(jsonData.latitude)
               : 0,
           longitude:
-            formDataObj.longitude && !isNaN(parseFloat(formDataObj.longitude))
-              ? parseFloat(formDataObj.longitude)
+            jsonData.longitude && !isNaN(parseFloat(jsonData.longitude))
+              ? parseFloat(jsonData.longitude)
               : 0,
         },
       };
@@ -1009,21 +999,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
       // Log the raw location data before organizing
       console.log("Raw form location data:", {
-        city: formDataObj.city,
-        district: formDataObj.district,
-        neighborhood: formDataObj.neighborhood,
-        street: formDataObj.street,
-        latitude: formDataObj.latitude,
-        longitude: formDataObj.longitude,
+        city: jsonData.city,
+        district: jsonData.district,
+        neighborhood: jsonData.neighborhood,
+        street: jsonData.street,
+        latitude: jsonData.latitude,
+        longitude: jsonData.longitude,
       });
 
       // Log the structured location data
-      console.log("Structured location data:", formDataObj.location);
+      console.log("Structured location data:", jsonData.location);
 
       // Verify the location object is properly formed
-      if (!formDataObj.location || typeof formDataObj.location !== "object") {
+      if (!jsonData.location || typeof jsonData.location !== "object") {
         console.error("Location object is not properly formed!");
-        formDataObj.location = {
+        jsonData.location = {
           city: "",
           district: "",
           neighborhood: "",
@@ -1033,24 +1023,24 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       // Ensure coordinates exist within location
-      if (!formDataObj.location.coordinates) {
-        formDataObj.location.coordinates = { latitude: 0, longitude: 0 };
+      if (!jsonData.location.coordinates) {
+        jsonData.location.coordinates = { latitude: 0, longitude: 0 };
       }
 
       // Remove the individual location fields since they're now in the location object
-      delete formDataObj.city;
-      delete formDataObj.district;
-      delete formDataObj.neighborhood;
-      delete formDataObj.street;
-      delete formDataObj.latitude;
-      delete formDataObj.longitude;
+      delete jsonData.city;
+      delete jsonData.district;
+      delete jsonData.neighborhood;
+      delete jsonData.street;
+      delete jsonData.latitude;
+      delete jsonData.longitude;
 
       const response = await fetch(apiUrl, {
         method: method,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formDataObj),
+        body: JSON.stringify(jsonData),
       });
 
       const responseData = await response.json();
@@ -1076,10 +1066,9 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("Error:", error);
       showNotification("There was a problem creating your post", "error");
 
-      // Make sure submitBtn exists before trying to modify it
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
+      // Make sure loader exists before trying to modify it
+      if (loader) {
+        hideLoadingState(loader);
       }
     }
   });
@@ -1442,7 +1431,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Form validation
+  // Form validation (updated to check contact preferences)
   function validateForm() {
     const requiredFields = form.querySelectorAll("[required]");
     let isValid = true;
@@ -1460,6 +1449,24 @@ document.addEventListener("DOMContentLoaded", function () {
     // Make sure we have coordinates
     if (!marker) {
       showNotification("Please set a location on the map", "error");
+      isValid = false;
+    }
+
+    // Validate contact preferences (at least one must be selected)
+    const contactCheckboxes = document.querySelectorAll(
+      'input[name="contactPreferences"]'
+    );
+    const isAnyContactSelected = Array.from(contactCheckboxes).some(
+      (cb) => cb.checked
+    );
+
+    if (!isAnyContactSelected) {
+      showNotification("Please select at least one contact method", "error");
+      const contactCard = document.querySelector(".contact-card");
+      if (contactCard) {
+        contactCard.classList.add("error-container");
+        contactCard.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       isValid = false;
     }
 
@@ -1686,4 +1693,108 @@ document.addEventListener("DOMContentLoaded", function () {
       return null;
     }
   }
+
+  /**
+   * Setup contact preferences with multiple selection
+   * and conditional phone number input visibility
+   */
+  function setupContactPreferences() {
+    const phoneCheckbox = document.getElementById("phone-checkbox");
+    const phoneInputContainer = document.getElementById(
+      "phone-input-container"
+    );
+
+    // Initialize phone input visibility
+    updatePhoneInputVisibility();
+
+    // Add event listener for phone checkbox
+    if (phoneCheckbox) {
+      phoneCheckbox.addEventListener("change", updatePhoneInputVisibility);
+    }
+
+    // Add validation to ensure at least one contact preference is selected
+    const contactCheckboxes = document.querySelectorAll(
+      'input[name="contactPreferences"]'
+    );
+    contactCheckboxes.forEach((checkbox) => {
+      checkbox.addEventListener("change", validateContactPreferences);
+    });
+
+    // Function to update phone input visibility
+    function updatePhoneInputVisibility() {
+      if (phoneCheckbox && phoneCheckbox.checked) {
+        // Show phone input
+        phoneInputContainer.style.display = "block";
+        phoneInputContainer.classList.add("active");
+
+        // Make phone input required when checkbox is checked
+        const phoneInput = document.getElementById("phone");
+        if (phoneInput) {
+          phoneInput.setAttribute("required", "required");
+        }
+      } else {
+        // Hide phone input
+        phoneInputContainer.style.display = "none";
+        phoneInputContainer.classList.remove("active");
+
+        // Remove required attribute when checkbox is unchecked
+        const phoneInput = document.getElementById("phone");
+        if (phoneInput) {
+          phoneInput.removeAttribute("required");
+          // Clear value when hiding
+          phoneInput.value = "";
+        }
+      }
+    }
+
+    // Function to validate at least one contact preference is selected
+    function validateContactPreferences() {
+      const isAnySelected = Array.from(contactCheckboxes).some(
+        (cb) => cb.checked
+      );
+
+      // Add validation feedback
+      const contactCard = document.querySelector(".contact-card");
+      if (!isAnySelected && contactCard) {
+        contactCard.classList.add("error-container");
+
+        // Add error message if it doesn't exist
+        if (!document.querySelector(".contact-error-message")) {
+          const errorMessage = document.createElement("div");
+          errorMessage.className = "contact-error-message";
+          errorMessage.textContent =
+            "Please select at least one contact method";
+          contactCard.querySelector(".contact-description").after(errorMessage);
+        }
+      } else {
+        // Remove error styling
+        if (contactCard) {
+          contactCard.classList.remove("error-container");
+          const errorMessage = contactCard.querySelector(
+            ".contact-error-message"
+          );
+          if (errorMessage) {
+            errorMessage.remove();
+          }
+        }
+      }
+
+      return isAnySelected;
+    }
+  }
+
+  // Add CSS for error container
+  const style = document.createElement("style");
+  style.textContent = `
+    .error-container {
+      border: 1px solid #f56565 !important;
+      background-color: rgba(254, 215, 215, 0.1);
+    }
+    .contact-error-message {
+      color: #f56565;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+  `;
+  document.head.appendChild(style);
 });

@@ -511,6 +511,12 @@ textarea {
   margin-bottom: 0;
 }
 
+.contact-description {
+  margin-bottom: var(--space-md);
+  color: var(--neutral-600);
+  font-size: var(--font-size-sm);
+}
+
 .contact-option {
   cursor: pointer;
 }
@@ -529,13 +535,46 @@ textarea {
   background: var(--neutral-200);
 }
 
-.contact-option input[type="radio"] {
+/* Style for checkbox inputs in contact options */
+.contact-option input[type="checkbox"] {
   display: none;
 }
 
-.contact-option input[type="radio"]:checked + .option-content {
+.contact-option input[type="checkbox"] + .option-content {
+  position: relative;
+}
+
+.contact-option input[type="checkbox"] + .option-content::before {
+  content: "";
+  position: absolute;
+  right: var(--space-md);
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--neutral-400);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.contact-option input[type="checkbox"]:checked + .option-content {
   border-color: var(--primary);
   background: var(--neutral-200);
+}
+
+.contact-option input[type="checkbox"]:checked + .option-content::before {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.contact-option input[type="checkbox"]:checked + .option-content::after {
+  content: "✓";
+  position: absolute;
+  right: var(--space-md);
+  width: 1.25rem;
+  height: 1.25rem;
+  color: white;
+  text-align: center;
+  line-height: 1.25rem;
+  font-size: 0.875rem;
 }
 
 .contact-icon {
@@ -557,6 +596,43 @@ textarea {
   display: block;
   font-size: var(--font-size-sm);
   color: var(--neutral-600);
+}
+
+/* Phone input container styles */
+.additional-input-container {
+  margin-top: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  opacity: 0;
+}
+
+.additional-input-container.active {
+  margin-top: var(--space-md);
+  max-height: 200px;
+  opacity: 1;
+  padding: var(--space-md);
+  background-color: var(--neutral-200);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--neutral-300);
+}
+
+/* Help text for inputs */
+.input-help {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--neutral-600);
+}
+
+/* Make sure the phone input has proper spacing */
+#phone-input-container .form-group {
+  margin-bottom: 0;
+}
+
+#phone-input-container input {
+  padding: 0.625rem;
+  background-color: white;
 }
 
 /* Action Buttons */

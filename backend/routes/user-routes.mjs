@@ -164,7 +164,7 @@ const passwordLink = async (req, res) => {
         ), //secret will be moved to .env file.
       }).save();
     }
-    const url = `http://localhost:3000/${user.id}/${token.token}`; //!!!!!!! need to change this url later.
+    const url = `http://localhost:3000/reset/${user.id}/${token.token}`; //Updated URL to match new route path
     const subject = "Password Reset";
     const message = `
         <p>Here is a link to reset your password</p>
@@ -261,10 +261,15 @@ const sendEmail = async (email, subject, message) => {
 };
 
 const logout = async (req, res) => {
-  res
-    .clearCookie("login")
-    .status(200)
-    .send({ message: "Logged out successfully" });
+  try {
+    res
+      .clearCookie("login")
+      .status(200)
+      .send({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error("Error during logout:", error);
+    res.status(500).send({ message: "Internal server error during logout" });
+  }
 };
 
 //login and register routes
@@ -272,14 +277,16 @@ router.post("/api/login", login);
 
 router.post("/api/register", register);
 
+router.post("/api/logout", isAuthenticated, logout);
+
 router.get("/:id/verify/:token", emailLink); //register verification
 
 //password reset routes
 router.post("/api/passwordreset", passwordLink);
 
-router.get("/:id/:token", verifyUrl); //password reset verification
+router.get("/reset/:id/:token", verifyUrl); //password reset verification
 
-router.post("/:id/:token", resetPassword);
+router.post("/reset/:id/:token", resetPassword);
 
 // Update username
 router.patch("/api/user/username", isAuthenticated, async (req, res) => {
@@ -388,7 +395,5 @@ router.get("/api/user/current", isAuthenticated, async (req, res) => {
     });
   }
 });
-
-router.post("/api/logout", logout);
 
 export default router;

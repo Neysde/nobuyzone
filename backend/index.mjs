@@ -34,7 +34,7 @@ const jwtOptions = {
 passport.use(
   new Strategy(jwtOptions, async (jwt_payload, done) => {
     try {
-      // Find user by _id (not 'id') and use async/await since mongoose no longer supports callbacks
+      //Find user by _id (not 'id') and use async/await since mongoose no longer supports callbacks
       const user = await User.findOne({ _id: jwt_payload._id });
       if (user) {
         return done(null, user);
@@ -50,7 +50,7 @@ passport.use(
 //!!!!!Initialize passport
 app.use(passport.initialize());
 
-// Middleware to check authentication status without redirecting
+//Middleware to check authentication status without redirecting
 app.use((req, res, next) => {
   passport.authenticate("jwt", { session: false }, (err, user) => {
     // Attach user to request object if authenticated

@@ -224,7 +224,7 @@ router.get("/passwordreset", (req, res) => {
 });
 
 // Password reset page (after clicking the link in email)
-router.get("/:id/:token", async (req, res) => {
+router.get("/reset/:id/:token", async (req, res) => {
   // This route will be used for both verifying the token and displaying the reset form
   // The actual verification happens in the backend user-routes.mjs
   res.render("password-reset", {
