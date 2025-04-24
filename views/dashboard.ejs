@@ -7,6 +7,11 @@
     <link rel="stylesheet" href="/css/header.css" />
     <link rel="stylesheet" href="/css/footer.css" />
     <link rel="stylesheet" href="/css/dashboard.css" />
+    <!-- Font Awesome for chat icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    />
     <!-- Cropper.js CSS -->
     <link
       rel="stylesheet"
@@ -418,6 +423,73 @@
                 <h2>Your Messages</h2>
               </div>
 
+              <% if (chats && chats.length > 0) { %>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Contact</th>
+                      <th>Post</th>
+                      <th>Last Message</th>
+                      <th>Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% chats.forEach(chat => { %>
+                    <tr
+                      class="chat-row <%= chat.unread ? 'unread-chat' : '' %>"
+                      data-post-id="<%= chat.postId %>"
+                      data-recipient-id="<%= chat.otherUser._id %>"
+                      data-recipient="<%= chat.otherUser.name %>"
+                      data-post-title="<%= chat.postTitle %>"
+                      data-avatar="<%= chat.otherUser.avatar || '/img/default-avatar.svg' %>"
+                    >
+                      <td class="chat-contact">
+                        <div class="chat-avatar">
+                          <img
+                            src="<%= chat.otherUser.avatar || '/img/default-avatar.svg' %>"
+                            alt="<%= chat.otherUser.name %>"
+                          />
+                        </div>
+                        <span><%= chat.otherUser.name %></span>
+                      </td>
+                      <td class="chat-post-info"><%= chat.postTitle %></td>
+                      <td class="chat-preview">
+                        <span
+                          class="<%= chat.unread ? 'unread-message' : '' %>"
+                        >
+                          <% if (chat.lastMessage.isUserSender) { %>You: <% }
+                          %><%= chat.lastMessage.content %>
+                        </span>
+                      </td>
+                      <td class="chat-date">
+                        <%= formatTime(chat.lastMessage.createdAt) %>
+                      </td>
+                      <td class="chat-actions">
+                        <button
+                          class="button button-small button-primary open-chat-btn"
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                          >
+                            <path
+                              d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+                            ></path>
+                          </svg>
+                          Open Chat
+                        </button>
+                      </td>
+                    </tr>
+                    <% }); %>
+                  </tbody>
+                </table>
+              </div>
+              <% } else { %>
               <div class="empty-state">
                 <svg
                   width="64"
@@ -432,7 +504,11 @@
                 </svg>
                 <h3>No messages yet</h3>
                 <p>Your conversations will appear here</p>
+                <a href="/find-posts" class="button button-primary"
+                  >Browse Items</a
+                >
               </div>
+              <% } %>
             </div>
           </div>
 
@@ -638,6 +714,169 @@
       accept="image/*"
       style="display: none"
     />
+
+    <!-- Chat Interface Component (will be positioned with CSS) -->
+    <div id="chat-container" class="chat-container">
+      <!-- Chat Header with Recipient Info -->
+      <div id="chat-header" class="chat-header">
+        <div class="chat-header-info">
+          <div class="chat-avatar" id="chat-avatar">
+            <img src="" alt="" />
+          </div>
+          <div class="chat-details">
+            <div id="chat-recipient-name" class="chat-name"></div>
+            <div id="chat-post-title" class="chat-status"></div>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <button
+            class="chat-action-btn"
+            id="chat-minimize-btn"
+            aria-label="Minimize chat"
+          >
+            <i class="fas fa-minus"></i>
+          </button>
+          <button
+            class="chat-action-btn"
+            id="chat-close-btn"
+            aria-label="Close chat"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Chat Body -->
+      <div class="chat-body">
+        <!-- Messages Container -->
+        <div id="chat-messages" class="chat-messages">
+          <!-- Messages will be inserted here via JavaScript -->
+        </div>
+
+        <!-- Empty State - Shown when no messages -->
+        <div id="chat-empty-state" class="chat-empty-state">
+          <div class="empty-icon">
+            <i class="far fa-comment-dots"></i>
+          </div>
+          <div class="empty-text">No messages yet</div>
+          <div class="empty-subtext">
+            Start the conversation by sending a message below
+          </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div id="chat-typing" class="chat-typing">
+          <div class="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="typing-text">
+            <span class="typing-name"></span> is typing...
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Input Area -->
+      <div class="chat-input-area">
+        <textarea id="chat-input" placeholder="Type a message..."></textarea>
+        <button id="chat-send-btn" class="chat-send-btn" disabled>
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Socket.IO Script -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <!-- Add the chat.js script before the dashboard.js script -->
+    <script src="/js/chat.js"></script>
+
+    <!-- Add helper function for formatting timestamps -->
+    <script>
+      // Helper function to format dates for chat messages
+      function formatTime(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+
+        // If it's today, show time
+        if (date.toDateString() === now.toDateString()) {
+          return date.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        }
+
+        // If it's within a week, show day name
+        const dayDiff = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+        if (dayDiff < 7) {
+          return date.toLocaleDateString([], { weekday: "short" });
+        }
+
+        // Otherwise show date
+        return date.toLocaleDateString([], { month: "short", day: "numeric" });
+      }
+
+      // Initialize chat functionality when the document is ready
+      document.addEventListener("DOMContentLoaded", function () {
+        // First initialize the Chat module
+        if (
+          typeof Chat !== "undefined" &&
+          typeof Chat.initialize === "function"
+        ) {
+          Chat.initialize({
+            chatContainer: document.getElementById("chat-container"),
+            chatMessages: document.getElementById("chat-messages"),
+            chatInput: document.getElementById("chat-input"),
+            chatSendBtn: document.getElementById("chat-send-btn"),
+            chatCloseBtn: document.getElementById("chat-close-btn"),
+            chatMinimizeBtn: document.getElementById("chat-minimize-btn"),
+            chatAvatar: document
+              .getElementById("chat-avatar")
+              .querySelector("img"),
+            chatRecipientName: document.getElementById("chat-recipient-name"),
+            chatPostTitle: document.getElementById("chat-post-title"),
+            chatEmptyState: document.getElementById("chat-empty-state"),
+            chatTypingIndicator: document.getElementById("chat-typing"),
+          });
+        }
+
+        // Set up chat row click handlers
+        const chatRows = document.querySelectorAll(".chat-row");
+
+        chatRows.forEach((row) => {
+          row.addEventListener("click", function (e) {
+            // If clicking the row itself or the open chat button
+            if (e.target.closest(".open-chat-btn") || e.currentTarget === row) {
+              const postId = this.dataset.postId;
+              const recipientId = this.dataset.recipientId;
+              const recipientName = this.dataset.recipient;
+              const postTitle = this.dataset.postTitle;
+              const avatar = this.dataset.avatar;
+
+              // Remove unread styling if present
+              if (this.classList.contains("unread-chat")) {
+                this.classList.remove("unread-chat");
+              }
+
+              // Open the chat using the Chat module
+              if (
+                typeof Chat !== "undefined" &&
+                typeof Chat.openChat === "function"
+              ) {
+                Chat.openChat(
+                  postId,
+                  recipientId,
+                  recipientName,
+                  avatar,
+                  postTitle
+                );
+              }
+            }
+          });
+        });
+      });
+    </script>
 
     <!-- Cropper.js -->
     <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>

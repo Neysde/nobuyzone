@@ -62,3 +62,65 @@
   <!-- Header JavaScript for enhanced dropdown functionality -->
   <script src="/js/header.js"></script>
 </header>
+
+<% if (user) { %>
+<script>
+  // Check for unread messages
+  async function checkUnreadMessages() {
+    try {
+      const response = await fetch("/api/messages/unread/count", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const badge = document.getElementById("unread-badge");
+
+        if (badge) {
+          if (data.count > 0) {
+            badge.textContent = data.count > 99 ? "99+" : data.count;
+            badge.style.display = "inline-flex";
+          } else {
+            badge.style.display = "none";
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error checking unread messages:", error);
+    }
+  }
+
+  // Check for unread messages on page load
+  document.addEventListener("DOMContentLoaded", checkUnreadMessages);
+
+  // Check for unread messages every minute
+  setInterval(checkUnreadMessages, 60000);
+</script>
+
+<style>
+  .messages-link {
+    position: relative;
+  }
+
+  .unread-badge {
+    position: absolute;
+    top: -5px;
+    right: -8px;
+    background-color: #ff4d4f;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: bold;
+    min-width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+</style>
+<% } %>

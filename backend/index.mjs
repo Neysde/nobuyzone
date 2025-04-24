@@ -10,12 +10,18 @@ import { Strategy } from "passport-jwt";
 import User from "./mongoose/user.mjs";
 import Post from "./mongoose/post.mjs";
 import { isAuthenticated } from "./middlewares.mjs";
+import { createServer } from "http";
+import { initializeSocketServer } from "./socket-server.mjs";
 
 //we need to create our own __dirname because we are using mjs files. In js files we have __dirname as a global variable.
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const httpServer = createServer(app);
+
+// Initialize Socket.IO through our separate module
+const io = initializeSocketServer(httpServer);
 
 app.use(express.json());
 app.use(cookieParser());
@@ -62,6 +68,7 @@ app.use((req, res, next) => {
 // Set up views directory and serve static files from it
 app.set("views", path.join(__dirname, "../views"));
 app.use(express.static(path.join(__dirname, "../views")));
+app.use(express.static(path.join(__dirname, "../public")));
 
 // Set up static file directories
 app.use(expressLayouts);
@@ -140,6 +147,10 @@ app.get("/posting", isAuthenticated, async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
+// Start the server with httpServer instead of app
+httpServer.listen(3000, () => {
   console.log("Server is running on port 3000");
+  console.log(
+    "Socket.IO server is available at http://localhost:3000/socket.io/socket.io.js"
+  );
 });

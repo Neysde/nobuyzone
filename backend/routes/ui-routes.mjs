@@ -3,6 +3,7 @@ import Post from "../mongoose/post.mjs";
 import User from "../mongoose/user.mjs";
 import { isAuthenticated } from "../middlewares.mjs";
 import passport from "passport";
+import Message from "../mongoose/message.mjs";
 
 const router = express.Router();
 
@@ -158,12 +159,133 @@ router.get("/dashboard/:id", isAuthenticated, async (req, res) => {
         };
       });
 
+    // Fetch chat data for this user
+    // Find all messages where the current user is either sender or recipient
+    const currentUserId = req.user._id;
+
+    const sentMessages = await Message.find({ sender: currentUserId })
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    const receivedMessages = await Message.find({ recipient: currentUserId })
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    // Combine messages and identify unique conversations
+    const allMessages = [...sentMessages, ...receivedMessages];
+
+    // Create a map to store unique conversations
+    const conversationsMap = new Map();
+
+    // Process each message to extract conversation data
+    for (const message of allMessages) {
+      // Create a unique key for this conversation
+      const otherUserId = message.sender.equals(currentUserId)
+        ? message.recipient
+        : message.sender;
+
+      // Skip if postId is not valid (prevents errors with malformed data)
+      if (!message.postId) continue;
+
+      const key = `${message.postId}_${otherUserId}`;
+
+      // If this conversation is not yet in our map, or if this message is newer
+      if (
+        !conversationsMap.has(key) ||
+        message.createdAt > conversationsMap.get(key).lastMessage.createdAt
+      ) {
+        // Check if message is unread
+        const isUnread = !message.sender.equals(currentUserId) && !message.read;
+
+        conversationsMap.set(key, {
+          postId: message.postId,
+          userId: otherUserId,
+          lastMessage: message,
+          unread: isUnread,
+        });
+      }
+    }
+
+    // Convert map to array and resolve user and post details
+    const chats = await Promise.all(
+      Array.from(conversationsMap.values()).map(async (conv) => {
+        try {
+          // Get user details
+          const otherUser = await User.findById(conv.userId).select(
+            "name avatar"
+          );
+
+          // Get post details
+          const post = await Post.findById(conv.postId).select("title");
+
+          // Skip if either user or post doesn't exist
+          if (!otherUser || !post) {
+            return null;
+          }
+
+          return {
+            postId: conv.postId,
+            otherUser: {
+              _id: otherUser._id,
+              name: otherUser.name,
+              avatar: otherUser.avatar,
+            },
+            postTitle: post.title,
+            lastMessage: {
+              _id: conv.lastMessage._id,
+              content: conv.lastMessage.content,
+              createdAt: conv.lastMessage.createdAt,
+              isUserSender: conv.lastMessage.sender.equals(currentUserId),
+            },
+            unread: conv.unread,
+          };
+        } catch (err) {
+          console.error("Error processing chat item:", err);
+          return null;
+        }
+      })
+    );
+
+    // Filter out null values (from conversations with missing users or posts)
+    const validChats = chats.filter((chat) => chat !== null);
+
+    // Sort conversations by last message date (most recent first)
+    validChats.sort(
+      (a, b) =>
+        new Date(b.lastMessage.createdAt) - new Date(a.lastMessage.createdAt)
+    );
+
     // Render the dashboard template with all the data
     res.render("dashboard", {
       user,
       posts,
       drafts,
       favorites,
+      chats: validChats,
+      formatTime: (date) => {
+        const messageDate = new Date(date);
+        const now = new Date();
+
+        // If it's today, show time
+        if (messageDate.toDateString() === now.toDateString()) {
+          return messageDate.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        }
+
+        // If it's within a week, show day name
+        const dayDiff = Math.floor((now - messageDate) / (1000 * 60 * 60 * 24));
+        if (dayDiff < 7) {
+          return messageDate.toLocaleDateString([], { weekday: "short" });
+        }
+
+        // Otherwise show date
+        return messageDate.toLocaleDateString([], {
+          month: "short",
+          day: "numeric",
+        });
+      },
     });
   } catch (error) {
     console.error("Error rendering dashboard:", error);

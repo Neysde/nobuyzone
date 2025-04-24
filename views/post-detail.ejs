@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="/css/header.css" />
     <link rel="stylesheet" href="/css/footer.css" />
     <link rel="stylesheet" href="/css/post-detail.css" />
+    <link rel="stylesheet" href="/css/chat.css" />
     <!-- Leaflet CSS for location map -->
     <link
       rel="stylesheet"
@@ -253,6 +254,7 @@
                     class="button button-sm contact-method-btn"
                     data-method="in-app"
                     data-post-id="<%= post._id %>"
+                    data-seller-id="<%= post.createdBy %>"
                   >
                     <svg
                       width="14"
@@ -422,8 +424,83 @@
     </div>
     <% } %>
 
+    <!-- Chat Interface -->
+    <div id="chat-container" class="chat-container">
+      <div id="chat-header" class="chat-header">
+        <div class="chat-header-info">
+          <div id="chat-avatar" class="chat-avatar">
+            <img src="" alt="Chat Partner" />
+          </div>
+          <div class="chat-details">
+            <div id="chat-recipient-name" class="chat-name">Loading...</div>
+            <div id="chat-post-title" class="chat-status">Loading...</div>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <button id="chat-minimize-btn" class="chat-action-btn">
+            <i class="fas fa-minus"></i>
+          </button>
+          <button id="chat-close-btn" class="chat-action-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="chat-body">
+        <div id="chat-messages" class="chat-messages">
+          <!-- Messages will be added here dynamically -->
+        </div>
+
+        <div id="chat-empty-state" class="chat-empty-state">
+          <div class="empty-icon">
+            <i class="far fa-comment-dots"></i>
+          </div>
+          <div class="empty-text">No messages yet</div>
+          <div class="empty-subtext">
+            Start the conversation by sending a message below
+          </div>
+        </div>
+
+        <div id="chat-typing" class="chat-typing">
+          <div class="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="typing-text">
+            <span class="typing-name"></span> is typing...
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <textarea id="chat-input" placeholder="Type a message..."></textarea>
+        <button id="chat-send-btn" class="chat-send-btn" disabled>
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Socket.IO - updated to use unpkg with fallback -->
+    <script src="https://unpkg.com/socket.io-client@4.8.1/dist/socket.io.min.js"></script>
+    <script>
+      // Fallback if Socket.IO didn't load from CDN
+      if (typeof io === "undefined") {
+        console.log("Socket.IO not loaded from CDN, trying server version");
+        const fallbackScript = document.createElement("script");
+        fallbackScript.src = "/socket.io/socket.io.js";
+        fallbackScript.onerror = function () {
+          console.error("Failed to load Socket.IO from server");
+        };
+        document.head.appendChild(fallbackScript);
+      }
+    </script>
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Chat Module -->
+    <script src="/js/chat.js"></script>
     <script src="/js/post-detail.js"></script>
   </body>
 </html>

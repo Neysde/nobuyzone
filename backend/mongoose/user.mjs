@@ -25,11 +25,9 @@ const userSchema = new mongoose.Schema({
   profilePicture: {
     url: {
       type: String,
-      required: true,
     },
     publicId: {
       type: String,
-      required: true,
     },
   },
   verified: {

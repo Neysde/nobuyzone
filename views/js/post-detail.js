@@ -17,6 +17,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   //Initialize favorite and flag functionality
   initializePostActions();
+
+  // Initialize in-app chat functionality
+  initializeChat();
 });
 
 /**
@@ -634,7 +637,28 @@ function setupContactButton() {
 
         // If we reach here, user is authenticated
         showNotification("Opening chat with seller...", "info");
-        window.location.href = `/messages?post=${postId}`;
+
+        // Get seller ID from response
+        const data = await response.json();
+
+        // Instead of redirecting, open the chat directly in the page
+        if (data && data.sellerId) {
+          // Create an event to trigger the chat opening
+          const chatEvent = new CustomEvent("openChat", {
+            detail: {
+              postId: postId,
+              recipientId: data.sellerId,
+              recipientName: data.sellerName || "Seller",
+              avatar: data.sellerAvatar || "",
+              postTitle: data.postTitle || "",
+            },
+          });
+
+          // Dispatch the event
+          document.dispatchEvent(chatEvent);
+        } else {
+          throw new Error("Could not get seller information");
+        }
       } catch (fetchError) {
         // Handle any fetch errors as authentication issues if they might be related
         if (
@@ -1173,4 +1197,550 @@ function initializePostActions() {
       }
     });
   }
+}
+
+/**
+ * Initialize in-app chat functionality
+ * This sets up the chat interface and socket.io connections
+ */
+function initializeChat() {
+  // Get DOM Elements
+  const chatContainer = document.getElementById("chat-container");
+  const chatMessages = document.getElementById("chat-messages");
+  const chatInput = document.getElementById("chat-input");
+  const chatSendBtn = document.getElementById("chat-send-btn");
+  const chatCloseBtn = document.getElementById("chat-close-btn");
+  const chatMinimizeBtn = document.getElementById("chat-minimize-btn");
+  const chatEmptyState = document.getElementById("chat-empty-state");
+  const chatTypingIndicator = document.getElementById("chat-typing");
+  const chatRecipientName = document.getElementById("chat-recipient-name");
+  const chatAvatar = document.getElementById("chat-avatar");
+
+  // Chat state
+  let socket;
+  let currentPostId = "";
+  let currentRecipientId = "";
+  let typingTimeout;
+  let isAuthenticated = false;
+  let currentUser = null;
+
+  // Find chat buttons
+  const chatButtons = document.querySelectorAll(
+    '.contact-method-btn[data-method="in-app"]'
+  );
+
+  // If no chat buttons, return early
+  if (!chatButtons.length) {
+    return;
+  }
+
+  // Add click event to all in-app chat buttons
+  chatButtons.forEach((button) => {
+    button.addEventListener("click", async (e) => {
+      const postId = button.getAttribute("data-post-id");
+      const sellerId = button.getAttribute("data-seller-id");
+
+      // If not logged in, handle redirection to login
+      if (!isAuthenticated) {
+        checkAuthentication();
+        return;
+      }
+
+      // Open chat with this seller for this post
+      openChat(postId, sellerId);
+    });
+  });
+
+  /**
+   * Check if user is authenticated and redirect to login if not
+   */
+  async function checkAuthentication() {
+    try {
+      const response = await fetch("/api/check-auth", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        isAuthenticated = true;
+        currentUser = data.user;
+        initializeSocketConnection();
+        return true;
+      } else {
+        // Redirect to login
+        const returnUrl = encodeURIComponent(window.location.pathname);
+        window.location.href = `/api/login?returnTo=${returnUrl}`;
+        return false;
+      }
+    } catch (error) {
+      console.error("Error checking authentication:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Initialize Socket.IO connection
+   */
+  function initializeSocketConnection() {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    // Check if Socket.IO library is loaded
+    if (typeof io === "undefined") {
+      console.error(
+        "Socket.IO library not loaded. Chat functionality will be disabled."
+      );
+      showNotification(
+        "Chat service is currently unavailable. Please try again later.",
+        "error"
+      );
+      return;
+    }
+
+    try {
+      // Initialize socket connection with proper options
+      socket = io({
+        auth: {
+          token: document.cookie.replace(
+            /(?:(?:^|.*;\s*)login\s*\=\s*([^;]*).*$)|^.*$/,
+            "$1"
+          ),
+        },
+        transports: ["websocket", "polling"], // Try WebSocket first, then fall back to polling
+        reconnectionAttempts: 5, // Limit reconnection attempts
+        reconnectionDelay: 1000, // Start with 1 second delay
+        reconnectionDelayMax: 5000, // Maximum delay of 5 seconds
+        timeout: 20000, // Longer timeout for initial connection
+      });
+
+      // Socket event listeners
+      socket.on("connect", () => {
+        console.log("Connected to chat server");
+        // Clear any previous error notifications
+        const errorNotification = document.querySelector(".notification.error");
+        if (errorNotification) {
+          errorNotification.remove();
+        }
+      });
+
+      socket.on("connect_error", (error) => {
+        console.error("Connection error:", error);
+        showNotification(
+          "Failed to connect to chat server. Please refresh the page to try again.",
+          "error"
+        );
+      });
+
+      socket.on("reconnect_attempt", (attemptNumber) => {
+        console.log(`Attempting to reconnect: attempt ${attemptNumber}`);
+      });
+
+      socket.on("reconnect_failed", () => {
+        console.error(
+          "Failed to reconnect to the chat server after multiple attempts"
+        );
+        showNotification(
+          "Connection to chat server lost. Please refresh the page.",
+          "error"
+        );
+      });
+
+      socket.on("new-message", (message) => {
+        addMessageToChat(message);
+        markMessagesAsRead();
+      });
+
+      socket.on("user-typing", ({ userId }) => {
+        if (userId === currentRecipientId) {
+          showTypingIndicator();
+        }
+      });
+
+      socket.on("messages-read", () => {
+        // Update UI to show messages as read if needed
+      });
+
+      socket.on("error", (error) => {
+        console.error("Socket error:", error);
+        showNotification(error.message || "An error occurred", "error");
+      });
+    } catch (error) {
+      console.error("Error initializing Socket.IO connection:", error);
+      showNotification(
+        "Chat service is currently unavailable. Please try again later.",
+        "error"
+      );
+    }
+  }
+
+  /**
+   * Open chat with a specific user for a specific post
+   * @param {string} postId - The ID of the post
+   * @param {string} recipientId - The ID of the user to chat with
+   */
+  async function openChat(postId, recipientId) {
+    // If not connected, connect first
+    if (!socket) {
+      const authenticated = await checkAuthentication();
+      if (!authenticated) return;
+    }
+
+    currentPostId = postId;
+    currentRecipientId = recipientId;
+
+    // Clear previous messages
+    clearChat();
+
+    // Join the chat room for this conversation
+    socket.emit("join-chat", { postId, userId: recipientId });
+
+    // Load conversation history
+    loadChatHistory(postId, recipientId);
+
+    // Show the chat container
+    chatContainer.classList.add("open");
+
+    // Focus the input field
+    setTimeout(() => {
+      chatInput.focus();
+    }, 300);
+  }
+
+  /**
+   * Load chat history from the server
+   * @param {string} postId - The ID of the post
+   * @param {string} userId - The ID of the other user
+   */
+  async function loadChatHistory(postId, userId) {
+    try {
+      console.log(
+        `Loading chat history for postId=${postId}, userId=${userId}`
+      );
+      showLoadingState();
+
+      // Validate parameters
+      if (!postId || !userId) {
+        console.error("Invalid parameters for loadChatHistory", {
+          postId,
+          userId,
+        });
+        showNotification("Could not load chat: missing parameters", "error");
+        return;
+      }
+
+      const response = await fetch(`/api/messages/${postId}/${userId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      if (response.status === 401) {
+        // Unauthorized, redirect to login
+        console.log("Unauthorized access, redirecting to login");
+        redirectToLogin();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to load chat history: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      console.log("Received chat data:", {
+        messageCount: data.messages?.length || 0,
+        hasUserData: !!data.otherUser,
+        hasPostData: !!data.post,
+      });
+
+      // Validate essential data and use fallbacks if missing
+      if (!data.messages) data.messages = [];
+      if (!data.otherUser) {
+        data.otherUser = {
+          name: "Unknown User",
+          avatar: "/img/default-avatar.svg",
+        };
+      }
+      if (!data.post) {
+        data.post = {
+          title: "Unknown Post",
+        };
+      }
+
+      // Update UI with user info
+      updateChatHeader(data.otherUser, data.post);
+
+      // Add messages to the chat
+      if (data.messages && data.messages.length > 0) {
+        hideEmptyState();
+        data.messages.forEach((message) => {
+          addMessageToChat(message);
+        });
+
+        // Mark messages as read
+        markMessagesAsRead();
+
+        // Scroll to the bottom
+        scrollToBottom();
+      } else {
+        console.log("No messages found in conversation");
+        showEmptyState();
+      }
+    } catch (error) {
+      console.error("Error loading chat history:", error);
+      // Try to recover - show empty chat rather than broken UI
+      showEmptyState();
+      showNotification(
+        `Failed to load chat history: ${error.message}`,
+        "error"
+      );
+    }
+  }
+
+  /**
+   * Update the chat header with user information
+   * @param {Object} user - The other user in the conversation
+   * @param {Object} post - The post being discussed
+   */
+  function updateChatHeader(user, post) {
+    // Safety check for undefined user or post
+    if (!user) {
+      console.error("User data is undefined in updateChatHeader");
+      user = { name: "Unknown User", avatar: "/img/default-avatar.svg" };
+    }
+
+    if (!post) {
+      console.error("Post data is undefined in updateChatHeader");
+      post = { title: "Unknown Post" };
+    }
+
+    // Set user name with fallback
+    chatRecipientName.textContent = user.name || "Unknown User";
+
+    // Set avatar with user's initial or image if available
+    if (user.avatar) {
+      // If we have an avatar image URL, use it
+      chatAvatar.innerHTML = `<img src="${user.avatar}" alt="${
+        user.name || "User"
+      }" />`;
+    } else {
+      // Otherwise, use the first initial
+      const initial = user.name ? user.name.charAt(0).toUpperCase() : "?";
+      chatAvatar.textContent = initial;
+    }
+  }
+
+  /**
+   * Add a message to the chat UI
+   * @param {Object} message - The message to add
+   */
+  function addMessageToChat(message) {
+    hideEmptyState();
+
+    const messageElement = document.createElement("div");
+    messageElement.classList.add("chat-message");
+    messageElement.classList.add(
+      message.isCurrentUser ? "outgoing" : "incoming"
+    );
+
+    // Format the date
+    const messageDate = new Date(message.createdAt);
+    const formattedTime = messageDate.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    messageElement.innerHTML = `
+      <div class="chat-message-content">${escapeHtml(message.content)}</div>
+      <div class="chat-message-time">${formattedTime}</div>
+    `;
+
+    chatMessages.appendChild(messageElement);
+
+    // Scroll to bottom
+    scrollToBottom();
+  }
+
+  /**
+   * Send a message to the current recipient
+   */
+  function sendMessage() {
+    const message = chatInput.value.trim();
+
+    if (!message) {
+      return;
+    }
+
+    // Disable input and button while sending
+    chatInput.disabled = true;
+    chatSendBtn.disabled = true;
+
+    // Send message via socket
+    socket.emit("send-message", {
+      postId: currentPostId,
+      recipientId: currentRecipientId,
+      content: message,
+    });
+
+    // Clear the input
+    chatInput.value = "";
+
+    // Re-enable input and button
+    chatInput.disabled = false;
+    chatSendBtn.disabled = true;
+    chatInput.focus();
+  }
+
+  /**
+   * Mark messages as read
+   */
+  function markMessagesAsRead() {
+    socket.emit("mark-read", {
+      postId: currentPostId,
+      senderId: currentRecipientId,
+    });
+  }
+
+  /**
+   * Show the typing indicator
+   */
+  function showTypingIndicator() {
+    chatTypingIndicator.style.display = "block";
+
+    // Clear previous timeout if exists
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
+    }
+
+    // Hide the typing indicator after 3 seconds
+    typingTimeout = setTimeout(() => {
+      chatTypingIndicator.style.display = "none";
+    }, 3000);
+  }
+
+  /**
+   * Emit typing event to the server
+   */
+  function emitTyping() {
+    socket.emit("typing", {
+      postId: currentPostId,
+      recipientId: currentRecipientId,
+    });
+  }
+
+  /**
+   * Show loading state in the chat
+   */
+  function showLoadingState() {
+    chatMessages.innerHTML = `
+      <div class="chat-empty-state">
+        <div class="chat-empty-icon">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </div>
+        <p class="chat-empty-text">Loading messages...</p>
+      </div>
+    `;
+  }
+
+  /**
+   * Show empty state in the chat
+   */
+  function showEmptyState() {
+    chatEmptyState.style.display = "flex";
+  }
+
+  /**
+   * Hide empty state in the chat
+   */
+  function hideEmptyState() {
+    chatEmptyState.style.display = "none";
+  }
+
+  /**
+   * Clear all messages from the chat
+   */
+  function clearChat() {
+    chatMessages.innerHTML = "";
+    chatEmptyState.style.display = "flex";
+  }
+
+  /**
+   * Close the chat window
+   */
+  function closeChat() {
+    chatContainer.classList.remove("open");
+    clearChat();
+    currentPostId = "";
+    currentRecipientId = "";
+  }
+
+  /**
+   * Minimize the chat window
+   */
+  function minimizeChat() {
+    chatContainer.classList.remove("open");
+  }
+
+  /**
+   * Scroll the chat window to the bottom
+   */
+  function scrollToBottom() {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  /**
+   * Escape HTML to prevent XSS
+   * @param {string} html - The string to escape
+   * @returns {string} - The escaped string
+   */
+  function escapeHtml(html) {
+    const div = document.createElement("div");
+    div.textContent = html;
+    return div.innerHTML;
+  }
+
+  // Event listeners
+  chatInput.addEventListener("input", () => {
+    // Enable/disable send button based on input
+    chatSendBtn.disabled = chatInput.value.trim().length === 0;
+
+    // Emit typing event if input has text
+    if (chatInput.value.trim().length > 0) {
+      emitTyping();
+    }
+  });
+
+  chatInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!chatSendBtn.disabled) {
+        sendMessage();
+      }
+    }
+  });
+
+  chatSendBtn.addEventListener("click", () => {
+    sendMessage();
+  });
+
+  chatCloseBtn.addEventListener("click", () => {
+    closeChat();
+  });
+
+  chatMinimizeBtn.addEventListener("click", () => {
+    minimizeChat();
+  });
+
+  // Check if the user is authenticated on page load
+  checkAuthentication();
 }
