@@ -438,33 +438,34 @@
                   <tbody>
                     <% chats.forEach(chat => { %>
                     <tr
-                      class="chat-row <%= chat.unread ? 'unread-chat' : '' %>"
+                      class="chat-row <%= chat.unreadCount > 0 ? 'unread-chat' : '' %>"
                       data-post-id="<%= chat.postId %>"
-                      data-recipient-id="<%= chat.otherUser._id %>"
-                      data-recipient="<%= chat.otherUser.name %>"
+                      data-recipient-id="<%= chat.user._id %>"
+                      data-recipient="<%= chat.user.name %>"
                       data-post-title="<%= chat.postTitle %>"
-                      data-avatar="<%= chat.otherUser.avatar || '/img/default-avatar.svg' %>"
+                      data-avatar="<%= chat.user.avatar || '/img/default-avatar.svg' %>"
                     >
                       <td class="chat-contact">
                         <div class="chat-avatar">
                           <img
-                            src="<%= chat.otherUser.avatar || '/img/default-avatar.svg' %>"
-                            alt="<%= chat.otherUser.name %>"
+                            src="<%= chat.user.avatar || '/img/default-avatar.svg' %>"
+                            alt="<%= chat.user.name %>"
                           />
                         </div>
-                        <span><%= chat.otherUser.name %></span>
+                        <span><%= chat.user.name %></span>
                       </td>
                       <td class="chat-post-info"><%= chat.postTitle %></td>
                       <td class="chat-preview">
                         <span
-                          class="<%= chat.unread ? 'unread-message' : '' %>"
+                          class="<%= chat.unreadCount > 0 ? 'unread-message' : '' %>"
                         >
-                          <% if (chat.lastMessage.isUserSender) { %>You: <% }
-                          %><%= chat.lastMessage.content %>
+                          <% if (chat.lastMessage.isRead || chat.unreadCount ===
+                          0) { %> You: <%= chat.lastMessage.content %> <% } else
+                          { %> <%= chat.lastMessage.content %> <% } %>
                         </span>
                       </td>
                       <td class="chat-date">
-                        <%= formatTime(chat.lastMessage.createdAt) %>
+                        <%= formatTime(chat.lastMessage.timestamp) %>
                       </td>
                       <td class="chat-actions">
                         <button
@@ -715,76 +716,8 @@
       style="display: none"
     />
 
-    <!-- Chat Interface Component (will be positioned with CSS) -->
-    <div id="chat-container" class="chat-container">
-      <!-- Chat Header with Recipient Info -->
-      <div id="chat-header" class="chat-header">
-        <div class="chat-header-info">
-          <div class="chat-avatar" id="chat-avatar">
-            <img src="" alt="" />
-          </div>
-          <div class="chat-details">
-            <div id="chat-recipient-name" class="chat-name"></div>
-            <div id="chat-post-title" class="chat-status"></div>
-          </div>
-        </div>
-        <div class="chat-header-actions">
-          <button
-            class="chat-action-btn"
-            id="chat-minimize-btn"
-            aria-label="Minimize chat"
-          >
-            <i class="fas fa-minus"></i>
-          </button>
-          <button
-            class="chat-action-btn"
-            id="chat-close-btn"
-            aria-label="Close chat"
-          >
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Chat Body -->
-      <div class="chat-body">
-        <!-- Messages Container -->
-        <div id="chat-messages" class="chat-messages">
-          <!-- Messages will be inserted here via JavaScript -->
-        </div>
-
-        <!-- Empty State - Shown when no messages -->
-        <div id="chat-empty-state" class="chat-empty-state">
-          <div class="empty-icon">
-            <i class="far fa-comment-dots"></i>
-          </div>
-          <div class="empty-text">No messages yet</div>
-          <div class="empty-subtext">
-            Start the conversation by sending a message below
-          </div>
-        </div>
-
-        <!-- Typing Indicator -->
-        <div id="chat-typing" class="chat-typing">
-          <div class="typing-indicator">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-          <div class="typing-text">
-            <span class="typing-name"></span> is typing...
-          </div>
-        </div>
-      </div>
-
-      <!-- Chat Input Area -->
-      <div class="chat-input-area">
-        <textarea id="chat-input" placeholder="Type a message..."></textarea>
-        <button id="chat-send-btn" class="chat-send-btn" disabled>
-          <i class="fas fa-paper-plane"></i>
-        </button>
-      </div>
-    </div>
+    <!-- Include the chat component -->
+    <%- include('chat.ejs') %>
 
     <!-- Socket.IO Script -->
     <script src="/socket.io/socket.io.js"></script>
@@ -819,28 +752,6 @@
 
       // Initialize chat functionality when the document is ready
       document.addEventListener("DOMContentLoaded", function () {
-        // First initialize the Chat module
-        if (
-          typeof Chat !== "undefined" &&
-          typeof Chat.initialize === "function"
-        ) {
-          Chat.initialize({
-            chatContainer: document.getElementById("chat-container"),
-            chatMessages: document.getElementById("chat-messages"),
-            chatInput: document.getElementById("chat-input"),
-            chatSendBtn: document.getElementById("chat-send-btn"),
-            chatCloseBtn: document.getElementById("chat-close-btn"),
-            chatMinimizeBtn: document.getElementById("chat-minimize-btn"),
-            chatAvatar: document
-              .getElementById("chat-avatar")
-              .querySelector("img"),
-            chatRecipientName: document.getElementById("chat-recipient-name"),
-            chatPostTitle: document.getElementById("chat-post-title"),
-            chatEmptyState: document.getElementById("chat-empty-state"),
-            chatTypingIndicator: document.getElementById("chat-typing"),
-          });
-        }
-
         // Set up chat row click handlers
         const chatRows = document.querySelectorAll(".chat-row");
 
@@ -859,19 +770,17 @@
                 this.classList.remove("unread-chat");
               }
 
-              // Open the chat using the Chat module
-              if (
-                typeof Chat !== "undefined" &&
-                typeof Chat.openChat === "function"
-              ) {
-                Chat.openChat(
+              // Create and dispatch a custom event to open the chat
+              const openChatEvent = new CustomEvent("openChat", {
+                detail: {
                   postId,
                   recipientId,
                   recipientName,
                   avatar,
-                  postTitle
-                );
-              }
+                  postTitle,
+                },
+              });
+              document.dispatchEvent(openChatEvent);
             }
           });
         });

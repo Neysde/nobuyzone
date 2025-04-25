@@ -1,18 +1,72 @@
 /**
  * Chat Module for Barter App
  * Handles client-side chat functionality using Socket.IO
+ * Optimized for compatibility with the updated backend implementation
  */
 
 // Chat functionality will be initialized when DOM is loaded
 document.addEventListener("DOMContentLoaded", function () {
-  // Initialize the chat module
-  Chat.initialize();
+  // Check if there's a chat container in the current page
+  if (document.getElementById("chat-container")) {
+    // Initialize the chat module
+    Chat.initialize();
+  }
+
+  // Track if an openChat event is being processed
+  let isProcessingOpenChat = false;
+
+  // Track the current chat being processed to prevent duplicate handling
+  let currentProcessingChatId = null;
 
   // Listen for events from other pages (like post-detail)
   document.addEventListener("openChat", function (event) {
     const { postId, recipientId, recipientName, avatar, postTitle } =
       event.detail;
-    Chat.openChat(postId, recipientId, recipientName, avatar, postTitle);
+
+    // Create a unique identifier for this chat conversation
+    const chatIdentifier = `${postId}:${recipientId}`;
+
+    // Prevent duplicate event handling for the same chat
+    if (isProcessingOpenChat && currentProcessingChatId === chatIdentifier) {
+      console.log("Already processing this chat, ignoring duplicate event");
+      return;
+    }
+
+    // Check if this chat is already open with the same participants
+    if (Chat.isCurrentChat && Chat.isCurrentChat(postId, recipientId)) {
+      console.log("This chat is already open, just focusing it");
+      Chat.focusChat && Chat.focusChat();
+      return;
+    }
+
+    isProcessingOpenChat = true;
+    currentProcessingChatId = chatIdentifier;
+
+    console.log(`Processing chat open request: ${chatIdentifier}`);
+
+    // Load the chat component if it's not already loaded
+    Chat.loadChatComponent()
+      .then(() => {
+        Chat.openChat(postId, recipientId, recipientName, avatar, postTitle);
+
+        // Reset the flags after a short delay
+        setTimeout(() => {
+          isProcessingOpenChat = false;
+          currentProcessingChatId = null;
+          // Also reset the global flag from post-detail.js if it exists
+          if (typeof window.isOpeningChat !== "undefined") {
+            window.isOpeningChat = false;
+          }
+        }, 1000);
+      })
+      .catch(() => {
+        isProcessingOpenChat = false;
+        currentProcessingChatId = null;
+        // Also reset the global flag from post-detail.js if it exists
+        if (typeof window.isOpeningChat !== "undefined") {
+          window.isOpeningChat = false;
+        }
+      });
   });
 });
 
@@ -25,6 +79,7 @@ const Chat = (function () {
   let typingTimeout;
   let isAuthenticated = false;
   let currentUser = null;
+  let chatComponentLoaded = false;
 
   // DOM Elements
   let chatContainer;
@@ -43,45 +98,72 @@ const Chat = (function () {
   let typingName;
 
   /**
+   * Load the chat component dynamically if not already in the page
+   * @returns {Promise} - Resolves when component is loaded
+   */
+  async function loadChatComponent() {
+    if (chatComponentLoaded) {
+      return Promise.resolve();
+    }
+
+    // If the chat container already exists, just initialize it
+    if (document.getElementById("chat-container")) {
+      chatComponentLoaded = true;
+      return Promise.resolve();
+    }
+
+    try {
+      // Fetch the chat component
+      const response = await fetch("/chat.ejs");
+      if (!response.ok) {
+        throw new Error(`Failed to load chat component: ${response.status}`);
+      }
+
+      // Get the component HTML
+      const html = await response.text();
+
+      // Create a temporary container and add the component HTML
+      const tempContainer = document.createElement("div");
+      tempContainer.innerHTML = html;
+
+      // Append the component to the body
+      document.body.appendChild(tempContainer);
+
+      // Mark as loaded
+      chatComponentLoaded = true;
+
+      return Promise.resolve();
+    } catch (error) {
+      console.error("Error loading chat component:", error);
+      return Promise.reject(error);
+    }
+  }
+
+  /**
    * Initialize the chat module
    */
-  function initialize(config) {
-    // Use provided config or find elements by ID
-    if (config) {
-      chatContainer = config.chatContainer;
-      chatMessages = config.chatMessages;
-      chatInput = config.chatInput;
-      chatSendBtn = config.chatSendBtn;
-      chatCloseBtn = config.chatCloseBtn;
-      chatMinimizeBtn = config.chatMinimizeBtn;
-      chatAvatar = config.chatAvatar;
-      chatRecipientName = config.chatRecipientName;
-      chatPostTitle = config.chatPostTitle;
-      chatEmptyState = config.chatEmptyState;
-      chatTyping = config.chatTypingIndicator;
-    } else {
-      // Find all DOM elements
-      chatContainer = document.getElementById("chat-container");
-      chatHeader = document.getElementById("chat-header");
-      chatMessages = document.getElementById("chat-messages");
-      chatInput = document.getElementById("chat-input");
-      chatSendBtn = document.getElementById("chat-send-btn");
-      chatCloseBtn = document.getElementById("chat-close-btn");
-      chatMinimizeBtn = document.getElementById("chat-minimize-btn");
-      chatEmptyState = document.getElementById("chat-empty-state");
-      chatTyping = document.getElementById("chat-typing");
-      chatRecipientName = document.getElementById("chat-recipient-name");
-      chatPostTitle = document.getElementById("chat-post-title");
-      chatAvatar = document.getElementById("chat-avatar")?.querySelector("img");
-      typingName = document.querySelector(".typing-name");
-    }
+  function initialize() {
+    // Find all DOM elements
+    chatContainer = document.getElementById("chat-container");
+    chatHeader = document.getElementById("chat-header");
+    chatMessages = document.getElementById("chat-messages");
+    chatInput = document.getElementById("chat-input");
+    chatSendBtn = document.getElementById("chat-send-btn");
+    chatCloseBtn = document.getElementById("chat-close-btn");
+    chatMinimizeBtn = document.getElementById("chat-minimize-btn");
+    chatEmptyState = document.getElementById("chat-empty-state");
+    chatTyping = document.getElementById("chat-typing");
+    chatRecipientName = document.getElementById("chat-recipient-name");
+    chatPostTitle = document.getElementById("chat-post-title");
+    chatAvatar = document.getElementById("chat-avatar")?.querySelector("img");
+    typingName = document.querySelector(".typing-name");
 
     // Find all in-app chat buttons
     chatButtons = document.querySelectorAll(
       '.contact-method-btn[data-method="in-app"]'
     );
 
-    // If chat isn't available or not on a post detail page, return early
+    // If chat isn't available or not on a page with chat, return early
     if (!chatContainer) {
       console.log("Chat container not found, skipping chat initialization");
       return;
@@ -92,6 +174,9 @@ const Chat = (function () {
 
     // Check authentication status
     checkAuthentication();
+
+    // Mark as loaded
+    chatComponentLoaded = true;
   }
 
   /**
@@ -102,17 +187,27 @@ const Chat = (function () {
     if (chatButtons && chatButtons.length) {
       chatButtons.forEach((button) => {
         button.addEventListener("click", async (e) => {
+          e.preventDefault();
           const postId = button.getAttribute("data-post-id");
           const sellerId = button.getAttribute("data-seller-id");
+          const sellerName =
+            button.getAttribute("data-seller-name") || "Seller";
+          const postTitle = button.getAttribute("data-post-title") || "Item";
+          const sellerAvatar =
+            button.getAttribute("data-seller-avatar") ||
+            "/img/default-avatar.svg";
 
           // If not logged in, handle redirection to login
           if (!isAuthenticated) {
-            checkAuthentication();
-            return;
+            const authenticated = await checkAuthentication();
+            if (!authenticated) {
+              redirectToLogin();
+              return;
+            }
           }
 
           // Open chat with this seller for this post
-          openChat(postId, sellerId);
+          openChat(postId, sellerId, sellerName, sellerAvatar, postTitle);
         });
       });
     }
@@ -120,12 +215,20 @@ const Chat = (function () {
     // Chat input event listeners
     if (chatInput) {
       chatInput.addEventListener("input", () => {
+        // Get the trimmed input value
+        const value = chatInput.value.trim();
+
         // Enable/disable send button based on input
-        chatSendBtn.disabled = chatInput.value.trim().length === 0;
+        chatSendBtn.disabled = value.length === 0;
 
         // Emit typing event if input has text
-        if (chatInput.value.trim().length > 0) {
+        if (value.length > 0) {
           emitTyping();
+        } else {
+          // If the input is now empty, hide the typing indicator immediately
+          if (chatTyping) {
+            chatTyping.style.display = "none";
+          }
         }
       });
 
@@ -163,12 +266,27 @@ const Chat = (function () {
       makeDraggable(chatContainer, chatHeader);
     }
 
-    // Listen for chat open events from other parts of the application
-    document.addEventListener("openChat", (event) => {
-      const { postId, recipientId, recipient, avatar, postTitle } =
-        event.detail;
-      openChat(postId, recipientId, recipient, avatar, postTitle);
-    });
+    // Make chat list items clickable if we're on a page with chat list
+    const chatListItems = document.querySelectorAll(".chat-list-item");
+    if (chatListItems && chatListItems.length) {
+      chatListItems.forEach((item) => {
+        item.addEventListener("click", function () {
+          const postId = this.dataset.postId;
+          const recipientId = this.dataset.recipientId;
+          const recipient = this.dataset.recipient;
+          const avatar = this.dataset.avatar;
+          const postTitle = this.dataset.postTitle;
+
+          // If the chat item was unread, remove the unread class
+          if (this.classList.contains("unread")) {
+            this.classList.remove("unread");
+          }
+
+          // Open chat with this user for this post
+          openChat(postId, recipientId, recipient, avatar, postTitle);
+        });
+      });
+    }
   }
 
   /**
@@ -176,7 +294,7 @@ const Chat = (function () {
    */
   async function checkAuthentication() {
     try {
-      const response = await fetch("/api/auth/check", {
+      const response = await fetch("/api/check-auth", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -214,6 +332,13 @@ const Chat = (function () {
    */
   function initializeSocketConnection() {
     if (!isAuthenticated) {
+      console.warn(
+        "Not initializing socket connection - user not authenticated"
+      );
+      showNotification(
+        "Chat service is currently unavailable. Please try again later.",
+        "error"
+      );
       return;
     }
 
@@ -230,6 +355,24 @@ const Chat = (function () {
     }
 
     try {
+      // If socket exists and is connected, no need to reinitialize
+      if (socket && socket.connected) {
+        console.log("Socket already connected, skipping initialization");
+        return socket;
+      }
+
+      // Clean up any previous socket instance
+      if (socket) {
+        console.log("Cleaning up previous socket connection");
+        try {
+          socket.disconnect();
+        } catch (e) {
+          console.error("Error disconnecting old socket:", e);
+        }
+      }
+
+      console.log("Initializing new socket connection");
+
       // Initialize socket connection with proper options
       socket = io({
         auth: {
@@ -239,39 +382,78 @@ const Chat = (function () {
           ),
         },
         transports: ["websocket", "polling"], // Try WebSocket first, then fall back to polling
-        reconnectionAttempts: 5, // Limit reconnection attempts
+        reconnectionAttempts: 10, // Increase reconnection attempts
         reconnectionDelay: 1000, // Start with 1 second delay
         reconnectionDelayMax: 5000, // Maximum delay of 5 seconds
         timeout: 20000, // Longer timeout for initial connection
-        forceNew: false, // Reuse existing connection if available
         autoConnect: true, // Automatically connect
       });
 
       // Socket event listeners
       socket.on("connect", () => {
         console.log("Connected to chat server");
+
         // Clear any previous error notifications
         const errorNotification = document.querySelector(".notification.error");
         if (errorNotification) {
           errorNotification.remove();
         }
+
+        // Initialize unread message count
+        socket.emit("init-chats");
+
+        // Join current chat room if we have one open
+        if (currentPostId && currentRecipientId) {
+          console.log("Rejoining chat room after reconnect");
+          socket.emit("join-chat", {
+            postId: currentPostId,
+            userId: currentRecipientId,
+          });
+
+          // Request any messages that might have been missed while disconnected
+          requestMissedMessages();
+        }
       });
 
       socket.on("connect_error", (error) => {
         console.error("Connection error:", error);
-        console.error("Connection details:", {
-          id: socket.id,
-          connected: socket.connected,
-          disconnected: socket.disconnected,
-        });
         showNotification(
           "Failed to connect to chat server. Please refresh the page to try again.",
           "error"
         );
       });
 
+      socket.on("disconnect", (reason) => {
+        console.log(`Disconnected from chat server: ${reason}`);
+
+        // If the disconnection was initiated by the server, try to reconnect
+        if (reason === "io server disconnect") {
+          // The disconnection was initiated by the server, need to reconnect manually
+          setTimeout(() => {
+            socket.connect();
+          }, 1000);
+        }
+        // else the socket will automatically try to reconnect
+      });
+
       socket.on("reconnect_attempt", (attemptNumber) => {
         console.log(`Attempting to reconnect: attempt ${attemptNumber}`);
+      });
+
+      socket.on("reconnect", (attemptNumber) => {
+        console.log(`Successfully reconnected after ${attemptNumber} attempts`);
+
+        // Rejoin chat room if there's an active chat
+        if (currentPostId && currentRecipientId) {
+          console.log("Rejoining chat room after reconnect");
+          socket.emit("join-chat", {
+            postId: currentPostId,
+            userId: currentRecipientId,
+          });
+
+          // Request any messages that might have been missed during disconnection
+          requestMissedMessages();
+        }
       });
 
       socket.on("reconnect_failed", () => {
@@ -284,44 +466,267 @@ const Chat = (function () {
         );
       });
 
-      socket.on("new-message", (message) => {
-        console.log("Received new message:", message);
-        addMessageToChat(message);
-        markMessagesAsRead();
-      });
-
+      // Handler for sent messages acknowledgment
       socket.on("message-sent", (data) => {
-        console.log("Message sent confirmation received:", data);
+        // Store message content before clearing input
+        const messageContent = chatInput.value.trim();
+
+        // Clear the input immediately
+        chatInput.value = "";
+        // Also reset send button state
+        chatSendBtn.disabled = true;
+
+        // Clear any pending timeout for displaying the message locally
+        if (window.lastMessageTimeout) {
+          clearTimeout(window.lastMessageTimeout);
+          window.lastMessageTimeout = null;
+        }
+
         // Add your own message to the chat UI
         const sentMessage = {
           _id: data.messageId || `temp-${Date.now()}`,
-          content: chatInput.value.trim(),
+          content: data.content || messageContent, // Use data.content if available, fallback to stored content
           createdAt: new Date(),
           isCurrentUser: true,
         };
+
+        console.log("Adding sent message to chat UI");
+
         addMessageToChat(sentMessage);
+
+        // Scroll to bottom to ensure new message is visible
+        scrollToBottom();
       });
 
-      socket.on("user-typing", ({ userId }) => {
-        if (userId === currentRecipientId) {
-          showTypingIndicator();
+      // NEW HANDLER: Dedicated handler for receiving new messages
+      socket.on("receive-message", (message) => {
+        console.log("Received message via dedicated channel");
+
+        // Extract post ID and sender ID from the message, ensuring all possible formats
+        const messagePostId = message.postId;
+        const messageSenderId =
+          message.sender?._id || message.senderId || message.sentBy;
+
+        // Don't process if essential data is missing
+        if (!messagePostId || !messageSenderId) {
+          console.error(
+            "Received message with missing essential data",
+            message
+          );
+          return;
+        }
+
+        // Check if this message belongs to the current open chat
+        if (
+          messagePostId === currentPostId &&
+          messageSenderId === currentRecipientId
+        ) {
+          // Format the message properly for display
+          const formattedMessage = {
+            _id: message._id || `received-${Date.now()}`,
+            content: message.content,
+            createdAt: message.createdAt || new Date(),
+            isCurrentUser: false,
+          };
+
+          console.log("Adding received message to chat UI");
+
+          // Add message to chat UI
+          addMessageToChat(formattedMessage);
+
+          // Mark messages as read immediately
+          markMessagesAsRead();
+
+          // Scroll to bottom to ensure new message is visible
+          scrollToBottom();
+
+          // Send read receipt to sender
+          socket.emit("message-read", {
+            messageId: message._id,
+            postId: messagePostId,
+            senderId: messageSenderId,
+          });
+        } else {
+          // Message is for a different chat, show notification
+          const senderName =
+            message.sender?.name || message.senderName || "Someone";
+          showNotification(`New message from ${senderName}`, "info");
+
+          // Update unread count
+          socket.emit("init-chats");
         }
       });
 
-      socket.on("messages-read", () => {
+      // Legacy handler for backward compatibility
+      socket.on("new-message", (message) => {
+        console.log("Received message via legacy channel");
+
+        // Extract post ID and sender ID from the message, with fallbacks
+        const messagePostId = message.postId || "";
+        const messageSenderId =
+          message.sender?._id || message.senderId || message.sentBy || "";
+
+        // Check if this message belongs to the current open chat
+        const isForCurrentChat =
+          // Check if post IDs match
+          messagePostId &&
+          messagePostId === currentPostId &&
+          // Check various sender ID possibilities
+          messageSenderId &&
+          (messageSenderId === currentRecipientId ||
+            // Also check if the sender ID is in the users array (MongoDB sometimes nests objects)
+            (message.users &&
+              message.users.some(
+                (u) =>
+                  (u.user &&
+                    (u.user === currentRecipientId ||
+                      u.user._id === currentRecipientId)) ||
+                  u === currentRecipientId
+              )));
+
+        if (isForCurrentChat) {
+          // Format the message properly for display
+          const formattedMessage = {
+            _id: message._id || `received-${Date.now()}`,
+            content: message.content || message.text || "",
+            createdAt: message.createdAt || new Date(),
+            isCurrentUser: message.isCurrentUser === true ? true : false,
+          };
+
+          // Actually add message to chat UI
+          addMessageToChat(formattedMessage);
+
+          // Mark messages as read
+          markMessagesAsRead();
+
+          // Scroll to bottom to ensure new message is visible
+          scrollToBottom();
+        } else {
+          // Otherwise, show a notification
+          const senderName =
+            message.sender?.name || message.senderName || "Someone";
+          showNotification(`New message from ${senderName}`, "info");
+
+          // Update unread count
+          socket.emit("init-chats");
+        }
+      });
+
+      socket.on("user-typing", ({ userId, postId, firstName, lastName }) => {
+        // Log received typing indicator data for debugging
+        console.log("Received typing indicator from another user:", {
+          userId, // ID of the OTHER person who is typing
+          postId,
+          firstName, // First name of the OTHER person who is typing
+          lastName, // Last name of the OTHER person who is typing
+          fullName:
+            firstName && lastName
+              ? `${firstName} ${lastName}`
+              : firstName || "Someone",
+        });
+
+        // Only show typing indicator if it's from the current chat partner we're talking with
+        if (userId === currentRecipientId && postId === currentPostId) {
+          // The typing indicator should show the OTHER person's name (the one who is typing)
+          // firstName and lastName are the sender's details, not the current user's
+          showTypingIndicator(firstName, lastName);
+        }
+      });
+
+      socket.on("messages-read", ({ postId, userId }) => {
         // Update UI to show messages as read if needed
+        if (postId === currentPostId && userId === currentRecipientId) {
+          // Mark messages as read in UI if needed
+          const unreadMessages = document.querySelectorAll(".message-unread");
+          unreadMessages.forEach((msg) => {
+            msg.classList.remove("message-unread");
+          });
+        }
+      });
+
+      socket.on("unread-count", ({ count }) => {
+        // Update UI to show unread count
+        updateUnreadCount(count);
       });
 
       socket.on("error", (error) => {
         console.error("Socket error:", error);
         showNotification(error.message || "An error occurred", "error");
       });
+
+      return socket;
     } catch (error) {
       console.error("Error initializing Socket.IO connection:", error);
       showNotification(
         "Chat service is currently unavailable. Please try again later.",
         "error"
       );
+    }
+  }
+
+  /**
+   * Request any messages that might have been missed while disconnected
+   * This actively fetches messages instead of relying on passive reception
+   */
+  function requestMissedMessages() {
+    if (!socket || !socket.connected || !currentPostId || !currentRecipientId)
+      return;
+
+    console.log("Requesting any missed messages");
+
+    // Request messages since the last message timestamp we have
+    const lastMessageTime = getLastMessageTimestamp();
+
+    socket.emit("request-messages", {
+      postId: currentPostId,
+      userId: currentRecipientId,
+      since: lastMessageTime || new Date(0), // Use epoch if no messages
+    });
+  }
+
+  /**
+   * Get the timestamp of the last message in the current chat
+   * @returns {Date|null} The timestamp of the last message or null if no messages
+   */
+  function getLastMessageTimestamp() {
+    // Find all message timestamps in the DOM
+    const timestamps = [];
+    const messageElements = document.querySelectorAll(".chat-message");
+
+    messageElements.forEach((message) => {
+      const timeElement = message.querySelector(".chat-message-time");
+      if (timeElement) {
+        // Try to extract timestamp from data attribute if available
+        const timestamp = timeElement.getAttribute("data-timestamp");
+        if (timestamp) {
+          timestamps.push(new Date(timestamp));
+        }
+      }
+    });
+
+    // Sort timestamps in descending order and return the most recent
+    if (timestamps.length > 0) {
+      timestamps.sort((a, b) => b - a);
+      return timestamps[0];
+    }
+
+    return null;
+  }
+
+  /**
+   * Update unread message count in UI
+   * @param {number} count - Number of unread messages
+   */
+  function updateUnreadCount(count) {
+    // Update badge in UI if it exists
+    const unreadBadge = document.querySelector(".messages-badge");
+    if (unreadBadge) {
+      if (count > 0) {
+        unreadBadge.textContent = count > 99 ? "99+" : count;
+        unreadBadge.style.display = "flex";
+      } else {
+        unreadBadge.style.display = "none";
+      }
     }
   }
 
@@ -351,7 +756,6 @@ const Chat = (function () {
 
     // If socket not connected, try to initialize it
     if (!socket || !socket.connected) {
-      console.log("Socket not connected, initializing connection...");
       initializeSocketConnection();
 
       // Wait a bit for socket to connect
@@ -368,6 +772,21 @@ const Chat = (function () {
     }
 
     console.log("Opening chat:", { postId, recipientId, recipientName });
+
+    // Check if we're already in this chat
+    const isSameChat =
+      currentPostId === postId && currentRecipientId === recipientId;
+    if (isSameChat) {
+      console.log("Already in this chat, just focusing it");
+      // Just focus the chat window
+      chatContainer.classList.add("open");
+      chatContainer.style.display = "flex";
+      chatContainer.classList.remove("minimized");
+      chatInput.focus();
+      return;
+    }
+
+    // Set current chat parameters
     currentPostId = postId;
     currentRecipientId = recipientId;
 
@@ -375,13 +794,20 @@ const Chat = (function () {
     clearChat();
 
     // Join the chat room for this conversation
+    console.log(
+      `Joining chat room for post ${postId} with user ${recipientId}`
+    );
     socket.emit("join-chat", { postId, userId: recipientId });
+
+    // Track the room ID for debugging
+    const chatRoomId = `chat:${postId}:${currentUser?._id}:${recipientId}`;
+    socket.currentChatRoom = chatRoomId;
 
     // If recipient details are provided, use them directly
     if (recipientName && (avatar || postTitle)) {
       const userData = {
         name: recipientName,
-        avatar: avatar || "",
+        avatar: avatar || "/img/default-avatar.svg",
       };
 
       const postData = {
@@ -397,11 +823,27 @@ const Chat = (function () {
 
     // Show the chat container
     chatContainer.classList.add("open");
+    chatContainer.style.display = "flex";
+    chatContainer.classList.remove("minimized");
 
     // Focus the input field
     setTimeout(() => {
       chatInput.focus();
     }, 300);
+
+    // Set up a periodic check to ensure we're still in the chat room
+    clearInterval(window.chatRoomCheckInterval);
+    window.chatRoomCheckInterval = setInterval(() => {
+      if (socket && socket.connected && currentPostId && currentRecipientId) {
+        console.log("Periodic chat room check - ensuring membership");
+        socket.emit("join-chat", {
+          postId: currentPostId,
+          userId: currentRecipientId,
+        });
+      } else {
+        clearInterval(window.chatRoomCheckInterval);
+      }
+    }, 30000); // Check every 30 seconds
   }
 
   /**
@@ -411,9 +853,6 @@ const Chat = (function () {
    */
   async function loadChatHistory(postId, userId) {
     try {
-      console.log(
-        `Loading chat history for postId=${postId}, userId=${userId}`
-      );
       showLoadingState();
 
       // Validate parameters
@@ -436,7 +875,6 @@ const Chat = (function () {
 
       if (response.status === 401) {
         // Unauthorized, redirect to login
-        console.log("Unauthorized access, redirecting to login");
         redirectToLogin();
         return;
       }
@@ -454,32 +892,40 @@ const Chat = (function () {
         hasPostData: !!data.post,
       });
 
-      // Validate essential data and use fallbacks if missing
-      if (!data.messages) data.messages = [];
-      if (!data.otherUser) {
-        data.otherUser = {
-          name: "Unknown User",
-          avatar: "/img/default-avatar.svg",
-        };
-      }
-      if (!data.post) {
-        data.post = {
-          title: "Unknown Post",
-        };
-      }
-
       // Update UI with user info
       updateChatHeader(data.otherUser, data.post);
 
       // Add messages to the chat
       if (data.messages && data.messages.length > 0) {
         hideEmptyState();
-        data.messages.forEach((message) => {
-          addMessageToChat(message);
-        });
 
-        // Mark messages as read
-        markMessagesAsRead();
+        // Clear existing messages to avoid duplicates
+        if (chatMessages) {
+          chatMessages.innerHTML = "";
+        }
+
+        // Process and add each message
+        data.messages.forEach((message) => {
+          // Format message properly before adding
+          const formattedMessage = {
+            _id:
+              message._id ||
+              `hist-${Date.now()}-${Math.random()
+                .toString(36)
+                .substring(2, 9)}`,
+            content: message.content || message.text || "",
+            createdAt: message.createdAt || new Date(),
+            // Determine if this is the current user's message
+            isCurrentUser:
+              message.senderId !== userId && message.sender?._id !== userId,
+            read: message.read || false,
+          };
+
+          // Only add messages with content
+          if (formattedMessage.content) {
+            addMessageToChat(formattedMessage);
+          }
+        });
 
         // Scroll to the bottom
         scrollToBottom();
@@ -489,7 +935,6 @@ const Chat = (function () {
       }
     } catch (error) {
       console.error("Error loading chat history:", error);
-      // Try to recover - show empty chat rather than broken UI
       showEmptyState();
       showNotification(
         `Failed to load chat history: ${error.message}`,
@@ -506,12 +951,10 @@ const Chat = (function () {
   function updateChatHeader(user, post) {
     // Safety check for undefined user or post
     if (!user) {
-      console.error("User data is undefined in updateChatHeader");
       user = { name: "Unknown User", avatar: "/img/default-avatar.svg" };
     }
 
     if (!post) {
-      console.error("Post data is undefined in updateChatHeader");
       post = { title: "Unknown Post" };
     }
 
@@ -535,13 +978,40 @@ const Chat = (function () {
    * @param {Object} message - The message to add
    */
   function addMessageToChat(message) {
+    if (!chatMessages) return;
+
+    // Skip if message has no content
+    if (!message || !message.content) {
+      console.warn("Attempted to add message with no content:", message);
+      return;
+    }
+
     hideEmptyState();
+
+    // Check if this message is already in the chat (avoid duplicates)
+    if (message._id) {
+      const existingMessage = document.querySelector(
+        `[data-message-id="${message._id}"]`
+      );
+      if (existingMessage) {
+        console.log(
+          "Message already exists in chat, not adding duplicate:",
+          message._id
+        );
+        return;
+      }
+    }
 
     const messageElement = document.createElement("div");
     messageElement.classList.add("chat-message");
     messageElement.classList.add(
       message.isCurrentUser ? "outgoing" : "incoming"
     );
+
+    // Add message ID as data attribute if available
+    if (message._id) {
+      messageElement.setAttribute("data-message-id", message._id);
+    }
 
     // Format the date
     const messageDate = new Date(message.createdAt);
@@ -550,9 +1020,16 @@ const Chat = (function () {
       minute: "2-digit",
     });
 
+    // Add read status class if the message is unread and from the current user
+    const readStatusClass =
+      message.isCurrentUser && !message.read ? "message-unread" : "";
+
+    // Make sure message content is properly escaped
+    const safeContent = escapeHtml(message.content);
+
     messageElement.innerHTML = `
-      <div class="chat-message-content">${escapeHtml(message.content)}</div>
-      <div class="chat-message-time">${formattedTime}</div>
+      <div class="chat-message-content">${safeContent}</div>
+      <div class="chat-message-time ${readStatusClass}" data-timestamp="${messageDate.toISOString()}">${formattedTime}</div>
     `;
 
     chatMessages.appendChild(messageElement);
@@ -568,10 +1045,6 @@ const Chat = (function () {
     const message = chatInput.value.trim();
 
     if (!message || !socket || !socket.connected) {
-      console.warn(
-        "Cannot send message: ",
-        !message ? "Empty message" : "Socket not connected"
-      );
       return;
     }
 
@@ -586,20 +1059,50 @@ const Chat = (function () {
     chatSendBtn.disabled = true;
 
     try {
+      // Store the message content for local display in case the socket event doesn't include it
+      const messageContent = message;
+
       // Send message via socket
       socket.emit("send-message", {
         postId: currentPostId,
         recipientId: currentRecipientId,
-        content: message,
+        content: messageContent,
       });
 
-      // Clear the input
+      // Clear the input field immediately after sending
       chatInput.value = "";
+
+      // If socket doesn't emit a message-sent event within 500ms, display locally
+      const messageTimeout = setTimeout(() => {
+        // Check if the message is already displayed (message-sent event already handled)
+        const messageElements = chatMessages.querySelectorAll(
+          ".chat-message-content"
+        );
+        const messageExists = Array.from(messageElements).some(
+          (el) => el.textContent === messageContent
+        );
+
+        if (!messageExists) {
+          console.log(
+            "Message-sent event not received, displaying message locally"
+          );
+          const localMessage = {
+            _id: `local-${Date.now()}`,
+            content: messageContent,
+            createdAt: new Date(),
+            isCurrentUser: true,
+          };
+          addMessageToChat(localMessage);
+        }
+      }, 500);
+
+      // Store the timeout ID to clear it if message-sent event is received
+      window.lastMessageTimeout = messageTimeout;
     } catch (error) {
       console.error("Error sending message:", error);
       showNotification("Failed to send message. Please try again.", "error");
     } finally {
-      // Re-enable input and button
+      // Re-enable input and keep button disabled until new input is entered
       chatInput.disabled = false;
       chatSendBtn.disabled = true;
       chatInput.focus();
@@ -619,9 +1122,33 @@ const Chat = (function () {
   }
 
   /**
-   * Show the typing indicator
+   * Show the typing indicator with the name of the person typing
+   * @param {string} firstName - The first name of the person typing (NOT the current user)
+   * @param {string} lastName - The last name of the person typing (NOT the current user)
    */
-  function showTypingIndicator() {
+  function showTypingIndicator(firstName, lastName) {
+    if (!chatTyping) return;
+
+    // Set the name of the user who's typing with proper fallbacks
+    // These names are the OTHER person's details (received from server)
+    if (typingName) {
+      if (firstName && lastName) {
+        // Both first and last name available - ensure correct order
+        typingName.textContent = `${firstName} ${lastName}`.trim();
+      } else if (firstName) {
+        // Only first name available
+        typingName.textContent = firstName;
+      } else {
+        // No name available
+        typingName.textContent = "Someone";
+      }
+
+      // For debugging
+      console.log(
+        `Showing typing indicator for OTHER user: ${typingName.textContent}`
+      );
+    }
+
     chatTyping.style.display = "block";
 
     // Clear previous timeout if exists
@@ -651,15 +1178,12 @@ const Chat = (function () {
    * Show loading state in the chat
    */
   function showLoadingState() {
+    if (!chatMessages) return;
+
     chatMessages.innerHTML = `
-      <div class="chat-empty-state">
-        <div class="chat-empty-icon">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
-          </svg>
-        </div>
-        <p class="chat-empty-text">Loading messages...</p>
+      <div class="chat-loading">
+        <div class="loading-spinner"></div>
+        <p>Loading messages...</p>
       </div>
     `;
   }
@@ -668,6 +1192,7 @@ const Chat = (function () {
    * Show empty state in the chat
    */
   function showEmptyState() {
+    if (!chatEmptyState) return;
     chatEmptyState.style.display = "flex";
   }
 
@@ -675,6 +1200,7 @@ const Chat = (function () {
    * Hide empty state in the chat
    */
   function hideEmptyState() {
+    if (!chatEmptyState) return;
     chatEmptyState.style.display = "none";
   }
 
@@ -682,6 +1208,8 @@ const Chat = (function () {
    * Clear all messages from the chat
    */
   function clearChat() {
+    if (!chatMessages || !chatEmptyState) return;
+
     chatMessages.innerHTML = "";
     chatEmptyState.style.display = "flex";
   }
@@ -690,24 +1218,62 @@ const Chat = (function () {
    * Close the chat window
    */
   function closeChat() {
+    if (!chatContainer) return;
+
     chatContainer.classList.remove("open");
+    chatContainer.style.display = "none";
+
+    // Clear any periodic chat room check interval
+    if (window.chatRoomCheckInterval) {
+      clearInterval(window.chatRoomCheckInterval);
+      window.chatRoomCheckInterval = null;
+    }
+
+    // Clear chat content
     clearChat();
+
+    // Reset current chat IDs
+    const oldPostId = currentPostId;
+    const oldRecipientId = currentRecipientId;
     currentPostId = "";
     currentRecipientId = "";
+
+    // Log for debugging
+    console.log("Chat closed and state reset");
+
+    // Clear current chat room tracking
+    if (socket && socket.currentChatRoom) {
+      socket.currentChatRoom = null;
+    }
   }
 
   /**
    * Minimize the chat window
    */
   function minimizeChat() {
-    chatContainer.classList.remove("open");
+    if (!chatContainer) return;
+    chatContainer.classList.add("minimized");
   }
 
   /**
    * Scroll the chat window to the bottom
    */
   function scrollToBottom() {
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    if (!chatMessages) return;
+
+    // Use a slight delay to ensure all content is rendered
+    setTimeout(() => {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      // For some browsers/conditions, the above may not work reliably
+      // Force scroll with another approach as fallback
+      if (chatMessages.lastElementChild) {
+        chatMessages.lastElementChild.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+        });
+      }
+    }, 50);
   }
 
   /**
@@ -716,7 +1282,7 @@ const Chat = (function () {
    * @param {string} type - The type of notification (info, success, error)
    */
   function showNotification(message, type = "info") {
-    // Check if the showNotification function exists globally (defined in post-detail.js)
+    // Check if the showNotification function exists globally
     if (typeof window.showNotification === "function") {
       window.showNotification(message, type);
     } else {
@@ -770,6 +1336,7 @@ const Chat = (function () {
       pos3 = 0,
       pos4 = 0;
 
+    if (!handle || !element) return;
     handle.addEventListener("mousedown", dragMouseDown);
 
     function dragMouseDown(e) {
@@ -826,6 +1393,27 @@ const Chat = (function () {
   return {
     initialize: initialize,
     openChat: openChat,
+    loadChatComponent: loadChatComponent,
+    isCurrentChat: function (postId, recipientId) {
+      return (
+        currentPostId === postId &&
+        currentRecipientId === recipientId &&
+        chatContainer?.classList.contains("open")
+      );
+    },
+    focusChat: function () {
+      if (chatContainer) {
+        chatContainer.classList.add("open");
+        chatContainer.style.display = "flex";
+        chatContainer.classList.remove("minimized");
+
+        // Bring the chat window to focus
+        setTimeout(() => {
+          chatInput?.focus();
+          scrollToBottom();
+        }, 100);
+      }
+    },
   };
 })();
 

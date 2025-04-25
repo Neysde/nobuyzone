@@ -403,8 +403,9 @@ router.get("/api/check-auth", (req, res) => {
       authenticated: true,
       user: {
         _id: req.user._id,
-        name: req.user.name,
+        name: `${req.user.firstName} ${req.user.lastName}`,
         email: req.user.email,
+        profilePicture: req.user.profilePicture.url,
       },
     });
   } else {

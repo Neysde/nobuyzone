@@ -2,16 +2,15 @@ import mongoose from "mongoose";
 
 const messageSchema = new mongoose.Schema(
   {
-    sender: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    recipient: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+    users: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+      },
+    ],
     postId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Post",
@@ -45,8 +44,22 @@ const messageSchema = new mongoose.Schema(
 );
 
 // Add index for efficient querying
-messageSchema.index({ sender: 1, recipient: 1, postId: 1 });
-messageSchema.index({ recipient: 1, read: 1 });
+messageSchema.index({ postId: 1, "users.user": 1 });
+messageSchema.index({ "users.user": 1 });
+messageSchema.index({ "messages.read": 1 });
+
+// Custom validation to ensure only 2 unique users
+messageSchema.pre("save", function (next) {
+  // Convert users array to a set of unique IDs
+  const uniqueUsers = new Set(this.users.map((u) => u.user.toString()));
+
+  // Check if there are exactly 2 unique users
+  if (uniqueUsers.size !== 2) {
+    return next(new Error("Messages must have exactly 2 unique users"));
+  }
+
+  next();
+});
 
 const Message = mongoose.model("Message", messageSchema);
 
