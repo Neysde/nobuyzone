@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", function () {
   // Check if there's a chat container in the current page
   if (document.getElementById("chat-container")) {
     // Initialize the chat module
+    // Note: This only sets up the DOM elements and event listeners
+    // Socket connection will be established on-demand when user opens a chat
     Chat.initialize();
   }
 
@@ -17,6 +19,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Track the current chat being processed to prevent duplicate handling
   let currentProcessingChatId = null;
+
+  // Add page visibility listeners to manage socket connections
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") {
+      // Page is hidden, user has navigated away
+      if (Chat.isSocketConnected && !Chat.isInActiveChat()) {
+        // If socket is connected but no active chat, start inactivity timer
+        Chat.startInactivityTimer();
+      }
+    } else if (document.visibilityState === "visible") {
+      // Page is visible again, user has returned
+      if (Chat.isInActiveChat()) {
+        // If user is in an active chat, ensure connection
+        Chat.ensureSocketConnection();
+      }
+    }
+  });
 
   // Listen for events from other pages (like post-detail)
   document.addEventListener("openChat", function (event) {
@@ -80,6 +99,10 @@ const Chat = (function () {
   let isAuthenticated = false;
   let currentUser = null;
   let chatComponentLoaded = false;
+  // Socket inactivity tracking
+  let socketInactivityTimeout = null;
+  let socketInactivityDuration = 120000; // 2 minutes in milliseconds
+  let isChatActive = false;
 
   // DOM Elements
   let chatContainer;
@@ -88,7 +111,6 @@ const Chat = (function () {
   let chatInput;
   let chatSendBtn;
   let chatCloseBtn;
-  let chatMinimizeBtn;
   let chatEmptyState;
   let chatTyping;
   let chatRecipientName;
@@ -150,7 +172,6 @@ const Chat = (function () {
     chatInput = document.getElementById("chat-input");
     chatSendBtn = document.getElementById("chat-send-btn");
     chatCloseBtn = document.getElementById("chat-close-btn");
-    chatMinimizeBtn = document.getElementById("chat-minimize-btn");
     chatEmptyState = document.getElementById("chat-empty-state");
     chatTyping = document.getElementById("chat-typing");
     chatRecipientName = document.getElementById("chat-recipient-name");
@@ -172,7 +193,8 @@ const Chat = (function () {
     // Set up event listeners for chat components
     setupEventListeners();
 
-    // Check authentication status
+    // Check authentication status but don't establish socket connection
+    // Socket connection will be established on-demand when a chat is opened
     checkAuthentication();
 
     // Mark as loaded
@@ -221,7 +243,7 @@ const Chat = (function () {
         // Enable/disable send button based on input
         chatSendBtn.disabled = value.length === 0;
 
-        // Emit typing event if input has text
+        //Emit typing event if input has text
         if (value.length > 0) {
           emitTyping();
         } else {
@@ -252,12 +274,6 @@ const Chat = (function () {
     if (chatCloseBtn) {
       chatCloseBtn.addEventListener("click", () => {
         closeChat();
-      });
-    }
-
-    if (chatMinimizeBtn) {
-      chatMinimizeBtn.addEventListener("click", () => {
-        minimizeChat();
       });
     }
 
@@ -306,7 +322,8 @@ const Chat = (function () {
         const data = await response.json();
         isAuthenticated = true;
         currentUser = data.user;
-        initializeSocketConnection();
+        // Don't automatically initialize socket connection
+        // Socket will be initialized on-demand when user opens a chat
         return true;
       } else {
         // Prepare to redirect to login
@@ -329,6 +346,7 @@ const Chat = (function () {
 
   /**
    * Initialize Socket.IO connection
+   * @returns {boolean} - Whether the connection was successfully initialized
    */
   function initializeSocketConnection() {
     if (!isAuthenticated) {
@@ -339,7 +357,7 @@ const Chat = (function () {
         "Chat service is currently unavailable. Please try again later.",
         "error"
       );
-      return;
+      return false;
     }
 
     // Check if Socket.IO library is loaded
@@ -351,14 +369,14 @@ const Chat = (function () {
         "Chat service is currently unavailable. Please try again later.",
         "error"
       );
-      return;
+      return false;
     }
 
     try {
       // If socket exists and is connected, no need to reinitialize
       if (socket && socket.connected) {
         console.log("Socket already connected, skipping initialization");
-        return socket;
+        return true;
       }
 
       // Clean up any previous socket instance
@@ -389,7 +407,7 @@ const Chat = (function () {
         autoConnect: true, // Automatically connect
       });
 
-      // Socket event listeners
+      // Basic connection event listeners
       socket.on("connect", () => {
         console.log("Connected to chat server");
 
@@ -412,6 +430,11 @@ const Chat = (function () {
 
           // Request any messages that might have been missed while disconnected
           requestMissedMessages();
+        } else {
+          // If no active chat, start the inactivity timer
+          if (!isChatActive) {
+            startSocketInactivityTimer();
+          }
         }
       });
 
@@ -466,202 +489,210 @@ const Chat = (function () {
         );
       });
 
-      // Handler for sent messages acknowledgment
-      socket.on("message-sent", (data) => {
-        // Store message content before clearing input
-        const messageContent = chatInput.value.trim();
+      // Set up all message-related event handlers
+      setupSocketEventHandlers();
 
-        // Clear the input immediately
-        chatInput.value = "";
-        // Also reset send button state
-        chatSendBtn.disabled = true;
-
-        // Clear any pending timeout for displaying the message locally
-        if (window.lastMessageTimeout) {
-          clearTimeout(window.lastMessageTimeout);
-          window.lastMessageTimeout = null;
-        }
-
-        // Add your own message to the chat UI
-        const sentMessage = {
-          _id: data.messageId || `temp-${Date.now()}`,
-          content: data.content || messageContent, // Use data.content if available, fallback to stored content
-          createdAt: new Date(),
-          isCurrentUser: true,
-        };
-
-        console.log("Adding sent message to chat UI");
-
-        addMessageToChat(sentMessage);
-
-        // Scroll to bottom to ensure new message is visible
-        scrollToBottom();
-      });
-
-      // NEW HANDLER: Dedicated handler for receiving new messages
-      socket.on("receive-message", (message) => {
-        console.log("Received message via dedicated channel");
-
-        // Extract post ID and sender ID from the message, ensuring all possible formats
-        const messagePostId = message.postId;
-        const messageSenderId =
-          message.sender?._id || message.senderId || message.sentBy;
-
-        // Don't process if essential data is missing
-        if (!messagePostId || !messageSenderId) {
-          console.error(
-            "Received message with missing essential data",
-            message
-          );
-          return;
-        }
-
-        // Check if this message belongs to the current open chat
-        if (
-          messagePostId === currentPostId &&
-          messageSenderId === currentRecipientId
-        ) {
-          // Format the message properly for display
-          const formattedMessage = {
-            _id: message._id || `received-${Date.now()}`,
-            content: message.content,
-            createdAt: message.createdAt || new Date(),
-            isCurrentUser: false,
-          };
-
-          console.log("Adding received message to chat UI");
-
-          // Add message to chat UI
-          addMessageToChat(formattedMessage);
-
-          // Mark messages as read immediately
-          markMessagesAsRead();
-
-          // Scroll to bottom to ensure new message is visible
-          scrollToBottom();
-
-          // Send read receipt to sender
-          socket.emit("message-read", {
-            messageId: message._id,
-            postId: messagePostId,
-            senderId: messageSenderId,
-          });
-        } else {
-          // Message is for a different chat, show notification
-          const senderName =
-            message.sender?.name || message.senderName || "Someone";
-          showNotification(`New message from ${senderName}`, "info");
-
-          // Update unread count
-          socket.emit("init-chats");
-        }
-      });
-
-      // Legacy handler for backward compatibility
-      socket.on("new-message", (message) => {
-        console.log("Received message via legacy channel");
-
-        // Extract post ID and sender ID from the message, with fallbacks
-        const messagePostId = message.postId || "";
-        const messageSenderId =
-          message.sender?._id || message.senderId || message.sentBy || "";
-
-        // Check if this message belongs to the current open chat
-        const isForCurrentChat =
-          // Check if post IDs match
-          messagePostId &&
-          messagePostId === currentPostId &&
-          // Check various sender ID possibilities
-          messageSenderId &&
-          (messageSenderId === currentRecipientId ||
-            // Also check if the sender ID is in the users array (MongoDB sometimes nests objects)
-            (message.users &&
-              message.users.some(
-                (u) =>
-                  (u.user &&
-                    (u.user === currentRecipientId ||
-                      u.user._id === currentRecipientId)) ||
-                  u === currentRecipientId
-              )));
-
-        if (isForCurrentChat) {
-          // Format the message properly for display
-          const formattedMessage = {
-            _id: message._id || `received-${Date.now()}`,
-            content: message.content || message.text || "",
-            createdAt: message.createdAt || new Date(),
-            isCurrentUser: message.isCurrentUser === true ? true : false,
-          };
-
-          // Actually add message to chat UI
-          addMessageToChat(formattedMessage);
-
-          // Mark messages as read
-          markMessagesAsRead();
-
-          // Scroll to bottom to ensure new message is visible
-          scrollToBottom();
-        } else {
-          // Otherwise, show a notification
-          const senderName =
-            message.sender?.name || message.senderName || "Someone";
-          showNotification(`New message from ${senderName}`, "info");
-
-          // Update unread count
-          socket.emit("init-chats");
-        }
-      });
-
-      socket.on("user-typing", ({ userId, postId, firstName, lastName }) => {
-        // Log received typing indicator data for debugging
-        console.log("Received typing indicator from another user:", {
-          userId, // ID of the OTHER person who is typing
-          postId,
-          firstName, // First name of the OTHER person who is typing
-          lastName, // Last name of the OTHER person who is typing
-          fullName:
-            firstName && lastName
-              ? `${firstName} ${lastName}`
-              : firstName || "Someone",
-        });
-
-        // Only show typing indicator if it's from the current chat partner we're talking with
-        if (userId === currentRecipientId && postId === currentPostId) {
-          // The typing indicator should show the OTHER person's name (the one who is typing)
-          // firstName and lastName are the sender's details, not the current user's
-          showTypingIndicator(firstName, lastName);
-        }
-      });
-
-      socket.on("messages-read", ({ postId, userId }) => {
-        // Update UI to show messages as read if needed
-        if (postId === currentPostId && userId === currentRecipientId) {
-          // Mark messages as read in UI if needed
-          const unreadMessages = document.querySelectorAll(".message-unread");
-          unreadMessages.forEach((msg) => {
-            msg.classList.remove("message-unread");
-          });
-        }
-      });
-
-      socket.on("unread-count", ({ count }) => {
-        // Update UI to show unread count
-        updateUnreadCount(count);
-      });
-
-      socket.on("error", (error) => {
-        console.error("Socket error:", error);
-        showNotification(error.message || "An error occurred", "error");
-      });
-
-      return socket;
+      return true;
     } catch (error) {
       console.error("Error initializing Socket.IO connection:", error);
       showNotification(
         "Chat service is currently unavailable. Please try again later.",
         "error"
       );
+      return false;
     }
+  }
+
+  /**
+   * Set up socket event handlers for message reception, typing indicators, etc.
+   */
+  function setupSocketEventHandlers() {
+    if (!socket) return;
+
+    // Handler for sent messages acknowledgment
+    socket.on("message-sent", (data) => {
+      // Store message content before clearing input
+      const messageContent = chatInput.value.trim();
+
+      // Clear the input immediately
+      chatInput.value = "";
+      // Also reset send button state
+      chatSendBtn.disabled = true;
+
+      // Clear any pending timeout for displaying the message locally
+      if (window.lastMessageTimeout) {
+        clearTimeout(window.lastMessageTimeout);
+        window.lastMessageTimeout = null;
+      }
+
+      // Add your own message to the chat UI
+      const sentMessage = {
+        _id: data.messageId || `temp-${Date.now()}`,
+        content: data.content || messageContent, // Use data.content if available, fallback to stored content
+        createdAt: new Date(),
+        isCurrentUser: true,
+      };
+
+      console.log("Adding sent message to chat UI");
+
+      addMessageToChat(sentMessage);
+
+      // Scroll to bottom to ensure new message is visible
+      scrollToBottom();
+    });
+
+    //NEW HANDLER: Dedicated handler for receiving new messages
+    socket.on("receive-message", (message) => {
+      console.log("Received message via dedicated channel");
+
+      // Extract post ID and sender ID from the message, ensuring all possible formats
+      const messagePostId = message.postId;
+      const messageSenderId =
+        message.sender?._id || message.senderId || message.sentBy;
+
+      // Don't process if essential data is missing
+      if (!messagePostId || !messageSenderId) {
+        console.error("Received message with missing essential data", message);
+        return;
+      }
+
+      // Check if this message belongs to the current open chat
+      if (
+        messagePostId === currentPostId &&
+        messageSenderId === currentRecipientId
+      ) {
+        // Format the message properly for display
+        const formattedMessage = {
+          _id: message._id || `received-${Date.now()}`,
+          content: message.content,
+          createdAt: message.createdAt || new Date(),
+          isCurrentUser: false,
+        };
+
+        console.log("Adding received message to chat UI");
+
+        // Add message to chat UI
+        addMessageToChat(formattedMessage);
+
+        // Mark messages as read immediately
+        markMessagesAsRead();
+
+        // Scroll to bottom to ensure new message is visible
+        scrollToBottom();
+
+        // Send read receipt to sender
+        socket.emit("message-read", {
+          messageId: message._id,
+          postId: messagePostId,
+          senderId: messageSenderId,
+        });
+      } else {
+        // Message is for a different chat, show notification
+        const senderName =
+          message.sender?.name || message.senderName || "Someone";
+        showNotification(`New message from ${senderName}`, "info");
+
+        // Update unread count
+        socket.emit("init-chats");
+      }
+    });
+
+    // Legacy handler for backward compatibility
+    socket.on("new-message", (message) => {
+      console.log("Received message via legacy channel");
+
+      // Extract post ID and sender ID from the message, with fallbacks
+      const messagePostId = message.postId || "";
+      const messageSenderId =
+        message.sender?._id || message.senderId || message.sentBy || "";
+
+      // Check if this message belongs to the current open chat
+      const isForCurrentChat =
+        // Check if post IDs match
+        messagePostId &&
+        messagePostId === currentPostId &&
+        // Check various sender ID possibilities
+        messageSenderId &&
+        (messageSenderId === currentRecipientId ||
+          // Also check if the sender ID is in the users array (MongoDB sometimes nests objects)
+          (message.users &&
+            message.users.some(
+              (u) =>
+                (u.user &&
+                  (u.user === currentRecipientId ||
+                    u.user._id === currentRecipientId)) ||
+                u === currentRecipientId
+            )));
+
+      if (isForCurrentChat) {
+        // Format the message properly for display
+        const formattedMessage = {
+          _id: message._id || `received-${Date.now()}`,
+          content: message.content || message.text || "",
+          createdAt: message.createdAt || new Date(),
+          isCurrentUser: message.isCurrentUser === true ? true : false,
+        };
+
+        // Actually add message to chat UI
+        addMessageToChat(formattedMessage);
+
+        // Mark messages as read
+        markMessagesAsRead();
+
+        // Scroll to bottom to ensure new message is visible
+        scrollToBottom();
+      } else {
+        // Otherwise, show a notification
+        const senderName =
+          message.sender?.name || message.senderName || "Someone";
+        showNotification(`New message from ${senderName}`, "info");
+
+        // Update unread count
+        socket.emit("init-chats");
+      }
+    });
+
+    socket.on("user-typing", ({ userId, postId, firstName, lastName }) => {
+      // Log received typing indicator data for debugging
+      console.log("Received typing indicator from another user:", {
+        userId, // ID of the OTHER person who is typing
+        postId,
+        firstName, // First name of the OTHER person who is typing
+        lastName, // Last name of the OTHER person who is typing
+        fullName:
+          firstName && lastName
+            ? `${firstName} ${lastName}`
+            : firstName || "Someone",
+      });
+
+      // Only show typing indicator if it's from the current chat partner we're talking with
+      if (userId === currentRecipientId && postId === currentPostId) {
+        // The typing indicator should show the OTHER person's name (the one who is typing)
+        // firstName and lastName are the sender's details, not the current user's
+        showTypingIndicator(firstName, lastName);
+      }
+    });
+
+    socket.on("messages-read", ({ postId, userId }) => {
+      // Update UI to show messages as read if needed
+      if (postId === currentPostId && userId === currentRecipientId) {
+        // Mark messages as read in UI if needed
+        const unreadMessages = document.querySelectorAll(".message-unread");
+        unreadMessages.forEach((msg) => {
+          msg.classList.remove("message-unread");
+        });
+      }
+    });
+
+    socket.on("unread-count", ({ count }) => {
+      // Update UI to show unread count
+      updateUnreadCount(count);
+    });
+
+    socket.on("error", (error) => {
+      console.error("Socket error:", error);
+      showNotification(error.message || "An error occurred", "error");
+    });
   }
 
   /**
@@ -754,14 +785,32 @@ const Chat = (function () {
       }
     }
 
-    // If socket not connected, try to initialize it
+    // Mark chat as active and clear any inactivity timer
+    isChatActive = true;
+    if (socketInactivityTimeout) {
+      clearTimeout(socketInactivityTimeout);
+      socketInactivityTimeout = null;
+    }
+
+    // Ensure socket connection is established when opening a chat
     if (!socket || !socket.connected) {
+      console.log("Initializing socket connection for chat");
       initializeSocketConnection();
 
-      // Wait a bit for socket to connect
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Wait for socket connection to be established
+      if (!socket || !socket.connected) {
+        // Try to wait for connection
+        let connectionAttempts = 0;
+        while ((!socket || !socket.connected) && connectionAttempts < 3) {
+          console.log(
+            `Waiting for socket connection... Attempt ${connectionAttempts + 1}`
+          );
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          connectionAttempts++;
+        }
+      }
 
-      // If still not connected, show error
+      // Final check if connection was established
       if (!socket || !socket.connected) {
         showNotification(
           "Could not connect to chat server. Please try again later.",
@@ -781,7 +830,6 @@ const Chat = (function () {
       // Just focus the chat window
       chatContainer.classList.add("open");
       chatContainer.style.display = "flex";
-      chatContainer.classList.remove("minimized");
       chatInput.focus();
       return;
     }
@@ -824,7 +872,6 @@ const Chat = (function () {
     // Show the chat container
     chatContainer.classList.add("open");
     chatContainer.style.display = "flex";
-    chatContainer.classList.remove("minimized");
 
     // Focus the input field
     setTimeout(() => {
@@ -832,18 +879,31 @@ const Chat = (function () {
     }, 300);
 
     // Set up a periodic check to ensure we're still in the chat room
-    clearInterval(window.chatRoomCheckInterval);
-    window.chatRoomCheckInterval = setInterval(() => {
-      if (socket && socket.connected && currentPostId && currentRecipientId) {
-        console.log("Periodic chat room check - ensuring membership");
-        socket.emit("join-chat", {
-          postId: currentPostId,
-          userId: currentRecipientId,
-        });
-      } else {
-        clearInterval(window.chatRoomCheckInterval);
-      }
-    }, 30000); // Check every 30 seconds
+    // but only if there's not already an interval running
+    if (window.chatRoomCheckInterval) {
+      clearInterval(window.chatRoomCheckInterval);
+      window.chatRoomCheckInterval = null;
+    }
+
+    // Only set up the periodic check if we're in a chat
+    if (currentPostId && currentRecipientId) {
+      window.chatRoomCheckInterval = setInterval(() => {
+        // Only attempt to rejoin if socket is connected but we're not in a room
+        if (socket && socket.connected && currentPostId && currentRecipientId) {
+          // We don't need to check every 30 seconds, as the server will now track room membership
+          // Just ensure we're in the room every 2 minutes
+          console.log("Periodic chat room check - ensuring membership");
+          socket.emit("join-chat", {
+            postId: currentPostId,
+            userId: currentRecipientId,
+          });
+        } else {
+          // If conditions changed, clear the interval
+          clearInterval(window.chatRoomCheckInterval);
+          window.chatRoomCheckInterval = null;
+        }
+      }, 120000); // Check every 2 minutes instead of 30 seconds
+    }
   }
 
   /**
@@ -1129,26 +1189,33 @@ const Chat = (function () {
   function showTypingIndicator(firstName, lastName) {
     if (!chatTyping) return;
 
-    // Set the name of the user who's typing with proper fallbacks
-    // These names are the OTHER person's details (received from server)
-    if (typingName) {
-      if (firstName && lastName) {
-        // Both first and last name available - ensure correct order
-        typingName.textContent = `${firstName} ${lastName}`.trim();
-      } else if (firstName) {
-        // Only first name available
-        typingName.textContent = firstName;
-      } else {
-        // No name available
-        typingName.textContent = "Someone";
-      }
-
-      // For debugging
-      console.log(
-        `Showing typing indicator for OTHER user: ${typingName.textContent}`
-      );
+    // Find typing name element if not already cached
+    if (!typingName) {
+      typingName = chatTyping.querySelector(".typing-name");
+      if (!typingName) return;
     }
 
+    // Create the full name with proper handling of undefined/null values
+    let fullName = "Someone";
+
+    if (firstName && lastName) {
+      // Both first and last name available - format as "FirstName LastName"
+      fullName = `${firstName} ${lastName}`.trim();
+    } else if (firstName) {
+      // Only first name available
+      fullName = firstName.trim();
+    } else if (lastName) {
+      // Only last name available (unlikely but handled for completeness)
+      fullName = lastName.trim();
+    }
+
+    // Set the full name directly
+    typingName.textContent = fullName;
+
+    // Log for debugging
+    console.log(`Showing typing indicator for user: ${fullName}`);
+
+    // Make typing indicator visible with simple display style
     chatTyping.style.display = "block";
 
     // Clear previous timeout if exists
@@ -1238,6 +1305,10 @@ const Chat = (function () {
     currentPostId = "";
     currentRecipientId = "";
 
+    // Mark chat as inactive and start the socket inactivity timer
+    isChatActive = false;
+    startSocketInactivityTimer();
+
     // Log for debugging
     console.log("Chat closed and state reset");
 
@@ -1245,14 +1316,6 @@ const Chat = (function () {
     if (socket && socket.currentChatRoom) {
       socket.currentChatRoom = null;
     }
-  }
-
-  /**
-   * Minimize the chat window
-   */
-  function minimizeChat() {
-    if (!chatContainer) return;
-    chatContainer.classList.add("minimized");
   }
 
   /**
@@ -1389,6 +1452,43 @@ const Chat = (function () {
     }
   }
 
+  /**
+   * Start the socket inactivity timer that will disconnect the socket
+   * after a period of inactivity when not in a chat
+   */
+  function startSocketInactivityTimer() {
+    // Clear any existing timeout
+    if (socketInactivityTimeout) {
+      clearTimeout(socketInactivityTimeout);
+      socketInactivityTimeout = null;
+    }
+
+    // If chat is active, don't set a timer
+    if (isChatActive) {
+      console.log("Chat is active, not setting inactivity timer");
+      return;
+    }
+
+    // Set a new timeout
+    console.log(
+      `Setting socket inactivity timer for ${
+        socketInactivityDuration / 1000
+      } seconds`
+    );
+    socketInactivityTimeout = setTimeout(() => {
+      // If socket exists and is connected
+      if (socket && socket.connected) {
+        // Only disconnect if not in a chat
+        if (!isChatActive && !currentPostId && !currentRecipientId) {
+          console.log("Disconnecting socket due to inactivity");
+          // Disconnect the socket
+          socket.disconnect();
+          socket = null;
+        }
+      }
+    }, socketInactivityDuration);
+  }
+
   // Public API
   return {
     initialize: initialize,
@@ -1405,13 +1505,24 @@ const Chat = (function () {
       if (chatContainer) {
         chatContainer.classList.add("open");
         chatContainer.style.display = "flex";
-        chatContainer.classList.remove("minimized");
 
-        // Bring the chat window to focus
-        setTimeout(() => {
-          chatInput?.focus();
-          scrollToBottom();
-        }, 100);
+        chatInput?.focus();
+        scrollToBottom();
+      }
+    },
+    // Methods for socket management
+    isSocketConnected: function () {
+      return socket && socket.connected;
+    },
+    isInActiveChat: function () {
+      return isChatActive && currentPostId && currentRecipientId;
+    },
+    startInactivityTimer: function () {
+      startSocketInactivityTimer();
+    },
+    ensureSocketConnection: function () {
+      if (!socket || !socket.connected) {
+        initializeSocketConnection();
       }
     },
   };

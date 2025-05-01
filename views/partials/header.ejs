@@ -24,6 +24,27 @@
         <!-- Sign in button for non-authenticated users -->
         <a href="/api/login" class="button button-outline">Sign In</a>
         <% } else { %>
+        <!-- Notification bell icon with unread count -->
+        <a
+          href="/dashboard/<%= user._id %>#messages"
+          class="notification-bell"
+          id="notification-bell"
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span id="unread-badge" class="unread-badge">0</span>
+        </a>
         <!-- User profile button with dropdown for authenticated users -->
         <div class="user-dropdown">
           <a href="/dashboard/<%= user._id %>" class="user-button">
@@ -65,7 +86,110 @@
 
 <% if (user) { %>
 <script>
-  // Check for unread messages
+  // Global notification socket variable
+  let notificationSocket = null;
+
+  // Initialize Socket.IO connection for notifications
+  function initNotificationSocket() {
+    // Skip if we already have a connected socket
+    if (notificationSocket && notificationSocket.connected) {
+      console.log("Notification socket already connected");
+      return;
+    }
+
+    try {
+      // Create a lightweight socket connection just for notifications
+      notificationSocket = io({
+        auth: {
+          token: document.cookie.replace(
+            /(?:(?:^|.*;\s*)login\s*\=\s*([^;]*).*$)|^.*$/,
+            "$1"
+          ),
+        },
+        transports: ["websocket", "polling"],
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        autoConnect: true,
+      });
+
+      // Set up event handlers
+      notificationSocket.on("connect", () => {
+        console.log("Notification socket connected");
+
+        // Join user's personal notification room
+        notificationSocket.emit("join-user-room", {
+          userId: "<%= user._id %>",
+        });
+
+        // Request initial unread count
+        checkUnreadMessages();
+      });
+
+      // Handle disconnection gracefully
+      notificationSocket.on("disconnect", (reason) => {
+        console.log(`Notification socket disconnected: ${reason}`);
+
+        // Fall back to fetch API if socket disconnects
+        if (reason === "io server disconnect") {
+          setTimeout(() => {
+            notificationSocket.connect();
+          }, 3000);
+        }
+      });
+
+      // Listen for unread count updates
+      notificationSocket.on("unread-count", ({ count }) => {
+        console.log("Received real-time unread count update:", count);
+        updateUnreadBadge(count);
+      });
+
+      // Listen for new message notifications
+      notificationSocket.on("notification", (data) => {
+        if (data.type === "new-message") {
+          // Update unread count when receiving a new message notification
+          checkUnreadMessages();
+        }
+      });
+
+      // Listen for real-time new messages
+      notificationSocket.on("receive-message", (message) => {
+        if (message.isNotification) {
+          // Update unread count when receiving a new message
+          checkUnreadMessages();
+        }
+      });
+    } catch (error) {
+      console.error("Error initializing notification socket:", error);
+    }
+  }
+
+  // Update unread badge in the UI
+  function updateUnreadBadge(count) {
+    const badge = document.getElementById("unread-badge");
+
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count > 99 ? "99+" : count;
+        badge.style.display = "inline-flex";
+
+        // Add a pulse animation class if there are unread messages
+        const bell = document.querySelector(".notification-bell");
+        if (bell) {
+          bell.classList.add("has-unread");
+        }
+      } else {
+        badge.style.display = "none";
+
+        // Remove the pulse class if no unread messages
+        const bell = document.querySelector(".notification-bell");
+        if (bell) {
+          bell.classList.remove("has-unread");
+        }
+      }
+    }
+  }
+
+  // Check for unread messages (fallback using fetch API)
   async function checkUnreadMessages() {
     try {
       const response = await fetch("/api/messages/unread/count", {
@@ -78,49 +202,20 @@
 
       if (response.ok) {
         const data = await response.json();
-        const badge = document.getElementById("unread-badge");
-
-        if (badge) {
-          if (data.count > 0) {
-            badge.textContent = data.count > 99 ? "99+" : data.count;
-            badge.style.display = "inline-flex";
-          } else {
-            badge.style.display = "none";
-          }
-        }
+        updateUnreadBadge(data.count);
       }
     } catch (error) {
       console.error("Error checking unread messages:", error);
     }
   }
 
-  // Check for unread messages on page load
-  document.addEventListener("DOMContentLoaded", checkUnreadMessages);
+  // Initialize notification socket when page loads
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialize Socket.IO connection for notifications
+    initNotificationSocket();
 
-  // Check for unread messages every minute
-  setInterval(checkUnreadMessages, 60000);
+    // Still check periodically as a fallback
+    setInterval(checkUnreadMessages, 60000);
+  });
 </script>
-
-<style>
-  .messages-link {
-    position: relative;
-  }
-
-  .unread-badge {
-    position: absolute;
-    top: -5px;
-    right: -8px;
-    background-color: #ff4d4f;
-    color: white;
-    border-radius: 10px;
-    padding: 2px 6px;
-    font-size: 10px;
-    font-weight: bold;
-    min-width: 18px;
-    height: 18px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-</style>
 <% } %>

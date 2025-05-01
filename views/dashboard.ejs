@@ -459,9 +459,9 @@
                         <span
                           class="<%= chat.unreadCount > 0 ? 'unread-message' : '' %>"
                         >
-                          <% if (chat.lastMessage.isRead || chat.unreadCount ===
-                          0) { %> You: <%= chat.lastMessage.content %> <% } else
-                          { %> <%= chat.lastMessage.content %> <% } %>
+                          <% if (chat.lastMessage.sentByCurrentUser) { %> You:
+                          <%= chat.lastMessage.content %> <% } else { %> <%=
+                          chat.lastMessage.content %> <% } %>
                         </span>
                       </td>
                       <td class="chat-date">

@@ -59,6 +59,9 @@ export function initializeSocketServer(httpServer) {
     },
   });
 
+  // Store active user rooms to prevent duplicate joins
+  const userRooms = {};
+
   // Modified Socket.IO middleware for authentication using our existing middleware
   io.use(async (socket, next) => {
     try {
@@ -94,22 +97,70 @@ export function initializeSocketServer(httpServer) {
           return next(new Error("Authentication failed"));
         }
 
-        // Get complete user data if firstName or lastName is missing
-        if (!req.user.firstName || !req.user.lastName) {
-          try {
-            console.log(`Getting complete user data for ${req.user._id}`);
-            const completeUser = await User.findById(req.user._id);
-            if (completeUser) {
-              // Merge the complete user data with the existing user data
-              req.user = {
-                ...req.user,
-                firstName: completeUser.firstName,
-                lastName: completeUser.lastName,
-              };
+        try {
+          // Ensure user ID exists - sometimes it's in 'id' instead of '_id'
+          if (!req.user._id && req.user.id) {
+            req.user._id = req.user.id;
+          }
+
+          // Always try to get complete user data to ensure we have all needed fields
+          let completeUser = null;
+          if (req.user._id) {
+            completeUser = await User.findById(req.user._id);
+          } else if (req.user.id) {
+            completeUser = await User.findById(req.user.id);
+          } else if (req.user.email) {
+            completeUser = await User.findOne({ email: req.user.email });
+          }
+
+          if (completeUser) {
+            // Ensure the user has an _id field
+            req.user._id = completeUser._id || req.user._id || req.user.id;
+
+            // Merge the complete user data with the existing user data
+            req.user = {
+              ...req.user,
+              _id: req.user._id, // Maintain existing _id or use the one from completeUser
+              firstName: completeUser.firstName || req.user.firstName,
+              lastName: completeUser.lastName || req.user.lastName,
+            };
+
+            // Ensure the name is set
+            if (!req.user.name) {
+              if (req.user.firstName || req.user.lastName) {
+                req.user.name = `${req.user.firstName || ""} ${
+                  req.user.lastName || ""
+                }`.trim();
+              } else {
+                req.user.name = `User ${req.user._id.toString().substr(-6)}`;
+              }
             }
-          } catch (dbError) {
-            console.error("Error getting complete user data:", dbError);
-            // Continue even if we can't get the complete user data
+          } else {
+            console.warn(
+              `Could not find complete user data for user: ${
+                req.user._id || req.user.id || req.user.email || "unknown"
+              }`
+            );
+          }
+        } catch (dbError) {
+          console.error("Error getting complete user data:", dbError);
+
+          // Make sure ID is set properly even if DB lookup failed
+          if (!req.user._id) {
+            req.user._id = req.user.id;
+          }
+
+          // Still ensure a name is set even if we couldn't get complete data
+          if (!req.user.name) {
+            if (req.user.firstName || req.user.lastName) {
+              req.user.name = `${req.user.firstName || ""} ${
+                req.user.lastName || ""
+              }`.trim();
+            } else if (req.user._id) {
+              req.user.name = `User ${req.user._id.toString().substr(-6)}`;
+            } else {
+              req.user.name = `User ${Date.now().toString().substr(-6)}`;
+            }
           }
         }
 
@@ -128,44 +179,176 @@ export function initializeSocketServer(httpServer) {
 
   // Socket.IO connection handling
   io.on("connection", async (socket) => {
+    // Ensure user ID and name are available
+    if (!socket.user._id && socket.user.id) {
+      // Some authentication systems use 'id' instead of '_id'
+      socket.user._id = socket.user.id;
+    } else if (!socket.user._id && !socket.user.id) {
+      console.error(
+        "User connected without a valid ID. Authentication may be misconfigured."
+      );
+      // In production, you might want to disconnect users without IDs
+      // For now, creating a fallback ID for development
+      socket.user._id = `temp-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 9)}`;
+    }
+
+    // Ensure user name is available
+    if (!socket.user.name) {
+      // Try to construct name from firstName and lastName
+      if (socket.user.firstName || socket.user.lastName) {
+        socket.user.name = `${socket.user.firstName || ""} ${
+          socket.user.lastName || ""
+        }`.trim();
+      } else {
+        // Fallback to a generic name with user ID
+        socket.user.name = `User ${
+          (socket.user._id.toString() || "").substr(-6) || "unknown"
+        }`;
+      }
+    }
+
     // Log more detailed user information for debugging
     console.log(
-      `User connected to chat: ${socket.user.name} (${socket.user._id})`
+      `User connected to chat: ${socket.user.name} (ID: ${
+        socket.user._id || socket.user.id || "unknown"
+      })`
     );
     console.log(`User object structure:`, {
       hasFirstName: !!socket.user.firstName,
       hasLastName: !!socket.user.lastName,
       name: socket.user.name,
-      id: socket.user._id,
+      id: socket.user._id || socket.user.id,
       // Don't log the full user object to avoid exposing sensitive data
     });
 
+    // Get the user ID consistently
+    const currentUserId = socket.user._id || socket.user.id;
+
+    // Initialize user's rooms set in the tracking object
+    userRooms[currentUserId] = userRooms[currentUserId] || new Set();
+
     // Join a user-specific room for private messages
-    socket.join(`user:${socket.user._id}`);
+    socket.join(`user:${currentUserId}`);
+    userRooms[currentUserId].add(`user:${currentUserId}`);
+
+    // Handle socket disconnection
+    socket.on("disconnect", () => {
+      console.log(
+        `User disconnected from chat: ${socket.user.name} (ID: ${currentUserId})`
+      );
+      // Clean up room tracking on disconnect
+      delete userRooms[currentUserId];
+    });
+
+    // Handle joining a user's personal notification room
+    socket.on("join-user-room", ({ userId }) => {
+      // Ensure the user can only join their own notification room
+      const currentUserId = socket.user._id || socket.user.id;
+
+      if (!currentUserId) {
+        console.error("Cannot join user room: Invalid user ID");
+        socket.emit("error", {
+          message: "Authentication error: Invalid user ID",
+        });
+        return;
+      }
+
+      // For security, only allow users to join their own personal room
+      if (userId !== currentUserId.toString()) {
+        console.error(
+          `User ${currentUserId} attempted to join another user's room: ${userId}`
+        );
+        return;
+      }
+
+      const userRoom = `user:${currentUserId}`;
+
+      // Check if already in room
+      if (userRooms[currentUserId] && userRooms[currentUserId].has(userRoom)) {
+        console.log(`${socket.user.name} already in user room ${userRoom}`);
+        return;
+      }
+
+      // Join the room
+      socket.join(userRoom);
+      userRooms[currentUserId] = userRooms[currentUserId] || new Set();
+      userRooms[currentUserId].add(userRoom);
+      console.log(
+        `${socket.user.name} joined personal notification room: ${userRoom}`
+      );
+
+      // Send initial unread count
+      getUnreadMessageCount(currentUserId)
+        .then((count) => {
+          socket.emit("unread-count", { count });
+        })
+        .catch((error) => {
+          console.error("Error getting initial unread count:", error);
+        });
+    });
 
     // Handle joining a chat room for a specific post/conversation
     socket.on("join-chat", async ({ postId, userId }) => {
-      const roomId = `chat:${postId}:${socket.user._id}:${userId}`;
+      // Ensure we have a valid user ID
+      const currentUserId = socket.user._id || socket.user.id;
+
+      if (!currentUserId) {
+        console.error("Cannot join chat: User has no valid ID");
+        socket.emit("error", {
+          message: "Authentication error: Invalid user ID",
+        });
+        return;
+      }
+
+      const roomId = `chat:${postId}:${currentUserId}:${userId}`;
+
+      // Check if the user is already in this room
+      if (userRooms[currentUserId] && userRooms[currentUserId].has(roomId)) {
+        // User is already in the room, no need to join again
+        console.log(
+          `${socket.user.name} already in chat room ${roomId}, skipping join`
+        );
+        return;
+      }
+
+      // Join the room since the user is not already in it
       socket.join(roomId);
+      userRooms[currentUserId] = userRooms[currentUserId] || new Set();
+      userRooms[currentUserId].add(roomId);
       console.log(`${socket.user.name} joined chat room ${roomId}`);
 
       // Mark messages as read when user enters the chat room
       try {
         const updated = await markMessagesAsRead({
-          currentUserId: socket.user._id,
+          currentUserId: currentUserId,
           senderId: userId,
           postId,
         });
 
         if (updated) {
           console.log(
-            `Marked messages as read for user ${socket.user._id} in chat with ${userId} for post ${postId}`
+            `Marked messages as read for user ${currentUserId} in chat with ${userId} for post ${postId}`
           );
           // Notify the sender that their messages were read
           io.to(`user:${userId}`).emit("messages-read", {
             postId,
-            userId: socket.user._id,
+            userId: currentUserId,
           });
+
+          // Update unread count for current user
+          try {
+            const unreadCount = await getUnreadMessageCount(currentUserId);
+            io.to(`user:${currentUserId}`).emit("unread-count", {
+              count: unreadCount,
+            });
+          } catch (error) {
+            console.error(
+              "Error sending unread count after marking messages as read:",
+              error
+            );
+          }
         }
       } catch (error) {
         console.error("Error marking messages as read on join:", error);
@@ -182,9 +365,20 @@ export function initializeSocketServer(httpServer) {
           return;
         }
 
+        // Ensure we have a valid user ID
+        const currentUserId = socket.user._id || socket.user.id;
+
+        if (!currentUserId) {
+          console.error("Cannot send message: User has no valid ID");
+          socket.emit("error", {
+            message: "Authentication error: Invalid user ID",
+          });
+          return;
+        }
+
         // Use the shared utility function
         const conversation = await createOrUpdateConversation({
-          userId: socket.user._id,
+          userId: currentUserId,
           otherUserId: recipientId,
           postId,
           content,
@@ -201,8 +395,14 @@ export function initializeSocketServer(httpServer) {
           sentBy: savedMessage.sentBy,
           postId, // Add postId to the message for client-side routing
           sender: {
-            _id: socket.user._id,
-            name: socket.user.name,
+            _id: currentUserId,
+            name:
+              socket.user.name ||
+              `User ${
+                (currentUserId.toString() || "").substr(-6) || "unknown"
+              }`,
+            firstName: socket.user.firstName,
+            lastName: socket.user.lastName,
           },
           createdAt: savedMessage.createdAt,
           isCurrentUser: true,
@@ -215,11 +415,11 @@ export function initializeSocketServer(httpServer) {
         };
 
         // Send to sender's room
-        const senderRoom = `chat:${postId}:${socket.user._id}:${recipientId}`;
+        const senderRoom = `chat:${postId}:${currentUserId}:${recipientId}`;
         socket.to(senderRoom).emit("receive-message", messageToSend);
 
         // Send to recipient's room
-        const recipientRoom = `chat:${postId}:${recipientId}:${socket.user._id}`;
+        const recipientRoom = `chat:${postId}:${recipientId}:${currentUserId}`;
         io.to(recipientRoom).emit("receive-message", messageForRecipient);
 
         // Send to recipient's user-specific room (for notifications)
@@ -235,13 +435,27 @@ export function initializeSocketServer(httpServer) {
         // Send notification to recipient
         io.to(`user:${recipientId}`).emit("notification", {
           type: "new-message",
-          message: `New message from ${socket.user.name}`,
+          message: `New message from ${socket.user.name || "a user"}`,
           sender: {
-            _id: socket.user._id,
-            name: socket.user.name,
+            _id: currentUserId,
+            name:
+              socket.user.name ||
+              `User ${
+                (currentUserId.toString() || "").substr(-6) || "unknown"
+              }`,
           },
           postId,
         });
+
+        // Update unread count for recipient
+        try {
+          const unreadCount = await getUnreadMessageCount(recipientId);
+          io.to(`user:${recipientId}`).emit("unread-count", {
+            count: unreadCount,
+          });
+        } catch (error) {
+          console.error("Error sending unread count:", error);
+        }
 
         // Acknowledge the message was sent
         socket.emit("message-sent", {
@@ -260,52 +474,141 @@ export function initializeSocketServer(httpServer) {
           return; // Skip if missing required data
         }
 
+        // Ensure we have a valid user ID
+        const currentUserId = socket.user._id || socket.user.id;
+
+        if (!currentUserId) {
+          console.error("Cannot send typing indicator: User has no valid ID");
+          return;
+        }
+
         // Extract the CURRENT user's name (the one who is typing)
         // This is what we want to send to the recipient
-        let firstName = "Someone";
-        let lastName = "";
+        let firstName = socket.user.firstName || "";
+        let lastName = socket.user.lastName || "";
 
-        // Try to extract firstName and lastName from user data
-        if (socket.user) {
-          if (socket.user.firstName && socket.user.lastName) {
-            // Direct properties exist
-            firstName = socket.user.firstName;
-            lastName = socket.user.lastName;
-          } else if (socket.user.name) {
-            // Try to extract from name
-            const nameParts = socket.user.name.split(" ");
-            if (nameParts.length >= 2) {
-              firstName = nameParts[0];
-              lastName = nameParts.slice(1).join(" ");
-            } else if (nameParts.length === 1) {
-              firstName = nameParts[0];
-            }
+        // If firstName/lastName are not available, try to parse from name
+        if (!firstName && !lastName && socket.user.name) {
+          const nameParts = socket.user.name.split(" ");
+          if (nameParts.length >= 2) {
+            firstName = nameParts[0];
+            lastName = nameParts.slice(1).join(" ");
+          } else if (nameParts.length === 1) {
+            firstName = nameParts[0];
           }
         }
 
+        // Ensure we have at least something to display
+        if (!firstName && !lastName) {
+          firstName = "Someone";
+        }
+
         console.log(
-          `Typing indicator: User ${socket.user._id} (${firstName} ${lastName}) is typing - sending to recipient ${recipientId}`
+          `Typing indicator: User ${currentUserId} (${firstName} ${lastName}) is typing - sending to recipient ${recipientId}`
         );
 
         // Get recipient room
-        const recipientRoom = `chat:${postId}:${recipientId}:${socket.user._id}`;
+        const recipientRoom = `chat:${postId}:${recipientId}:${currentUserId}`;
 
         // Create user typing data to send - this contains the current user's details
         // so the recipient knows WHO is typing
         const typingData = {
-          userId: socket.user._id, // ID of the user who is typing
+          userId: currentUserId, // ID of the user who is typing
           postId: postId,
-          firstName: socket.user.firstName, // First name of the user who is typing
-          lastName: socket.user.lastName, // Last name of the user who is typing
+          firstName: firstName, // First name of the user who is typing
+          lastName: lastName, // Last name of the user who is typing
         };
-
-        // Send to recipient's chat room
-        io.to(recipientRoom).emit("user-typing", typingData);
 
         // Also send to recipient's personal room
         io.to(`user:${recipientId}`).emit("user-typing", typingData);
       } catch (error) {
         console.error("Error sending typing indicator:", error);
+      }
+    });
+
+    // Handle marking messages as read
+    socket.on("mark-messages-as-read", async ({ postId, senderId }) => {
+      try {
+        // Ensure we have a valid user ID
+        const currentUserId = socket.user._id || socket.user.id;
+
+        if (!currentUserId || !postId || !senderId) {
+          console.error("Invalid parameters for marking messages as read");
+          return;
+        }
+
+        // Mark messages as read
+        const updated = await markMessagesAsRead({
+          currentUserId,
+          senderId,
+          postId,
+        });
+
+        if (updated) {
+          // Notify the sender that their messages were read
+          io.to(`user:${senderId}`).emit("messages-read", {
+            postId,
+            userId: currentUserId,
+          });
+
+          // Update unread count for current user
+          try {
+            const unreadCount = await getUnreadMessageCount(currentUserId);
+            io.to(`user:${currentUserId}`).emit("unread-count", {
+              count: unreadCount,
+            });
+          } catch (error) {
+            console.error(
+              "Error sending unread count after marking messages as read:",
+              error
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error marking messages as read:", error);
+      }
+    });
+
+    // Legacy handler for backward compatibility
+    socket.on("message-read", async ({ messageId, postId, senderId }) => {
+      try {
+        // Ensure we have a valid user ID
+        const currentUserId = socket.user._id || socket.user.id;
+
+        if (!currentUserId || !postId || !senderId) {
+          console.error("Invalid parameters for marking message as read");
+          return;
+        }
+
+        // Mark messages as read
+        const updated = await markMessagesAsRead({
+          currentUserId,
+          senderId,
+          postId,
+        });
+
+        if (updated) {
+          // Notify the sender that their messages were read
+          io.to(`user:${senderId}`).emit("messages-read", {
+            postId,
+            userId: currentUserId,
+          });
+
+          // Update unread count for current user
+          try {
+            const unreadCount = await getUnreadMessageCount(currentUserId);
+            io.to(`user:${currentUserId}`).emit("unread-count", {
+              count: unreadCount,
+            });
+          } catch (error) {
+            console.error(
+              "Error sending unread count after marking message as read:",
+              error
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error marking message as read:", error);
       }
     });
   });

@@ -221,6 +221,10 @@ router.get("/api/chats", isAuthenticated, async (req, res) => {
       const postImage =
         post.images && post.images.length > 0 ? post.images[0].url : null;
 
+      // Determine if the last message was sent by the current user
+      const lastMessageSentByCurrentUser =
+        lastMessage.sentBy.toString() === userId.toString();
+
       chatSummaries.push({
         postId: post._id,
         postTitle: post.title,
@@ -234,6 +238,7 @@ router.get("/api/chats", isAuthenticated, async (req, res) => {
           content: lastMessage.content,
           timestamp: lastMessage.createdAt,
           isRead: lastMessage.read,
+          sentByCurrentUser: lastMessageSentByCurrentUser,
         },
         unreadCount: unreadCount,
       });
