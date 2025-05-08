@@ -1254,6 +1254,50 @@ function initializeChat() {
     window.isOpeningChat = false;
   }
 
+  // Add specific handling for post-detail chat container height
+  document.addEventListener("openChat", function () {
+    // Let the chat container render first
+    setTimeout(function () {
+      adjustChatContainerHeight();
+    }, 100);
+  });
+
+  // Handle window resize events to adjust chat container height
+  window.addEventListener("resize", function () {
+    // Don't adjust height if chat isn't open
+    const chatContainer = document.getElementById("chat-container");
+    if (chatContainer && chatContainer.classList.contains("open")) {
+      adjustChatContainerHeight();
+    }
+  });
+
+  // Function to adjust chat container height for mobile
+  function adjustChatContainerHeight() {
+    const chatContainer = document.getElementById("chat-container");
+    const chatMessages = document.getElementById("chat-messages");
+
+    if (chatContainer) {
+      // Always ensure chat is positioned at the bottom
+      chatContainer.style.bottom = "0";
+
+      // For mobile screens, adjust the height
+      if (window.innerWidth <= 480) {
+        // Ensure height is appropriate for post-detail page
+        const viewportHeight = window.innerHeight;
+        const chatHeight = viewportHeight * (viewportHeight < 600 ? 0.8 : 0.7);
+
+        // Apply the specific height settings
+        chatContainer.style.height = chatHeight + "px";
+        chatContainer.style.maxHeight = chatHeight + "px";
+
+        // Adjust message container to prevent excessive whitespace
+        if (chatMessages) {
+          chatMessages.style.maxHeight = chatHeight - 120 + "px"; // 120px accounts for header and input
+        }
+      }
+    }
+  }
+
   /**
    * Helper function to load a script dynamically
    * @param {string} src - The script source URL

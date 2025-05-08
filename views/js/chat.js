@@ -277,11 +277,6 @@ const Chat = (function () {
       });
     }
 
-    // Allow dragging the chat window by its header
-    if (chatContainer && chatHeader) {
-      makeDraggable(chatContainer, chatHeader);
-    }
-
     // Make chat list items clickable if we're on a page with chat list
     const chatListItems = document.querySelectorAll(".chat-list-item");
     if (chatListItems && chatListItems.length) {
@@ -872,6 +867,10 @@ const Chat = (function () {
     // Show the chat container
     chatContainer.classList.add("open");
     chatContainer.style.display = "flex";
+
+    // Reset any inline positioning styles that may have been added
+    chatContainer.style.top = "";
+    chatContainer.style.left = "";
 
     // Focus the input field
     setTimeout(() => {

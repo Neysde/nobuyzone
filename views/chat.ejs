@@ -69,7 +69,7 @@
   /* Chat Container Styles */
   .chat-container {
     position: fixed;
-    bottom: 20px;
+    bottom: 0;
     right: 20px;
     width: 350px;
     background: white;
@@ -99,7 +99,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    cursor: move;
+    cursor: default;
     height: 60px;
   }
 
@@ -349,7 +349,7 @@
   /* Responsive Styles */
   @media (max-width: 768px) {
     .chat-container {
-      bottom: 0;
+      bottom: 0; /* Keep fixed to bottom */
       right: 0;
       width: 100%;
       border-radius: 0;
@@ -364,6 +364,43 @@
     .typing-text {
       font-size: 12px;
     }
+  }
+
+  /* Mobile styles specifically for post-detail page chat */
+  @media (max-width: 480px) {
+    .chat-container {
+      height: 70vh; /* Take only 70% of the viewport height instead of full screen */
+      max-height: 70vh; /* Ensure it doesn't grow beyond this */
+      bottom: 0;
+      /* This creates a partial-screen chat experience similar to dashboard */
+    }
+
+    .chat-messages {
+      max-height: calc(
+        70vh - 120px
+      ); /* Adjust message container height to prevent the empty whitespace */
+      /* 120px accounts for header (60px) and input area (60px) */
+    }
+
+    /* Handle very small screens */
+    @media (max-height: 600px) {
+      .chat-container {
+        height: 80vh; /* Slightly taller on very small screens for better usability */
+        max-height: 80vh;
+      }
+
+      .chat-messages {
+        max-height: calc(80vh - 120px); /* Adjust accordingly */
+      }
+    }
+  }
+
+  /* Ensure chat stays at bottom with no movement */
+  #chat-container {
+    bottom: 0 !important;
+    position: fixed !important;
+    left: auto !important; /* Only allow right positioning */
+    top: auto !important; /* Ensure top is not set */
   }
 </style>
 

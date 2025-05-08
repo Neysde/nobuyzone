@@ -254,15 +254,53 @@ body {
   margin: 0;
 }
 
+/* Actions column styling */
+.th-actions {
+  text-align: left;
+}
+
+/* Post Actions */
+.post-actions,
+.chat-actions {
+  text-align: left;
+  vertical-align: middle;
+}
+
+.action-button-container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+}
+
 /* Table Styles */
 .table-responsive {
   overflow-x: auto;
   width: 100%;
   margin-top: var(--space-md);
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS devices */
+  scrollbar-width: thin; /* For Firefox */
+  max-width: 100%;
+}
+
+/* Style scrollbars for webkit browsers */
+.table-responsive::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: var(--neutral-200);
+  border-radius: 3px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background-color: var(--neutral-400);
+  border-radius: 3px;
 }
 
 .data-table {
   width: 100%;
+  min-width: 700px; /* Ensure table has a minimum width to maintain column sizes */
   border-collapse: collapse;
   text-align: left;
 }
@@ -273,6 +311,7 @@ body {
   border-bottom: 1px solid var(--neutral-300);
   font-weight: 600;
   color: var(--neutral-700);
+  text-align: left;
 }
 
 .data-table td {
@@ -332,11 +371,6 @@ body {
 .post-date {
   color: var(--neutral-600);
   font-size: var(--font-size-sm);
-}
-
-.post-actions {
-  text-align: right;
-  white-space: nowrap;
 }
 
 /* Empty State */
@@ -634,29 +668,21 @@ body.modal-open {
     display: none;
   }
 
-  .post-actions {
-    text-align: center;
+  /* Preserve all table columns for mobile, allow horizontal scrolling */
+  .data-table th,
+  .data-table td {
+    padding: var(--space-xs) var(--space-sm);
+    white-space: nowrap;
   }
 
-  .data-table th:nth-child(3),
-  .data-table td:nth-child(3),
-  .data-table th:nth-child(4),
-  .data-table td:nth-child(4) {
-    display: none;
+  .table-responsive {
+    overflow-x: auto;
+    padding-bottom: 10px; /* Add space for the scrollbar */
   }
 }
 
 @media (max-width: 576px) {
-  .data-table th:nth-child(5),
-  .data-table td:nth-child(5) {
-    display: none;
-  }
-
-  .data-table th,
-  .data-table td {
-    padding: var(--space-xs);
-  }
-
+  /* Keep all columns visible but adjust their sizing */
   .post-image {
     width: 60px;
   }
@@ -666,6 +692,7 @@ body.modal-open {
     height: 50px;
   }
 
+  /* Keep the modal properly sized */
   .modal-content {
     width: 95%;
   }
@@ -715,10 +742,6 @@ body.modal-open {
 .unread-message {
   font-weight: 600;
   color: var(--neutral-900);
-}
-
-.chat-actions {
-  text-align: right;
 }
 
 /* Chat Container Styles */

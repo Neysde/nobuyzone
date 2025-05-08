@@ -15,6 +15,8 @@
           </svg>
           <span>barter</span>
         </a>
+        <!-- Add mobile-actions container for mobile view buttons -->
+        <div class="mobile-actions"></div>
       </div>
       <div class="header-actions">
         <!-- Create post button always visible -->
@@ -165,27 +167,33 @@
 
   // Update unread badge in the UI
   function updateUnreadBadge(count) {
-    const badge = document.getElementById("unread-badge");
+    // Get all unread badges (both desktop and mobile)
+    const badges = document.querySelectorAll(".unread-badge");
 
-    if (badge) {
+    badges.forEach((badge) => {
       if (count > 0) {
         badge.textContent = count > 99 ? "99+" : count;
         badge.style.display = "inline-flex";
 
-        // Add a pulse animation class if there are unread messages
-        const bell = document.querySelector(".notification-bell");
+        // Get the parent bell
+        const bell = badge.closest(".notification-bell");
         if (bell) {
           bell.classList.add("has-unread");
         }
       } else {
         badge.style.display = "none";
 
-        // Remove the pulse class if no unread messages
-        const bell = document.querySelector(".notification-bell");
+        // Get the parent bell
+        const bell = badge.closest(".notification-bell");
         if (bell) {
           bell.classList.remove("has-unread");
         }
       }
+    });
+
+    // Trigger mobile layout update to sync badges
+    if (typeof window.handleMobileLayout === "function") {
+      window.handleMobileLayout();
     }
   }
 

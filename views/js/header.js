@@ -3,6 +3,10 @@
  * This script handles toggling the user dropdown menu
  * for better accessibility and mobile experience
  */
+
+// Global mobile layout handler function
+window.handleMobileLayout = function () {};
+
 document.addEventListener("DOMContentLoaded", function () {
   // Get the user button and dropdown elements
   const userDropdown = document.querySelector(".user-dropdown");
@@ -11,41 +15,199 @@ document.addEventListener("DOMContentLoaded", function () {
   const logoutLink = document.querySelector("#logout-link");
   const notificationBell = document.querySelector(".notification-bell");
 
-  // Handle notification bell click for accessibility
+  /**
+   * Attach event listeners to elements (both original and cloned)
+   * @param {HTMLElement} element - The element to attach listeners to
+   */
+  function attachEventListeners(element) {
+    if (element.classList.contains("notification-bell")) {
+      // Notification bell event handling
+      element.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          window.location.href = element.getAttribute("href");
+        }
+      });
+
+      element.setAttribute("role", "button");
+      element.setAttribute("aria-label", "Notifications");
+
+      element.addEventListener("click", function (e) {
+        // Don't prevent default - we still want to navigate
+
+        // Reset unread badge since we're going to the messages section
+        if (typeof notificationSocket !== "undefined" && notificationSocket) {
+          setTimeout(() => {
+            // Try to clear unread messages when the bell is clicked
+            const badge = document.getElementById("unread-badge");
+            if (badge) {
+              badge.style.display = "none";
+            }
+
+            const bells = document.querySelectorAll(".notification-bell");
+            bells.forEach((bell) => {
+              bell.classList.remove("has-unread");
+            });
+          }, 100);
+        }
+      });
+    } else if (element.classList.contains("user-dropdown")) {
+      // Get the user button in this dropdown
+      const dropdownButton = element.querySelector(".user-button");
+      const menu = element.querySelector(".dropdown-menu");
+
+      if (dropdownButton && menu) {
+        let isDropdownOpen = false;
+        let leaveTimer;
+
+        // Toggle dropdown on button click
+        dropdownButton.addEventListener("click", function (e) {
+          if (!menu.classList.contains("show") || window.innerWidth <= 768) {
+            e.preventDefault();
+            isDropdownOpen = !isDropdownOpen;
+            menu.classList.toggle("show");
+          }
+        });
+
+        // Handle mouse interactions
+        element.addEventListener("mouseenter", function () {
+          clearTimeout(leaveTimer);
+          menu.classList.add("show");
+          isDropdownOpen = true;
+        });
+
+        element.addEventListener("mouseleave", function () {
+          leaveTimer = setTimeout(function () {
+            menu.classList.remove("show");
+            isDropdownOpen = false;
+          }, 300);
+        });
+
+        // Find logout link in this dropdown
+        const logoutLinkInDropdown = element.querySelector("#logout-link");
+        if (logoutLinkInDropdown) {
+          logoutLinkInDropdown.addEventListener("click", handleLogout);
+        }
+      }
+    }
+  }
+
+  /**
+   * Handle logout functionality
+   * @param {Event} e - Click event
+   */
+  async function handleLogout(e) {
+    e.preventDefault();
+    try {
+      const response = await fetch("/api/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        // Redirect to home page after successful logout
+        window.location.href = "/";
+      } else {
+        console.error("Logout failed");
+      }
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
+  }
+
+  /**
+   * Update the global mobile layout handler
+   * Moves buttons to mobile container on smaller screens
+   */
+  window.handleMobileLayout = function () {
+    const createPostBtn = document.querySelector(
+      ".header-actions .button.button-primary"
+    );
+    const headerActions = document.querySelector(".header-actions");
+    const mobileActions = document.querySelector(".mobile-actions");
+
+    // Check if we're in mobile view
+    if (window.innerWidth <= 768) {
+      // Only move items if not already moved
+      if (mobileActions && headerActions) {
+        // Clear mobile actions first to prevent duplicates
+        mobileActions.innerHTML = "";
+
+        // Clone create post button for mobile
+        if (createPostBtn) {
+          const postBtnClone = createPostBtn.cloneNode(true);
+          mobileActions.appendChild(postBtnClone);
+        }
+
+        // Clone notification bell for mobile if it exists
+        if (notificationBell) {
+          // Deep clone to ensure all inner elements like badges are copied
+          const bellClone = notificationBell.cloneNode(true);
+
+          // Update the badge to match the current state
+          const originalBadge = document.getElementById("unread-badge");
+          if (originalBadge) {
+            const mobileUnreadBadge = bellClone.querySelector(".unread-badge");
+            mobileUnreadBadge.textContent = originalBadge.textContent;
+            mobileUnreadBadge.style.display = originalBadge.style.display;
+          }
+
+          // Add to mobile container
+          mobileActions.appendChild(bellClone);
+          attachEventListeners(bellClone);
+        }
+
+        // Clone user dropdown for mobile if it exists
+        if (userDropdown) {
+          const userDropdownClone = userDropdown.cloneNode(true);
+          mobileActions.appendChild(userDropdownClone);
+          attachEventListeners(userDropdownClone);
+        }
+      }
+    } else {
+      // Desktop view - clear mobile container
+      if (mobileActions) {
+        mobileActions.innerHTML = "";
+      }
+    }
+  };
+
+  // Run on initial load
+  window.handleMobileLayout();
+
+  // Run on window resize
+  window.addEventListener("resize", window.handleMobileLayout);
+
+  // Document click listener for closing dropdowns
+  document.addEventListener("click", function (e) {
+    const dropdowns = document.querySelectorAll(".user-dropdown");
+    dropdowns.forEach((dropdown) => {
+      if (!dropdown.contains(e.target)) {
+        const menu = dropdown.querySelector(".dropdown-menu");
+        if (menu) menu.classList.remove("show");
+      }
+    });
+  });
+
+  // Handle Escape key to close dropdowns
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      const menus = document.querySelectorAll(".dropdown-menu.show");
+      menus.forEach((menu) => {
+        menu.classList.remove("show");
+        const button = menu
+          .closest(".user-dropdown")
+          .querySelector(".user-button");
+        if (button) button.focus();
+      });
+    }
+  });
+
+  // Attach event listeners to original elements
   if (notificationBell) {
-    notificationBell.addEventListener("keydown", function (e) {
-      // Allow users to press Enter or Space to navigate to messages
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        window.location.href = notificationBell.getAttribute("href");
-      }
-    });
-
-    // Add an extra role for screen readers
-    notificationBell.setAttribute("role", "button");
-    notificationBell.setAttribute("aria-label", "Notifications");
-
-    // Add click handler to try to reset unread count
-    notificationBell.addEventListener("click", function (e) {
-      // Don't prevent default - we still want to navigate to the messages tab
-
-      // Reset unread badge since we're going to the messages section
-      if (typeof notificationSocket !== "undefined" && notificationSocket) {
-        // Use setTimeout to ensure this happens after navigation
-        setTimeout(() => {
-          // Try to clear unread messages when the bell is clicked
-          const badge = document.getElementById("unread-badge");
-          if (badge) {
-            badge.style.display = "none";
-          }
-
-          const bell = document.querySelector(".notification-bell");
-          if (bell) {
-            bell.classList.remove("has-unread");
-          }
-        }, 100);
-      }
-    });
+    attachEventListeners(notificationBell);
 
     // Check for URL hash to see if we're on the messages tab
     if (window.location.hash === "#messages") {
@@ -59,96 +221,12 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Handle logout functionality
-  if (logoutLink) {
-    logoutLink.addEventListener("click", async function (e) {
-      e.preventDefault();
-      try {
-        const response = await fetch("/api/logout", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (response.ok) {
-          // Redirect to home page after successful logout
-          window.location.href = "/";
-        } else {
-          console.error("Logout failed");
-        }
-      } catch (error) {
-        console.error("Error during logout:", error);
-      }
-    });
+  if (userDropdown) {
+    attachEventListeners(userDropdown);
   }
 
-  // Only proceed if both elements exist (user is logged in)
-  if (userButton && dropdownMenu) {
-    let isDropdownOpen = false;
-    let leaveTimer;
-
-    // Toggle dropdown on button click
-    userButton.addEventListener("click", function (e) {
-      // Don't prevent default if we're clicking a link and dropdown is open
-      // This allows navigation to work when clicking the user button after opening the dropdown
-      if (
-        !dropdownMenu.classList.contains("show") ||
-        window.innerWidth <= 768
-      ) {
-        e.preventDefault();
-        isDropdownOpen = !isDropdownOpen;
-        dropdownMenu.classList.toggle("show");
-      }
-    });
-
-    // Handle mouse enter and leave with a delay to prevent accidental closing
-    userDropdown.addEventListener("mouseenter", function () {
-      clearTimeout(leaveTimer);
-      dropdownMenu.classList.add("show");
-      isDropdownOpen = true;
-    });
-
-    userDropdown.addEventListener("mouseleave", function () {
-      leaveTimer = setTimeout(function () {
-        dropdownMenu.classList.remove("show");
-        isDropdownOpen = false;
-      }, 300); // 300ms delay before hiding the dropdown
-    });
-
-    // Close dropdown when clicking outside
-    document.addEventListener("click", function (e) {
-      if (!userDropdown.contains(e.target)) {
-        dropdownMenu.classList.remove("show");
-        isDropdownOpen = false;
-      }
-    });
-
-    // Handle Escape key to close dropdown
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && dropdownMenu.classList.contains("show")) {
-        dropdownMenu.classList.remove("show");
-        isDropdownOpen = false;
-        userButton.focus(); // Return focus to button for better accessibility
-      }
-    });
-
-    // Make dropdown menu items accessible via keyboard
-    const dropdownLinks = dropdownMenu.querySelectorAll("a");
-    dropdownLinks.forEach(function (link, index) {
-      link.addEventListener("keydown", function (e) {
-        // Move focus with arrow keys
-        if (e.key === "ArrowDown") {
-          e.preventDefault();
-          const nextLink = dropdownLinks[index + 1] || dropdownLinks[0];
-          nextLink.focus();
-        } else if (e.key === "ArrowUp") {
-          e.preventDefault();
-          const prevLink =
-            dropdownLinks[index - 1] || dropdownLinks[dropdownLinks.length - 1];
-          prevLink.focus();
-        }
-      });
-    });
+  // Handle logout functionality directly
+  if (logoutLink) {
+    logoutLink.addEventListener("click", handleLogout);
   }
 });

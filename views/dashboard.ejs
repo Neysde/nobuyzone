@@ -129,7 +129,7 @@
                       <th>Category</th>
                       <th>Location</th>
                       <th>Published</th>
-                      <th>Actions</th>
+                      <th class="th-actions">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -160,25 +160,27 @@
                         %>
                       </td>
                       <td class="post-actions">
-                        <button
-                          class="button button-small button-outline delete-post"
-                          data-post-id="<%= post._id %>"
-                        >
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
+                        <div class="action-button-container">
+                          <button
+                            class="button button-small button-outline delete-post"
+                            data-post-id="<%= post._id %>"
                           >
-                            <path
-                              d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
-                            ></path>
-                            <line x1="10" y1="11" x2="10" y2="17"></line>
-                            <line x1="14" y1="11" x2="14" y2="17"></line>
-                          </svg>
-                          Remove
-                        </button>
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                            >
+                              <path
+                                d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                              ></path>
+                              <line x1="10" y1="11" x2="10" y2="17"></line>
+                              <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                            Remove
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     <% }); %>
@@ -226,7 +228,7 @@
                       <th>Category</th>
                       <th>Location</th>
                       <th>Last Edited</th>
-                      <th>Actions</th>
+                      <th class="th-actions">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -268,25 +270,27 @@
                         Date(draft.updatedAt).toLocaleDateString("tr-TR") %>
                       </td>
                       <td class="post-actions">
-                        <button
-                          class="button button-small button-outline delete-draft"
-                          data-post-id="<%= draft._id %>"
-                        >
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
+                        <div class="action-button-container">
+                          <button
+                            class="button button-small button-outline delete-draft"
+                            data-post-id="<%= draft._id %>"
                           >
-                            <path
-                              d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
-                            ></path>
-                            <line x1="10" y1="11" x2="10" y2="17"></line>
-                            <line x1="14" y1="11" x2="14" y2="17"></line>
-                          </svg>
-                          Remove
-                        </button>
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                            >
+                              <path
+                                d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                              ></path>
+                              <line x1="10" y1="11" x2="10" y2="17"></line>
+                              <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                            Remove
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     <% }); %>
@@ -333,7 +337,7 @@
                       <th>Category</th>
                       <th>Location</th>
                       <th>Added</th>
-                      <th>Actions</th>
+                      <th class="th-actions">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -370,23 +374,25 @@
                         Date(favorite.addedAt).toLocaleDateString("tr-TR") %>
                       </td>
                       <td class="post-actions">
-                        <button
-                          class="button button-small button-outline remove-favorite"
-                          data-post-id="<%= favorite.post._id %>"
-                        >
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
+                        <div class="action-button-container">
+                          <button
+                            class="button button-small button-outline remove-favorite"
+                            data-post-id="<%= favorite.post._id %>"
                           >
-                            <path
-                              d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"
-                            ></path>
-                          </svg>
-                          Unfavorite
-                        </button>
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                            >
+                              <path
+                                d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"
+                              ></path>
+                            </svg>
+                            Unfavorite
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     <% }); %>
@@ -432,7 +438,7 @@
                       <th>Post</th>
                       <th>Last Message</th>
                       <th>Date</th>
-                      <th>Actions</th>
+                      <th class="th-actions">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -468,22 +474,24 @@
                         <%= formatTime(chat.lastMessage.timestamp) %>
                       </td>
                       <td class="chat-actions">
-                        <button
-                          class="button button-small button-primary open-chat-btn"
-                        >
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
+                        <div class="action-button-container">
+                          <button
+                            class="button button-small button-primary open-chat-btn"
                           >
-                            <path
-                              d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
-                            ></path>
-                          </svg>
-                          Open Chat
-                        </button>
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                            >
+                              <path
+                                d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+                              ></path>
+                            </svg>
+                            Open Chat
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     <% }); %>
