@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="/css/header.css" />
     <link rel="stylesheet" href="/css/footer.css" />
     <link rel="stylesheet" href="/css/post-detail.css" />
+    <link rel="stylesheet" href="/css/chat.css" />
     <!-- Leaflet CSS for location map -->
     <link
       rel="stylesheet"
@@ -253,6 +254,10 @@
                     class="button button-sm contact-method-btn"
                     data-method="in-app"
                     data-post-id="<%= post._id %>"
+                    data-seller-id="<%= post.createdBy %>"
+                    data-seller-name="<%= post.createdByUser ? `${post.createdByUser.firstName} ${post.createdByUser.lastName}` : 'Seller' %>"
+                    data-post-title="<%= post.title %>"
+                    data-seller-avatar="<%= post.createdByUser && post.createdByUser.profilePicture ? post.createdByUser.profilePicture.url : '/img/default-avatar.svg' %>"
                   >
                     <svg
                       width="14"
@@ -422,8 +427,37 @@
     </div>
     <% } %>
 
+    <!-- Include the chat component -->
+    <%- include('chat.ejs') %>
+
+    <!-- Socket.IO - updated to use unpkg with fallback -->
+    <script src="https://unpkg.com/socket.io-client@4.8.1/dist/socket.io.min.js"></script>
+    <script>
+      // Fallback if Socket.IO didn't load from CDN
+      if (typeof io === "undefined") {
+        console.log("Socket.IO not loaded from CDN, trying server version");
+        const fallbackScript = document.createElement("script");
+        fallbackScript.src = "/socket.io/socket.io.js";
+        fallbackScript.onerror = function () {
+          console.error("Failed to load Socket.IO from server");
+        };
+        document.head.appendChild(fallbackScript);
+      }
+    </script>
+
+    <!-- Font Awesome for chat icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    />
+
+    <!-- Chat.js for chat functionality -->
+    <script src="/js/chat.js"></script>
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Chat Module -->
     <script src="/js/post-detail.js"></script>
   </body>
 </html>

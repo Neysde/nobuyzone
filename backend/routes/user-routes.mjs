@@ -396,4 +396,24 @@ router.get("/api/user/current", isAuthenticated, async (req, res) => {
   }
 });
 
+// Check authentication status
+router.get("/api/check-auth", (req, res) => {
+  if (req.user) {
+    return res.status(200).json({
+      authenticated: true,
+      user: {
+        _id: req.user._id,
+        name: `${req.user.firstName} ${req.user.lastName}`,
+        email: req.user.email,
+        profilePicture: req.user.profilePicture.url,
+      },
+    });
+  } else {
+    return res.status(401).json({
+      authenticated: false,
+      message: "Not authenticated",
+    });
+  }
+});
+
 export default router;

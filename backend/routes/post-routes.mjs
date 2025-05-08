@@ -1043,7 +1043,7 @@ router.get("/api/posts/:id/contact", isAuthenticated, async (req, res) => {
     const { method } = req.query;
 
     // Validate request
-    if (!method || !["email", "phone"].includes(method)) {
+    if (!method || !["email", "phone", "in-app"].includes(method)) {
       return res.status(400).json({
         success: false,
         message: "Invalid contact method requested",
@@ -1070,7 +1070,25 @@ router.get("/api/posts/:id/contact", isAuthenticated, async (req, res) => {
     // Get contact details based on method
     let contactInfo = {};
 
-    if (method === "email") {
+    if (method === "in-app") {
+      // For in-app chat, return seller information
+      const seller = await User.findById(post.createdBy).select(
+        "_id name avatar"
+      );
+      if (!seller) {
+        return res.status(404).json({
+          success: false,
+          message: "Seller information not found",
+        });
+      }
+
+      contactInfo = {
+        sellerId: seller._id,
+        sellerName: seller.name,
+        sellerAvatar: seller.avatar,
+        postTitle: post.title,
+      };
+    } else if (method === "email") {
       // Find the post creator to get their email
       if (post.contactDetails && post.contactDetails.email) {
         contactInfo.email = post.contactDetails.email;

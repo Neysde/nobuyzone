@@ -261,12 +261,107 @@
     justify-content: space-between;
     align-items: center;
     gap: var(--space-md);
+    margin-bottom: var(--space-sm);
   }
 
-  .header-actions {
+  /* Position buttons in mobile view */
+  .logo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  /* Logo and SVG adjustments for mobile */
+  .logo a svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .logo a span {
+    margin-left: var(--space-sm);
+  }
+
+  /* Container for mobile buttons next to logo */
+  .mobile-actions {
     display: flex;
     gap: var(--space-sm);
-    flex-shrink: 0;
+    align-items: center;
+  }
+
+  /* Hide original header actions in mobile */
+  .header-actions {
+    display: none;
+  }
+
+  /* Clone of button styles for mobile */
+  .mobile-actions .button,
+  .mobile-actions .notification-bell,
+  .mobile-actions .user-dropdown {
+    display: flex;
+  }
+
+  /* Primary button in mobile */
+  .mobile-actions .button-primary {
+    height: 32px; /* changed it to 32px again it fits better */
+    padding: 0 var(--space-sm);
+    font-size: 1rem;
+    white-space: nowrap;
+    color: white;
+    font-weight: 500;
+  }
+
+  /* User button in mobile */
+  .mobile-actions .user-button {
+    padding: 0 var(--space-xs);
+    min-width: unset;
+    height: 32px;
+    max-width: 34px;
+    font-weight: 500;
+  }
+
+  /* Hide username text in mobile view */
+  .mobile-actions .user-button span {
+    display: none;
+  }
+
+  /* Reduce avatar size in mobile */
+  .mobile-actions .user-avatar {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Adjust notification bell for mobile */
+  .mobile-actions .notification-bell {
+    width: 32px;
+    height: 32px;
+  }
+
+  .mobile-actions .notification-bell svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Adjust badge position for mobile */
+  .mobile-actions .notification-bell .unread-badge {
+    top: -5px;
+    right: -5px;
+    min-width: 16px;
+    height: 16px;
+    font-size: 9px;
+  }
+
+  /* Adjust dropdown positioning in mobile view */
+  .mobile-actions .dropdown-menu {
+    top: 34px;
+    right: 0;
+    width: 140px;
+  }
+
+  /* Match dropdown menu text to desktop size */
+  .mobile-actions .dropdown-menu a {
+    font-size: 1rem;
+    font-weight: normal;
   }
 
   .button,
@@ -279,5 +374,73 @@
     width: 150px;
     right: 0;
     position: absolute;
+  }
+}
+
+/* Notification bell styles */
+.notification-bell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  color: var(--neutral-700);
+  border: 1px solid var(--neutral-300);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notification-bell:hover,
+.notification-bell:focus {
+  border-color: var(--primary);
+  color: var(--primary);
+  outline: none;
+}
+
+.notification-bell .unread-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background-color: var(--primary);
+  color: white;
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: bold;
+  min-width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Pulse animation for unread notifications */
+.notification-bell.has-unread {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(240, 160, 75, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(240, 160, 75, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(240, 160, 75, 0);
+  }
+}
+
+@media (max-width: 768px) {
+  .notification-bell {
+    width: 36px;
+    height: 36px;
+  }
+
+  .notification-bell svg {
+    width: 20px;
+    height: 20px;
   }
 }

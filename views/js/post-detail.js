@@ -17,6 +17,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   //Initialize favorite and flag functionality
   initializePostActions();
+
+  // Initialize in-app chat functionality
+  initializeChat();
 });
 
 /**
@@ -601,6 +604,14 @@ function setupContactButton() {
    */
   async function handleInAppContact(postId) {
     try {
+      // Check if we're already in the process of opening a chat from another function
+      if (window.isOpeningChat) {
+        return;
+      }
+
+      // Mark that we're handling a chat open action
+      window.isOpeningChat = true;
+
       // Use the same approach as getContactDetails for consistent auth handling
       let response;
       try {
@@ -620,6 +631,7 @@ function setupContactButton() {
         ) {
           // User is not authenticated, redirect to login page
           const returnUrl = encodeURIComponent(window.location.pathname);
+          window.isOpeningChat = false;
           window.location.href = `/api/login?returnTo=${returnUrl}`;
           return;
         }
@@ -628,13 +640,66 @@ function setupContactButton() {
         if (response.status === 401 || response.status === 403) {
           // Redirect to login page with return URL
           const returnUrl = encodeURIComponent(window.location.pathname);
+          window.isOpeningChat = false;
           window.location.href = `/api/login?returnTo=${returnUrl}`;
           return;
         }
 
         // If we reach here, user is authenticated
         showNotification("Opening chat with seller...", "info");
-        window.location.href = `/messages?post=${postId}`;
+
+        // Get seller ID from response
+        const data = await response.json();
+
+        // Instead of redirecting, open the chat directly in the page
+        if (data && data.sellerId) {
+          // Check if Chat module is loaded and initialize it if not
+          if (!window.Chat) {
+            console.log("Chat module not found. Loading chat.js...");
+            try {
+              // Load the chat script dynamically if not already present
+              await new Promise((resolve, reject) => {
+                const script = document.createElement("script");
+                script.src = "/js/chat.js";
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+              });
+            } catch (error) {
+              console.error("Failed to load chat.js:", error);
+              showNotification(
+                "Chat functionality is unavailable. Please try again later.",
+                "error"
+              );
+              window.isOpeningChat = false;
+              return;
+            }
+          }
+
+          // Create a short delay to ensure Chat module is fully initialized
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
+          // Create and dispatch the custom event to open the chat
+          const chatEvent = new CustomEvent("openChat", {
+            detail: {
+              postId: postId,
+              recipientId: data.sellerId,
+              recipientName: data.sellerName || "Seller",
+              avatar: data.sellerAvatar || "",
+              postTitle: data.postTitle || "",
+            },
+          });
+
+          // Dispatch the event
+          document.dispatchEvent(chatEvent);
+
+          // Reset the flag after a delay
+          setTimeout(() => {
+            window.isOpeningChat = false;
+          }, 2000);
+        } else {
+          throw new Error("Could not get seller information");
+        }
       } catch (fetchError) {
         // Handle any fetch errors as authentication issues if they might be related
         if (
@@ -644,6 +709,7 @@ function setupContactButton() {
         ) {
           // Network error or parsing error - likely auth issue
           const returnUrl = encodeURIComponent(window.location.pathname);
+          window.isOpeningChat = false;
           window.location.href = `/api/login?returnTo=${returnUrl}`;
           return;
         }
@@ -659,6 +725,7 @@ function setupContactButton() {
           "error"
         );
       }
+      window.isOpeningChat = false;
     }
   }
 
@@ -1171,6 +1238,78 @@ function initializePostActions() {
           );
         }
       }
+    });
+  }
+}
+
+/**
+ * Initialize chat functionality for post detail page
+ */
+function initializeChat() {
+  // No need to add additional event listeners here
+  // All in-app chat buttons are already handled by setupContactButton()
+
+  // Define the global chat flag if not already defined
+  if (typeof window.isOpeningChat === "undefined") {
+    window.isOpeningChat = false;
+  }
+
+  // Add specific handling for post-detail chat container height
+  document.addEventListener("openChat", function () {
+    // Let the chat container render first
+    setTimeout(function () {
+      adjustChatContainerHeight();
+    }, 100);
+  });
+
+  // Handle window resize events to adjust chat container height
+  window.addEventListener("resize", function () {
+    // Don't adjust height if chat isn't open
+    const chatContainer = document.getElementById("chat-container");
+    if (chatContainer && chatContainer.classList.contains("open")) {
+      adjustChatContainerHeight();
+    }
+  });
+
+  // Function to adjust chat container height for mobile
+  function adjustChatContainerHeight() {
+    const chatContainer = document.getElementById("chat-container");
+    const chatMessages = document.getElementById("chat-messages");
+
+    if (chatContainer) {
+      // Always ensure chat is positioned at the bottom
+      chatContainer.style.bottom = "0";
+
+      // For mobile screens, adjust the height
+      if (window.innerWidth <= 480) {
+        // Ensure height is appropriate for post-detail page
+        const viewportHeight = window.innerHeight;
+        const chatHeight = viewportHeight * (viewportHeight < 600 ? 0.8 : 0.7);
+
+        // Apply the specific height settings
+        chatContainer.style.height = chatHeight + "px";
+        chatContainer.style.maxHeight = chatHeight + "px";
+
+        // Adjust message container to prevent excessive whitespace
+        if (chatMessages) {
+          chatMessages.style.maxHeight = chatHeight - 120 + "px"; // 120px accounts for header and input
+        }
+      }
+    }
+  }
+
+  /**
+   * Helper function to load a script dynamically
+   * @param {string} src - The script source URL
+   * @returns {Promise} - Resolves when script is loaded
+   */
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
     });
   }
 }

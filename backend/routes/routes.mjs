@@ -9,6 +9,7 @@ import postRouter from "./post-routes.mjs";
 import uiRouter from "./ui-routes.mjs";
 import userRouter from "./user-routes.mjs";
 import fetch from "node-fetch";
+import chatRouter from "./chat-routes.mjs";
 
 const router = express.Router();
 
@@ -56,8 +57,18 @@ router.get("/api/mahalleler", async (req, res) => {
   }
 });
 
+// Redirect /chat to /messages for consistency
+router.get("/chat", (req, res) => {
+  res.redirect("/messages");
+});
+
+// Redirect /chats to /messages for consistency
+router.get("/chats", (req, res) => {
+  res.redirect("/messages");
+});
+
 router.use(postRouter);
 router.use(uiRouter);
 router.use(userRouter);
-
+router.use(chatRouter);
 export default router;

@@ -3,6 +3,8 @@ import Post from "../mongoose/post.mjs";
 import User from "../mongoose/user.mjs";
 import { isAuthenticated } from "../middlewares.mjs";
 import passport from "passport";
+import Message from "../mongoose/message.mjs";
+import fetch from "node-fetch";
 
 const router = express.Router();
 
@@ -72,10 +74,8 @@ router.get("/posts/:id", async (req, res) => {
     const post = await Post.findById(req.params.id);
 
     if (!post) {
-      return res.status(404).render("error", {
-        message: "Post not found",
-        error: { status: 404 },
-      });
+      // Redirect instead of rendering error page
+      return res.redirect("/");
     }
 
     //Create a user object if user is logged in
@@ -110,10 +110,8 @@ router.get("/posts/:id", async (req, res) => {
     });
   } catch (error) {
     console.error("Error rendering post detail:", error);
-    res.status(500).render("error", {
-      message: "Error loading post",
-      error: { status: 500 },
-    });
+    // Redirect instead of rendering error page
+    return res.redirect("/");
   }
 });
 
@@ -130,10 +128,8 @@ router.get("/dashboard/:id", isAuthenticated, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).render("error", {
-        message: "User not found",
-        error: { status: 404 },
-      });
+      // Redirect instead of rendering error page
+      return res.redirect("/");
     }
 
     // Fetch user's active posts
@@ -158,19 +154,62 @@ router.get("/dashboard/:id", isAuthenticated, async (req, res) => {
         };
       });
 
+    // Use the /api/chats endpoint to fetch chat data for this user
+    const currentUserId = req.user._id;
+
+    // Make a request to the chats API endpoint
+    const response = await fetch(
+      `${req.protocol}://${req.get("host")}/api/chats`,
+      {
+        headers: {
+          Cookie: req.headers.cookie, // Pass the user's cookies for authentication
+        },
+      }
+    );
+
+    let chats = [];
+    if (response.ok) {
+      chats = await response.json();
+    } else {
+      console.error("Error fetching chats from API:", response.status);
+    }
+
     // Render the dashboard template with all the data
     res.render("dashboard", {
       user,
       posts,
       drafts,
       favorites,
+      chats,
+      formatTime: (date) => {
+        const messageDate = new Date(date);
+        const now = new Date();
+
+        // If it's today, show time
+        if (messageDate.toDateString() === now.toDateString()) {
+          return messageDate.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        }
+
+        // If it's within a week, show day name
+        const dayDiff = Math.floor((now - messageDate) / (1000 * 60 * 60 * 24));
+        if (dayDiff < 7) {
+          return messageDate.toLocaleDateString([], { weekday: "short" });
+        }
+
+        // Otherwise show date
+        return messageDate.toLocaleDateString([], {
+          month: "short",
+          day: "numeric",
+        });
+      },
     });
   } catch (error) {
     console.error("Error rendering dashboard:", error);
-    res.status(500).render("error", {
-      message: "Error loading dashboard",
-      error: { status: 500 },
-    });
+    // Redirect instead of rendering error page
+    return res.redirect("/");
   }
 });
 
@@ -197,10 +236,8 @@ router.get("/profile/drafts", async (req, res) => {
     });
   } catch (error) {
     console.error("Error rendering drafts page:", error);
-    res.status(500).render("error", {
-      message: "Error loading drafts",
-      error: { status: 500 },
-    });
+    // Redirect instead of rendering error page
+    return res.redirect("/");
   }
 });
 

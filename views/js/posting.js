@@ -18,7 +18,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const useMyLocationBtn = document.getElementById("use-my-location");
   let map = null;
   let marker = null;
-  let uploadedImages = new Set(); //küme
+  // This set only stores image IDs for the UI, not the actual image data with URLs
+  let uploadedImageIds = new Set(); // Stores only image IDs for tracking uploaded images in the UI
   let imageIds = new Set(); // Store IDs of existing images from the server
   const fullscreenToggle = document.getElementById("fullscreen-toggle");
   const mapContainer = document.getElementById("location-map");
@@ -199,7 +200,7 @@ document.addEventListener("DOMContentLoaded", function () {
           if (image.url) {
             const imageId =
               Date.now() + Math.random().toString(36).slice(2, 11);
-            uploadedImages.add(imageId);
+            uploadedImageIds.add(imageId);
             const preview = createImagePreview(
               image.url,
               imageId,
@@ -395,7 +396,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function handleFiles(files) {
-    const currentCount = uploadedImages.size;
+    const currentCount = uploadedImageIds.size;
     const remainingSlots = 5 - currentCount;
 
     if (files.length > remainingSlots) {
@@ -423,13 +424,13 @@ document.addEventListener("DOMContentLoaded", function () {
   function processImageDirectly(file) {
     const reader = new FileReader();
     reader.onload = function (e) {
-      if (uploadedImages.size >= 5) {
+      if (uploadedImageIds.size >= 5) {
         showNotification("Maximum 5 images allowed", "error");
         return;
       }
 
       const imageId = Date.now() + Math.random().toString(36).slice(2, 11);
-      uploadedImages.add(imageId);
+      uploadedImageIds.add(imageId);
 
       const preview = createImagePreview(e.target.result, imageId, null);
       imagePreviews.appendChild(preview);
@@ -500,7 +501,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Add to previews
     const imageId = Date.now() + Math.random().toString(36).slice(2, 11);
-    uploadedImages.add(imageId);
+    uploadedImageIds.add(imageId);
 
     const preview = createImagePreview(croppedImageDataUrl, imageId, null);
     imagePreviews.appendChild(preview);
@@ -573,7 +574,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
 
-      uploadedImages.delete(id);
+      uploadedImageIds.delete(id);
       imageIds.delete(id); // Also remove from imageIds if it exists there
       div.remove();
       updateUploadState();
@@ -585,7 +586,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function updateUploadState() {
-    if (uploadedImages.size >= 5) {
+    if (uploadedImageIds.size >= 5) {
       imageUpload.classList.add("max-reached");
     } else {
       imageUpload.classList.remove("max-reached");
@@ -810,7 +811,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return false;
     }
 
-    const loader = showLoadingState();
+    let loader = showLoadingState();
 
     try {
       // Get form data
@@ -859,41 +860,99 @@ document.addEventListener("DOMContentLoaded", function () {
         phoneNumber: formData.get("phoneNumber"),
       };
 
-      // Add image data if available
-      if (uploadedImages && uploadedImages.size > 0) {
+      // Process and upload images if available
+      const imageItems = document.querySelectorAll(".preview-item img");
+      if (imageItems.length > 0) {
         const imageUrls = [];
         const imageIds = [];
 
-        uploadedImages.forEach((data) => {
-          imageUrls.push(data.url);
-          imageIds.push(data.publicId);
-        });
+        // Show progress to user
+        hideLoadingState(loader);
+        loader = showLoadingState(
+          `Processing images... (0/${imageItems.length})`
+        );
 
-        jsonData.imageUrls = imageUrls;
-        jsonData.imageIds = imageIds;
-      } else {
-        // Check for existing images in preview items if uploadedImages is not available
-        const previewItems = document.querySelectorAll(".preview-item img");
-        if (previewItems.length > 0) {
-          const imageUrls = [];
-          const imageIds = [];
+        // Process each image
+        for (let i = 0; i < imageItems.length; i++) {
+          const imgElement = imageItems[i];
+          const dataUrl = imgElement.src;
 
-          previewItems.forEach((img) => {
-            const url = img.src;
-            const publicId =
-              img.dataset.publicId || extractPublicIdFromUrl(url);
+          // Update progress message
+          hideLoadingState(loader);
+          loader = showLoadingState(
+            `Processing images... (${i + 1}/${imageItems.length})`
+          );
 
-            if (url && publicId) {
-              imageUrls.push(url);
-              imageIds.push(publicId);
+          // If already uploaded to Cloudinary (not a data URL), add directly
+          if (!dataUrl.startsWith("data:") && imgElement.dataset.publicId) {
+            imageUrls.push(dataUrl);
+            imageIds.push(imgElement.dataset.publicId);
+            continue;
+          }
+
+          // For new images (data URLs), upload to Cloudinary first
+          if (dataUrl.startsWith("data:")) {
+            try {
+              // Convert data URL to blob
+              const blob = await fetch(dataUrl).then((r) => r.blob());
+
+              // Create form data for this image
+              const imageFormData = new FormData();
+              imageFormData.append("image", blob, "image.jpg");
+
+              // Update progress message
+              hideLoadingState(loader);
+              loader = showLoadingState(
+                `Uploading image ${i + 1}/${imageItems.length}...`
+              );
+
+              // Upload image using the dedicated endpoint
+              const uploadResponse = await fetch("/api/posts/upload-image", {
+                method: "POST",
+                body: imageFormData,
+              });
+
+              if (!uploadResponse.ok) {
+                const errorData = await uploadResponse.json();
+                console.error("Image upload error:", errorData);
+                throw new Error(errorData.error || "Failed to upload image");
+              }
+
+              const imageResult = await uploadResponse.json();
+
+              if (imageResult.success) {
+                imageUrls.push(imageResult.data.url);
+                imageIds.push(imageResult.data.public_id);
+              } else {
+                console.error(
+                  "Image upload response not successful:",
+                  imageResult
+                );
+                throw new Error(
+                  "Failed to upload image: " +
+                    (imageResult.error || "Unknown error")
+                );
+              }
+            } catch (error) {
+              console.error("Error processing image:", error);
+              showNotification(
+                "Error uploading image: " + error.message,
+                "error"
+              );
+              // Continue with other images even if one fails
             }
-          });
-
-          if (imageUrls.length > 0 && imageIds.length > 0) {
-            jsonData.imageUrls = imageUrls;
-            jsonData.imageIds = imageIds;
           }
         }
+
+        // Set the image URLs and IDs in the request body
+        if (imageUrls.length > 0 && imageIds.length > 0) {
+          jsonData.imageUrls = imageUrls;
+          jsonData.imageIds = imageIds;
+        }
+
+        // Reset loader for submission
+        hideLoadingState(loader);
+        loader = showLoadingState("Submitting post...");
       }
 
       // Determine if this is a new post or updating a draft
@@ -1547,10 +1606,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
   ///CHECK FOR THEM LATER!!!!!!!!!!!!!
   // Loading state helper
-  function showLoadingState() {
+  function showLoadingState(message = "Loading...") {
     const loader = document.createElement("div");
     loader.className = "loading-overlay";
-    loader.innerHTML = '<span class="loading-spinner"></span>';
+    loader.innerHTML = `
+      <span class="loading-spinner"></span>
+      <p>${message}</p>
+    `;
     document.body.appendChild(loader);
     return loader;
   }
@@ -1605,12 +1667,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const countDisplay = document.querySelector(".image-count");
     if (!countDisplay) return;
 
-    // Get the current count from either uploadedImages or imageIds, depending on context
+    // Get the current count from either uploadedImageIds or imageIds, depending on context
     let currentCount;
 
-    // First try with uploadedImages which is used for newly added images
-    if (uploadedImages && typeof uploadedImages.size === "number") {
-      currentCount = uploadedImages.size;
+    // First try with uploadedImageIds which is used for newly added images
+    if (uploadedImageIds && typeof uploadedImageIds.size === "number") {
+      currentCount = uploadedImageIds.size;
     }
     // Then try with imageIds which is used in populateExistingImages
     else if (imageIds && typeof imageIds.size === "number") {
