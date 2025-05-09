@@ -447,23 +447,30 @@
                       class="chat-row <%= chat.unreadCount > 0 ? 'unread-chat' : '' %>"
                       data-post-id="<%= chat.postId %>"
                       data-recipient-id="<%= chat.user._id %>"
-                      data-recipient="<%= chat.user.name %>"
+                      data-recipient="<%= chat.user.showUsername && chat.user.username ? chat.user.username : (chat.user.firstName && chat.user.lastName ? chat.user.firstName + ' ' + chat.user.lastName : chat.user.username || 'User') %>"
                       data-post-title="<%= chat.postTitle %>"
                       data-avatar="<%= chat.user.avatar || '/img/default-avatar.svg' %>"
-                      data-username="<%= chat.user.username %>"
-                      data-show-username="<%= chat.user.showUsername %>"
+                      data-username="<%= chat.user.username || '' %>"
+                      data-first-name="<%= chat.user.firstName || '' %>"
+                      data-last-name="<%= chat.user.lastName || '' %>"
+                      data-show-username="<%= chat.user.showUsername === true || String(chat.user.showUsername).toLowerCase() === 'true' %>"
                     >
                       <td class="chat-contact">
                         <div class="chat-avatar">
                           <img
                             src="<%= chat.user.avatar || '/img/default-avatar.svg' %>"
-                            alt="<%= chat.user.name %>"
+                            alt="<%= chat.user.showUsername && chat.user.username ? chat.user.username : (chat.user.firstName || '' + ' ' + chat.user.lastName || '').trim() || 'User' %>"
                           />
                         </div>
                         <span>
-                          <% if (chat.user.showUsername) { %> @<%=
-                          chat.user.username %> <% } else { %> <%=
-                          chat.user.name %> <% } %>
+                          <% if (chat.user.showUsername && chat.user.username) {
+                          %> <%= chat.user.username %> <% } else if
+                          (chat.user.firstName && chat.user.lastName) { %> <%=
+                          chat.user.firstName %> <%= chat.user.lastName %> <% }
+                          else if (chat.user.firstName) { %> <%=
+                          chat.user.firstName %> <% } else if
+                          (chat.user.username) { %> <%= chat.user.username %> <%
+                          } else { %> User <% } %>
                         </span>
                       </td>
                       <td class="chat-post-info"><%= chat.postTitle %></td>
@@ -792,11 +799,41 @@
             if (e.target.closest(".open-chat-btn") || e.currentTarget === row) {
               const postId = this.dataset.postId;
               const recipientId = this.dataset.recipientId;
-              const recipientName = this.dataset.recipient;
               const postTitle = this.dataset.postTitle;
               const avatar = this.dataset.avatar;
               const username = this.dataset.username;
+              const firstName = this.dataset.firstName;
+              const lastName = this.dataset.lastName;
               const showUsername = this.dataset.showUsername === "true";
+
+              // Construct recipientName based on showUsername for Chat.openChat's recipientName param (which acts as a display fallback)
+              let recipientNameForChatOpen;
+              if (showUsername && username) {
+                recipientNameForChatOpen = username;
+              } else if (firstName && lastName) {
+                recipientNameForChatOpen = `${firstName} ${lastName}`;
+              } else if (firstName) {
+                recipientNameForChatOpen = firstName;
+              } else if (username) {
+                recipientNameForChatOpen = username;
+              } else {
+                recipientNameForChatOpen = "User";
+              }
+
+              console.log(
+                "Dashboard.ejs script - Dispatching openChat with data:",
+                {
+                  postId,
+                  recipientId,
+                  recipientName: recipientNameForChatOpen,
+                  avatar: avatar || "/img/default-avatar.svg",
+                  postTitle,
+                  username: username || "",
+                  firstName,
+                  lastName,
+                  showUsername,
+                }
+              );
 
               // Remove unread styling if present
               if (this.classList.contains("unread-chat")) {
@@ -808,10 +845,12 @@
                 detail: {
                   postId,
                   recipientId,
-                  recipientName,
-                  avatar,
+                  recipientName: recipientNameForChatOpen,
+                  avatar: avatar || "/img/default-avatar.svg",
                   postTitle,
-                  username,
+                  username: username || "",
+                  firstName,
+                  lastName,
                   showUsername,
                 },
               });

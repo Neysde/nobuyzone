@@ -680,15 +680,33 @@ function setupContactButton() {
           await new Promise((resolve) => setTimeout(resolve, 100));
 
           // Create and dispatch the custom event to open the chat
+          console.log("Creating chat event with data:", {
+            postId,
+            sellerId: data.sellerId,
+            sellerName: data.sellerName,
+            avatar: data.sellerAvatar,
+            postTitle: data.postTitle,
+            username: data.username,
+            showUsername: data.showUsername,
+            dataType: typeof data.showUsername,
+          });
+
+          // Convert showUsername to a consistent boolean before sending
+          const parsedShowUsername =
+            data.showUsername === true ||
+            String(data.showUsername).toLowerCase() === "true";
+
           const chatEvent = new CustomEvent("openChat", {
             detail: {
               postId: postId,
               recipientId: data.sellerId,
-              recipientName: data.sellerName || "Seller",
-              avatar: data.sellerAvatar || "",
-              postTitle: data.postTitle || "",
+              firstName: data.firstName || "",
+              lastName: data.lastName || "",
               username: data.username || "",
-              showUsername: data.showUsername || false,
+              recipientName: data.sellerName || "",
+              avatar: data.sellerAvatar || "/img/default-avatar.svg",
+              postTitle: data.postTitle || "Post",
+              showUsername: parsedShowUsername,
             },
           });
 

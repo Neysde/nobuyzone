@@ -1073,7 +1073,7 @@ router.get("/api/posts/:id/contact", isAuthenticated, async (req, res) => {
     if (method === "in-app") {
       // For in-app chat, return seller information
       const seller = await User.findById(post.createdBy).select(
-        "_id name avatar username showUsername"
+        "_id firstName lastName username profilePicture showUsername"
       );
       if (!seller) {
         return res.status(404).json({
@@ -1084,10 +1084,13 @@ router.get("/api/posts/:id/contact", isAuthenticated, async (req, res) => {
 
       contactInfo = {
         sellerId: seller._id,
-        sellerName: seller.name,
-        sellerAvatar: seller.avatar,
-        postTitle: post.title,
+        firstName: seller.firstName,
+        lastName: seller.lastName,
         username: seller.username,
+        sellerAvatar: seller.profilePicture
+          ? seller.profilePicture.url
+          : "/img/default-avatar.svg",
+        postTitle: post.title,
         showUsername: seller.showUsername,
       };
     } else if (method === "email") {

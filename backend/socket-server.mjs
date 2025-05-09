@@ -123,6 +123,8 @@ export function initializeSocketServer(httpServer) {
               _id: req.user._id, // Maintain existing _id or use the one from completeUser
               firstName: completeUser.firstName || req.user.firstName,
               lastName: completeUser.lastName || req.user.lastName,
+              username: completeUser.username || req.user.username,
+              showUsername: completeUser.showUsername || req.user.showUsername,
             };
 
             // Ensure the name is set
@@ -144,24 +146,6 @@ export function initializeSocketServer(httpServer) {
           }
         } catch (dbError) {
           console.error("Error getting complete user data:", dbError);
-
-          // Make sure ID is set properly even if DB lookup failed
-          if (!req.user._id) {
-            req.user._id = req.user.id;
-          }
-
-          // Still ensure a name is set even if we couldn't get complete data
-          if (!req.user.name) {
-            if (req.user.firstName || req.user.lastName) {
-              req.user.name = `${req.user.firstName || ""} ${
-                req.user.lastName || ""
-              }`.trim();
-            } else if (req.user._id) {
-              req.user.name = `User ${req.user._id.toString().substr(-6)}`;
-            } else {
-              req.user.name = `User ${Date.now().toString().substr(-6)}`;
-            }
-          }
         }
 
         // Attach user to socket
@@ -187,11 +171,7 @@ export function initializeSocketServer(httpServer) {
       console.error(
         "User connected without a valid ID. Authentication may be misconfigured."
       );
-      // In production, you might want to disconnect users without IDs
-      // For now, creating a fallback ID for development
-      socket.user._id = `temp-${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(2, 9)}`;
+      socket.disconnect(true);
     }
 
     // Ensure user name is available
@@ -508,7 +488,7 @@ export function initializeSocketServer(httpServer) {
         }
 
         // Ensure we have at least something to display
-        if (!showUsername && !firstName && !lastName) {
+        if (!firstName && !lastName) {
           firstName = "Someone";
         }
 

@@ -232,7 +232,14 @@ router.get("/api/chats", isAuthenticated, async (req, res) => {
         user: {
           _id: otherUser._id,
           name: `${otherUser.firstName} ${otherUser.lastName}`,
-          avatar: otherUser.profilePicture.url,
+          firstName: otherUser.firstName,
+          lastName: otherUser.lastName,
+          username: otherUser.username,
+          avatar:
+            otherUser.profilePicture && otherUser.profilePicture.url
+              ? otherUser.profilePicture.url
+              : "/img/default-avatar.svg",
+          showUsername: otherUser.showUsername,
         },
         lastMessage: {
           content: lastMessage.content,

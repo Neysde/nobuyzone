@@ -246,12 +246,17 @@
                 <div class="posted-by-content">
                   <span class="posted-by-label">Posted by:</span>
                   <span class="posted-by-name">
-                    <!-- do not display username with @ in post detail page so I deleted @ -->
-                    <% if (post.createdByUser &&
-                    post.createdByUser.showUsername) { %> <%=
-                    post.createdByUser.username %> <% } else { %> <%=
-                    post.createdByUser ? `${post.createdByUser.firstName}
-                    ${post.createdByUser.lastName}` : 'Unknown User' %> <% } %>
+                    <% if (post.createdByUser && post.createdByUser.showUsername
+                    && post.createdByUser.username) { %> <%=
+                    post.createdByUser.username %> <% } else if
+                    (post.createdByUser && post.createdByUser.firstName &&
+                    post.createdByUser.lastName) { %> <%=
+                    post.createdByUser.firstName %> <%=
+                    post.createdByUser.lastName %> <% } else if
+                    (post.createdByUser && post.createdByUser.firstName) { %>
+                    <%= post.createdByUser.firstName %> <% } else if
+                    (post.createdByUser && post.createdByUser.username) { %> <%=
+                    post.createdByUser.username %> <% } else { %> User <% } %>
                   </span>
                 </div>
               </div>
