@@ -34,6 +34,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  showUsername: {
+    type: Boolean,
+    default: false,
+  },
   //Store user's favorite posts
   favorites: [
     {

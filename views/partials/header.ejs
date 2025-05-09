@@ -62,7 +62,10 @@
               </div>
               <% } %>
             </div>
-            <span><%= user.firstName %> <%= user.lastName %></span>
+            <span>
+              <% if (user.showUsername) { %> @<%= user.username %> <% } else {
+              %> <%= user.firstName %> <%= user.lastName %> <% } %>
+            </span>
           </a>
           <div class="dropdown-menu">
             <a href="/dashboard/<%= user._id %>#postings">Posts</a>

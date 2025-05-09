@@ -482,29 +482,38 @@ export function initializeSocketServer(httpServer) {
           return;
         }
 
-        // Extract the CURRENT user's name (the one who is typing)
-        // This is what we want to send to the recipient
-        let firstName = socket.user.firstName || "";
-        let lastName = socket.user.lastName || "";
+        // Check the user's privacy settings
+        let firstName = "";
+        let lastName = "";
+        let username = socket.user.username || "";
+        let showUsername = socket.user.showUsername;
 
-        // If firstName/lastName are not available, try to parse from name
-        if (!firstName && !lastName && socket.user.name) {
-          const nameParts = socket.user.name.split(" ");
-          if (nameParts.length >= 2) {
-            firstName = nameParts[0];
-            lastName = nameParts.slice(1).join(" ");
-          } else if (nameParts.length === 1) {
-            firstName = nameParts[0];
+        // If showUsername is true, we'll only send the username
+        if (!showUsername) {
+          // Extract the CURRENT user's name (the one who is typing)
+          // This is what we want to send to the recipient
+          firstName = socket.user.firstName || "";
+          lastName = socket.user.lastName || "";
+
+          // If firstName/lastName are not available, try to parse from name
+          if (!firstName && !lastName && socket.user.name) {
+            const nameParts = socket.user.name.split(" ");
+            if (nameParts.length >= 2) {
+              firstName = nameParts[0];
+              lastName = nameParts.slice(1).join(" ");
+            } else if (nameParts.length === 1) {
+              firstName = nameParts[0];
+            }
           }
         }
 
         // Ensure we have at least something to display
-        if (!firstName && !lastName) {
+        if (!showUsername && !firstName && !lastName) {
           firstName = "Someone";
         }
 
         console.log(
-          `Typing indicator: User ${currentUserId} (${firstName} ${lastName}) is typing - sending to recipient ${recipientId}`
+          `Typing indicator: User ${currentUserId} is typing - sending to recipient ${recipientId}`
         );
 
         // Get recipient room
@@ -517,6 +526,8 @@ export function initializeSocketServer(httpServer) {
           postId: postId,
           firstName: firstName, // First name of the user who is typing
           lastName: lastName, // Last name of the user who is typing
+          username: username, // Username of the user who is typing
+          showUsername: showUsername, // Flag to indicate if only username should be shown
         };
 
         // Also send to recipient's personal room

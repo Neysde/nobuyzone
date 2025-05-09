@@ -378,6 +378,36 @@ router.patch("/api/user/profile-picture", isAuthenticated, async (req, res) => {
   }
 });
 
+// Update privacy settings (showUsername)
+router.patch("/api/user/privacy", isAuthenticated, async (req, res) => {
+  try {
+    const { showUsername } = req.body;
+
+    // Check if showUsername is a boolean value
+    if (typeof showUsername !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "showUsername must be a boolean value",
+      });
+    }
+
+    // Update the user's privacy setting
+    await User.findByIdAndUpdate(req.user._id, { showUsername });
+
+    // Return success response
+    return res.status(200).json({
+      success: true,
+      message: "Privacy settings updated successfully",
+    });
+  } catch (error) {
+    console.error("Error updating privacy settings:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update privacy settings: " + error.message,
+    });
+  }
+});
+
 // Get current user ID for redirection
 router.get("/api/user/current", isAuthenticated, async (req, res) => {
   try {

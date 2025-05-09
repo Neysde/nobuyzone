@@ -39,8 +39,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Listen for events from other pages (like post-detail)
   document.addEventListener("openChat", function (event) {
-    const { postId, recipientId, recipientName, avatar, postTitle } =
-      event.detail;
+    const {
+      postId,
+      recipientId,
+      recipientName,
+      avatar,
+      postTitle,
+      username,
+      showUsername,
+    } = event.detail;
 
     // Create a unique identifier for this chat conversation
     const chatIdentifier = `${postId}:${recipientId}`;
@@ -66,7 +73,15 @@ document.addEventListener("DOMContentLoaded", function () {
     // Load the chat component if it's not already loaded
     Chat.loadChatComponent()
       .then(() => {
-        Chat.openChat(postId, recipientId, recipientName, avatar, postTitle);
+        Chat.openChat(
+          postId,
+          recipientId,
+          recipientName,
+          avatar,
+          postTitle,
+          username,
+          showUsername
+        );
 
         // Reset the flags after a short delay
         setTimeout(() => {
@@ -218,6 +233,9 @@ const Chat = (function () {
           const sellerAvatar =
             button.getAttribute("data-seller-avatar") ||
             "/img/default-avatar.svg";
+          const username = button.getAttribute("data-username");
+          const showUsername =
+            button.getAttribute("data-show-username") === "true";
 
           // If not logged in, handle redirection to login
           if (!isAuthenticated) {
@@ -229,7 +247,15 @@ const Chat = (function () {
           }
 
           // Open chat with this seller for this post
-          openChat(postId, sellerId, sellerName, sellerAvatar, postTitle);
+          openChat(
+            postId,
+            sellerId,
+            sellerName,
+            sellerAvatar,
+            postTitle,
+            username,
+            showUsername
+          );
         });
       });
     }
@@ -647,26 +673,33 @@ const Chat = (function () {
       }
     });
 
-    socket.on("user-typing", ({ userId, postId, firstName, lastName }) => {
-      // Log received typing indicator data for debugging
-      console.log("Received typing indicator from another user:", {
-        userId, // ID of the OTHER person who is typing
-        postId,
-        firstName, // First name of the OTHER person who is typing
-        lastName, // Last name of the OTHER person who is typing
-        fullName:
-          firstName && lastName
-            ? `${firstName} ${lastName}`
-            : firstName || "Someone",
-      });
+    socket.on(
+      "user-typing",
+      ({ userId, postId, firstName, lastName, username, showUsername }) => {
+        // Log received typing indicator data for debugging
+        console.log("Received typing indicator from another user:", {
+          userId, // ID of the OTHER person who is typing
+          postId,
+          firstName, // First name of the OTHER person who is typing
+          lastName, // Last name of the OTHER person who is typing
+          username, // Username of the OTHER person who is typing
+          showUsername, // Whether to show only username
+          fullName:
+            !showUsername && firstName && lastName
+              ? `${firstName} ${lastName}`
+              : showUsername && username
+              ? `@${username}`
+              : firstName || "Someone",
+        });
 
-      // Only show typing indicator if it's from the current chat partner we're talking with
-      if (userId === currentRecipientId && postId === currentPostId) {
-        // The typing indicator should show the OTHER person's name (the one who is typing)
-        // firstName and lastName are the sender's details, not the current user's
-        showTypingIndicator(firstName, lastName);
+        // Only show typing indicator if it's from the current chat partner we're talking with
+        if (userId === currentRecipientId && postId === currentPostId) {
+          // The typing indicator should show the OTHER person's name (the one who is typing)
+          // firstName and lastName are the sender's details, not the current user's
+          showTypingIndicator(firstName, lastName, username, showUsername);
+        }
       }
-    });
+    );
 
     socket.on("messages-read", ({ postId, userId }) => {
       // Update UI to show messages as read if needed
@@ -757,19 +790,23 @@ const Chat = (function () {
   }
 
   /**
-   * Open chat with a specific user for a specific post
-   * @param {string} postId - The ID of the post
-   * @param {string} recipientId - The ID of the user to chat with
+   * Open or focus an existing chat conversation
+   * @param {string} postId - The ID of the post being discussed
+   * @param {string} recipientId - The ID of the chat recipient
    * @param {string} recipientName - Optional name of the recipient
    * @param {string} avatar - Optional avatar URL
    * @param {string} postTitle - Optional post title
+   * @param {string} username - Optional username of the recipient
+   * @param {boolean} showUsername - Optional flag indicating whether to show username instead of full name
    */
   async function openChat(
     postId,
     recipientId,
     recipientName,
     avatar,
-    postTitle
+    postTitle,
+    username,
+    showUsername
   ) {
     // If not authenticated, redirect to login
     if (!isAuthenticated) {
@@ -847,19 +884,19 @@ const Chat = (function () {
     socket.currentChatRoom = chatRoomId;
 
     // If recipient details are provided, use them directly
-    if (recipientName && (avatar || postTitle)) {
-      const userData = {
-        name: recipientName,
-        avatar: avatar || "/img/default-avatar.svg",
-      };
+    const userData = {
+      name: recipientName,
+      avatar: avatar || "/img/default-avatar.svg",
+      username: username,
+      showUsername: showUsername,
+    };
 
-      const postData = {
-        title: postTitle || "Post",
-      };
+    const postData = {
+      title: postTitle || "Post",
+    };
 
-      // Update chat header with provided information
-      updateChatHeader(userData, postData);
-    }
+    // Update chat header with provided information
+    updateChatHeader(userData, postData);
 
     // Load conversation history
     loadChatHistory(postId, recipientId);
@@ -1017,8 +1054,14 @@ const Chat = (function () {
       post = { title: "Unknown Post" };
     }
 
-    // Set user name with fallback
-    chatRecipientName.textContent = user.name || "Unknown User";
+    // Set user name with proper display based on privacy settings
+    if (user.showUsername && user.username) {
+      // Display username if showUsername is true
+      chatRecipientName.textContent = `@${user.username}`;
+    } else {
+      // Display full name as fallback
+      chatRecipientName.textContent = user.name || "Unknown User";
+    }
 
     // Set avatar with fallback
     if (chatAvatar) {
@@ -1184,8 +1227,10 @@ const Chat = (function () {
    * Show the typing indicator with the name of the person typing
    * @param {string} firstName - The first name of the person typing (NOT the current user)
    * @param {string} lastName - The last name of the person typing (NOT the current user)
+   * @param {string} username - The username of the person typing
+   * @param {boolean} showUsername - Whether to show only the username
    */
-  function showTypingIndicator(firstName, lastName) {
+  function showTypingIndicator(firstName, lastName, username, showUsername) {
     if (!chatTyping) return;
 
     // Find typing name element if not already cached
@@ -1197,7 +1242,10 @@ const Chat = (function () {
     // Create the full name with proper handling of undefined/null values
     let fullName = "Someone";
 
-    if (firstName && lastName) {
+    if (showUsername && username) {
+      // Show only the username if the privacy setting is enabled
+      fullName = `@${username}`;
+    } else if (firstName && lastName) {
       // Both first and last name available - format as "FirstName LastName"
       fullName = `${firstName} ${lastName}`.trim();
     } else if (firstName) {

@@ -78,6 +78,11 @@ router.get("/posts/:id", async (req, res) => {
       return res.redirect("/");
     }
 
+    // Fetch post creator's user data
+    const createdByUser = await User.findById(post.createdBy);
+    // Attach user data to post object for template access
+    post.createdByUser = createdByUser;
+
     //Create a user object if user is logged in
     let user = null;
     if (req.user) {
@@ -110,7 +115,7 @@ router.get("/posts/:id", async (req, res) => {
     });
   } catch (error) {
     console.error("Error rendering post detail:", error);
-    // Redirect instead of rendering error page
+    //Redirect instead of rendering error page
     return res.redirect("/");
   }
 });

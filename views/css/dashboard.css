@@ -489,6 +489,74 @@ body {
   gap: var(--space-md);
 }
 
+/* Privacy Setting Styles */
+.privacy-setting {
+  align-items: flex-start;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  font-size: var(--font-size-md);
+  user-select: none;
+  gap: var(--space-md);
+  width: 100%;
+}
+
+.checkbox-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkbox-container span:first-child {
+  flex: 1;
+}
+
+.checkmark {
+  position: relative;
+  height: 20px;
+  width: 20px;
+  background-color: var(--neutral-200);
+  border: 1px solid var(--neutral-400);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.checkbox-container:hover input ~ .checkmark {
+  background-color: var(--neutral-300);
+}
+
+.checkbox-container input:checked ~ .checkmark {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.checkbox-container input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.checkbox-container .checkmark:after {
+  left: 7px;
+  top: 3px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
 .edit-container {
   display: flex;
   flex-direction: column;
