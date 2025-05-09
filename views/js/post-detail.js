@@ -687,6 +687,8 @@ function setupContactButton() {
               recipientName: data.sellerName || "Seller",
               avatar: data.sellerAvatar || "",
               postTitle: data.postTitle || "",
+              username: data.username || "",
+              showUsername: data.showUsername || false,
             },
           });
 

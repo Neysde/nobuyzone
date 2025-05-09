@@ -10,6 +10,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Initialize username editing functionality
   initUsernameEdit();
+
+  // Initialize privacy settings
+  initPrivacySettings();
 });
 
 /**
@@ -687,4 +690,50 @@ function hideLoadingState(loader) {
   // Otherwise remove all loaders
   const loaders = document.querySelectorAll(".loading-overlay");
   loaders.forEach((loader) => loader.remove());
+}
+
+/**
+ * Initialize privacy settings toggle functionality
+ */
+function initPrivacySettings() {
+  const showUsernameToggle = document.getElementById("show-username-toggle");
+
+  if (showUsernameToggle) {
+    showUsernameToggle.addEventListener("change", async function () {
+      try {
+        showLoadingState();
+
+        const response = await fetch("/api/user/privacy", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ showUsername: this.checked }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.message || "Failed to update privacy settings");
+        }
+
+        showNotification(
+          this.checked
+            ? "Your profile will now only show your username to others"
+            : "Your profile will now show your full name to others",
+          "success"
+        );
+      } catch (error) {
+        console.error("Error updating privacy settings:", error);
+        showNotification(
+          error.message || "Failed to update privacy settings",
+          "error"
+        );
+
+        // Reset the checkbox to its previous state
+        this.checked = !this.checked;
+      } finally {
+        hideLoadingState();
+      }
+    });
+  }
 }

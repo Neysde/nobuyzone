@@ -450,6 +450,8 @@
                       data-recipient="<%= chat.user.name %>"
                       data-post-title="<%= chat.postTitle %>"
                       data-avatar="<%= chat.user.avatar || '/img/default-avatar.svg' %>"
+                      data-username="<%= chat.user.username %>"
+                      data-show-username="<%= chat.user.showUsername %>"
                     >
                       <td class="chat-contact">
                         <div class="chat-avatar">
@@ -458,7 +460,11 @@
                             alt="<%= chat.user.name %>"
                           />
                         </div>
-                        <span><%= chat.user.name %></span>
+                        <span>
+                          <% if (chat.user.showUsername) { %> @<%=
+                          chat.user.username %> <% } else { %> <%=
+                          chat.user.name %> <% } %>
+                        </span>
                       </td>
                       <td class="chat-post-info"><%= chat.postTitle %></td>
                       <td class="chat-preview">
@@ -670,6 +676,23 @@
                     </a>
                   </div>
                 </div>
+
+                <!-- Privacy Settings -->
+                <div class="account-field">
+                  <div class="field-label">Privacy</div>
+                  <div class="field-value privacy-setting">
+                    <label class="checkbox-container">
+                      <!-- Checkbox to control whether to show username only or full name to other users -->
+                      <span
+                        >Only show your username. This will hide your first and
+                        last name from other users.</span
+                      >
+                      <input type="checkbox" id="show-username-toggle" <%=
+                      user.showUsername ? 'checked' : '' %> >
+                      <span class="checkmark"></span>
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -772,6 +795,8 @@
               const recipientName = this.dataset.recipient;
               const postTitle = this.dataset.postTitle;
               const avatar = this.dataset.avatar;
+              const username = this.dataset.username;
+              const showUsername = this.dataset.showUsername === "true";
 
               // Remove unread styling if present
               if (this.classList.contains("unread-chat")) {
@@ -786,6 +811,8 @@
                   recipientName,
                   avatar,
                   postTitle,
+                  username,
+                  showUsername,
                 },
               });
               document.dispatchEvent(openChatEvent);

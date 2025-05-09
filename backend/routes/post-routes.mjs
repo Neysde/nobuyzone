@@ -1073,7 +1073,7 @@ router.get("/api/posts/:id/contact", isAuthenticated, async (req, res) => {
     if (method === "in-app") {
       // For in-app chat, return seller information
       const seller = await User.findById(post.createdBy).select(
-        "_id name avatar"
+        "_id name avatar username showUsername"
       );
       if (!seller) {
         return res.status(404).json({
@@ -1087,6 +1087,8 @@ router.get("/api/posts/:id/contact", isAuthenticated, async (req, res) => {
         sellerName: seller.name,
         sellerAvatar: seller.avatar,
         postTitle: post.title,
+        username: seller.username,
+        showUsername: seller.showUsername,
       };
     } else if (method === "email") {
       // Find the post creator to get their email
