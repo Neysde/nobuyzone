@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Rate limiting queue
   let lastRequestTime = 0;
-  const MIN_REQUEST_INTERVAL = 1000; // 1 second (you can move this to .env maybe)
+  let MIN_REQUEST_INTERVAL;
 
   // State variables
   let currentFilters = {
@@ -57,6 +57,17 @@ document.addEventListener("DOMContentLoaded", function () {
     radiusLng: null,
     radiusKm: 10,
   };
+
+  // Fetch configuration from the server
+  fetch("/api/config")
+    .then((response) => response.json())
+    .then((config) => {
+      apiKey = config.GEOCODING_API_KEY;
+      MIN_REQUEST_INTERVAL = config.MIN_REQUEST_INTERVAL;
+    })
+    .catch((error) => {
+      console.error("Error loading configuration:", error);
+    });
 
   // Initialize the map
   function initRadiusMap() {

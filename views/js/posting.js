@@ -27,7 +27,19 @@ document.addEventListener("DOMContentLoaded", function () {
   const district = document.getElementById("district");
   const street = document.getElementById("street");
   const neighborhood = document.getElementById("neighborhood");
-  const apiKey = "67f036a6524c4571002304nfp4826b8"; // Will be moved to .env
+  let apiKey = ""; // Will be loaded from config endpoint
+  let minRequestInterval;
+
+  // Fetch configuration from the server
+  fetch("/api/config")
+    .then((response) => response.json())
+    .then((config) => {
+      apiKey = config.GEOCODING_API_KEY;
+      minRequestInterval = config.MIN_REQUEST_INTERVAL;
+    })
+    .catch((error) => {
+      console.error("Error loading configuration:", error);
+    });
 
   // Image Cropper Elements
   const cropperModal = document.getElementById("image-cropper-modal");
@@ -45,7 +57,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Rate limiting queue
   let lastRequestTime = 0;
-  const MIN_REQUEST_INTERVAL = 1000; // 1 second (you can move this to .env maybe)
 
   //Store last valid marker position
   let lastValidMarkerPosition = null;
@@ -219,10 +230,10 @@ document.addEventListener("DOMContentLoaded", function () {
   async function waitForRateLimit() {
     const now = Date.now();
     const timeSinceLastRequest = now - lastRequestTime;
-    if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+    if (timeSinceLastRequest < minRequestInterval) {
       //code will wait until this promise is resolved
       await new Promise((resolve) =>
-        setTimeout(resolve, MIN_REQUEST_INTERVAL - timeSinceLastRequest)
+        setTimeout(resolve, minRequestInterval - timeSinceLastRequest)
       );
     }
     lastRequestTime = Date.now();

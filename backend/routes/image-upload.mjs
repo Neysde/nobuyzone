@@ -1,12 +1,21 @@
 import { config, uploader, v2 as cloudinary } from "cloudinary";
 import multer from "multer";
 import { fileTypeFromBuffer } from "file-type";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// Configure Cloudinary with credentials will be moved to .env
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from .env file. This MUST be at the top, after essential imports for path resolution.
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+
+// Configure Cloudinary with credentials from environment variables
 config({
-  cloud_name: "dcz6aghbq",
-  api_key: "724354672218175",
-  api_secret: "ft59ETqxJGCKSFpwvngE1UhwSLc",
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 export { uploader, cloudinary };

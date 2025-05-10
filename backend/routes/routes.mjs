@@ -10,6 +10,9 @@ import uiRouter from "./ui-routes.mjs";
 import userRouter from "./user-routes.mjs";
 import fetch from "node-fetch";
 import chatRouter from "./chat-routes.mjs";
+import devRoutes from "./devRoutes.mjs";
+import adminRoutes from "./adminRoutes.mjs";
+import path from "path";
 
 const router = express.Router();
 
@@ -67,8 +70,21 @@ router.get("/chats", (req, res) => {
   res.redirect("/messages");
 });
 
+// Add endpoint to serve environment variables to the frontend
+router.get("/api/config", (req, res) => {
+  // Only expose variables that are needed on the frontend
+  res.json({
+    GEOCODING_API_KEY: process.env.GEOCODING_API_KEY,
+    MIN_REQUEST_INTERVAL: parseInt(process.env.MIN_REQUEST_INTERVAL),
+    BASE_URL: process.env.BASE_URL,
+  });
+});
+
 router.use(postRouter);
 router.use(uiRouter);
 router.use(userRouter);
 router.use(chatRouter);
+router.use("/dev", devRoutes); // Use dev routes, perhaps prefixed with /dev
+router.use("/admin", adminRoutes); // Use admin routes, prefixed with /admin
+
 export default router;

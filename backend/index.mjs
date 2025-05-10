@@ -1,11 +1,22 @@
-import express from "express";
+import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+
+// Create __dirname for ES modules (needed for path.resolve in dotenv.config)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from .env file. This MUST be at the top, after essential imports for path resolution.
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
+// Now proceed with all other application imports
+import express from "express";
 import mongoose from "mongoose";
 import expressLayouts from "express-ejs-layouts";
 import routes from "./routes/routes.mjs";
 import chatRoutes from "./routes/chat-routes.mjs";
 import cookieParser from "cookie-parser";
+import session from "express-session";
 import passport from "passport";
 import { Strategy } from "passport-jwt";
 import User from "./mongoose/user.mjs";
@@ -13,10 +24,6 @@ import Post from "./mongoose/post.mjs";
 import { isAuthenticated } from "./middlewares.mjs";
 import { createServer } from "http";
 import { initializeSocketServer } from "./socket-server.mjs";
-
-// Create __dirname for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
@@ -27,6 +34,20 @@ const io = initializeSocketServer(httpServer);
 app.use(express.json());
 app.use(cookieParser());
 
+//Session middleware setup for admins
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+      secure: false, //set to true in prod
+      httpOnly: true,
+      maxAge: parseInt(process.env.COOKIE_MAX_AGE),
+    },
+  })
+);
+
 const jwtOptions = {
   jwtFromRequest: (req) => {
     var token = null;
@@ -35,7 +56,7 @@ const jwtOptions = {
     }
     return token;
   },
-  secretOrKey: "process.env.SECRETKEY", // Will be moved to .env
+  secretOrKey: process.env.SECRETKEY,
 };
 
 passport.use(
@@ -77,10 +98,9 @@ app.use("/css", express.static(path.join(__dirname, "../views/css")));
 app.use("/js", express.static(path.join(__dirname, "../views/js")));
 app.use("/backend/json", express.static(path.join(__dirname, "json")));
 
-const connectionString =
-  "mongodb+srv://root:1Ow6PKsLv1It8K2S@cluster0.ok6h4.mongodb.net/bartertest?retryWrites=true&w=majority&appName=Cluster0";
+// Use the MongoDB URI from environment variables
 mongoose
-  .connect(connectionString)
+  .connect(process.env.MONGODB_URI)
   .then(() => console.log("Connected to the database."))
   .catch((err) => console.log(`Error: ${err}`));
 
@@ -135,10 +155,11 @@ app.get("/posting", isAuthenticated, async (req, res) => {
   }
 });
 
-// Start the server with httpServer instead of app
-httpServer.listen(3000, () => {
-  console.log("Server is running on port 3000");
+// Start the server with httpServer instead of app, using PORT from env
+const PORT = parseInt(process.env.PORT);
+httpServer.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
   console.log(
-    "Socket.IO server is available at http://localhost:3000/socket.io/socket.io.js"
+    `Socket.IO server is available at http://localhost:${PORT}/socket.io/socket.io.js`
   );
 });

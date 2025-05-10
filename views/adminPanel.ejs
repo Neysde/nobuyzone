@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      <%= typeof pageTitle !== 'undefined' ? pageTitle : 'Admin Panel' %>
+    </title>
+    <link rel="stylesheet" href="/css/admin.css" />
+    <!-- Link to the admin-specific CSS -->
+  </head>
+  <body>
+    <header class="admin-header">
+      <h1>Admin Panel</h1>
+      <nav>
+        <a href="/admin/panel">Dashboard</a>
+        <a href="/admin/logout">Logout (<%= adminUser.username %>)</a>
+      </nav>
+    </header>
+
+    <main class="admin-main-content">
+      <section id="user-management" class="admin-section">
+        <h2>User Management</h2>
+        <div class="table-container">
+          <table id="users-table">
+            <thead>
+              <tr>
+                <th>Profile Pic</th>
+                <th>Username</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Email</th>
+                <th>Total Post Flags</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% users.forEach(user => { %>
+              <tr data-user-id="<%= user._id %>">
+                <td>
+                  <% if (user.profilePicture && user.profilePicture.url) { %>
+                  <img
+                    src="<%= user.profilePicture.url %>"
+                    alt="<%= user.username %>'s profile pic"
+                    class="admin-table-image small-profile-pic"
+                  />
+                  <% } else { %>
+                  <img
+                    src="/assets/images/default-profile.png"
+                    alt="Default profile pic"
+                    class="admin-table-image small-profile-pic"
+                  />
+                  <!-- Fallback image -->
+                  <% } %>
+                </td>
+                <td><%= user.username %></td>
+                <td><%= user.firstName %></td>
+                <td><%= user.lastName %></td>
+                <td><%= user.email %></td>
+                <td><%= user.totalFlagCount %></td>
+                <td>
+                  <button class="btn-delete-user" data-id="<%= user._id %>">
+                    Delete
+                  </button>
+                </td>
+              </tr>
+              <% }); %> <% if (users.length === 0) { %>
+              <tr>
+                <td colspan="7">No users found.</td>
+              </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="post-management" class="admin-section">
+        <div class="section-header-with-controls">
+          <h2>Post Management</h2>
+          <!-- Post Sorting Form -->
+          <form method="GET" action="/admin/panel#post-management" class="sort-form">
+            <label for="sortPostsBy">Sort by:</label>
+            <select name="sortPostsBy" id="sortPostsBy">
+              <option value="date_desc" <%= currentSortPostsBy === 'date_desc' ? 'selected' : '' %>>Newest First</option>
+              <option value="date_asc" <%= currentSortPostsBy === 'date_asc' ? 'selected' : '' %>>Oldest First</option>
+              <option value="title_asc" <%= currentSortPostsBy === 'title_asc' ? 'selected' : '' %>>Title (A-Z)</option>
+              <option value="title_desc" <%= currentSortPostsBy === 'title_desc' ? 'selected' : '' %>>Title (Z-A)</option>
+              <option value="flagCount_desc" <%= currentSortPostsBy === 'flagCount_desc' ? 'selected' : '' %>>Flags (High-Low)</option>
+              <option value="flagCount_asc" <%= currentSortPostsBy === 'flagCount_asc' ? 'selected' : '' %>>Flags (Low-High)</option>
+            </select>
+          </form>
+          <!-- End Post Sorting Form -->
+        </div>
+
+        <div class="table-container">
+          <table id="posts-table">
+            <thead>
+              <tr>
+                <th>Image</th>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Location</th>
+                <th>Publish Date</th>
+                <th>Author</th>
+                <th>Flag Count</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% posts.forEach(post => { %>
+              <tr data-post-id="<%= post._id %>" class="post-row">
+                <td>
+                  <% if (post.images && post.images.length > 0 &&
+                  post.images[0].url) { %>
+                  <img
+                    src="<%= post.images[0].url %>"
+                    alt="<%= post.title %>"
+                    class="admin-table-image"
+                  />
+                  <% } else { %>
+                  <span>No Image</span>
+                  <% } %>
+                </td>
+                <td class="post-title-link" data-postid="<%= post._id %>">
+                  <%= post.title %>
+                </td>
+                <td><%= post.category %></td>
+                <td>
+                  <%= post.location && post.location.city ? post.location.city :
+                  'N/A' %>
+                </td>
+                <td><%= new Date(post.createdAt).toLocaleDateString() %></td>
+                <!-- Ensure createdBy is populated and has name fields -->
+                <td>
+                  <%= post.createdBy ? (post.createdBy.firstName + ' ' +
+                  post.createdBy.lastName) : 'Unknown' %>
+                </td>
+                <td><%= post.flagCount %></td>
+                <td>
+                  <button class="btn-delete-post" data-id="<%= post._id %>">
+                    Delete
+                  </button>
+                </td>
+              </tr>
+              <% }); %> <% if (posts.length === 0) { %>
+              <tr>
+                <td colspan="8">No posts found.</td>
+              </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="/js/admin.js"></script>
+    <!-- Link to admin-specific JS -->
+  </body>
+</html>

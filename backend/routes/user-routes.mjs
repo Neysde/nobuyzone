@@ -43,12 +43,12 @@ const register = async (req, res) => {
       userId: user._id,
       token: jwt.sign(
         { email: user.email, _id: user._id },
-        "process.env.SECRETKEY",
+        process.env.SECRETKEY,
         { expiresIn: "1h" }
-      ), //key will be moved to .env file. (process.env.SECRETKEY)
+      ),
     }).save();
 
-    const url = `http://localhost:3000/${user.id}/verify/${token.token}`; //!!!!!!! need to change url later.
+    const url = `${process.env.BASE_URL}/${user.id}/verify/${token.token}`;
 
     //Maybe need to change this html design used in email template later.
     const subject = " Please Verify Email";
@@ -97,14 +97,14 @@ const login = async (req, res) => {
     }
     const token = jwt.sign(
       { email: user.email, _id: user._id },
-      "process.env.SECRETKEY", //will be moved to .env file.
+      process.env.SECRETKEY,
       { expiresIn: "1d" }
     );
     res
       .cookie("login", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 24 * 60 * 60 * 1000, //1 day
+        secure: process.env.NODE_ENV,
+        maxAge: parseInt(process.env.COOKIE_MAX_AGE),
       })
       .status(200)
       .send({ data: token, message: "User has successfully logged in" });
@@ -159,12 +159,12 @@ const passwordLink = async (req, res) => {
         userId: user._id,
         token: jwt.sign(
           { email: user.email, _id: user._id },
-          "process.env.SECRETKEY",
+          process.env.SECRETKEY,
           { expiresIn: "1h" }
-        ), //secret will be moved to .env file.
+        ),
       }).save();
     }
-    const url = `http://localhost:3000/reset/${user.id}/${token.token}`; //Updated URL to match new route path
+    const url = `${process.env.BASE_URL}/reset/${user.id}/${token.token}`;
     const subject = "Password Reset";
     const message = `
         <p>Here is a link to reset your password</p>
@@ -238,8 +238,8 @@ const sendEmail = async (email, subject, message) => {
       port: 587, //TLS port
       secureConnection: false, //TLS requires secureConnection to be false
       auth: {
-        user: "zucklol1453@gmail.com", // Will be moved to process.env.EMAIL_USER
-        pass: "rjpo kbif nxnu tapl", // Use app password will be moved to .env process.env.APP_PASSWORD
+        user: process.env.EMAIL_USER,
+        pass: process.env.APP_PASSWORD,
       },
       tls: {
         ciphers: "SSLv3",
@@ -247,7 +247,8 @@ const sendEmail = async (email, subject, message) => {
     });
 
     await transporter.sendMail({
-      from: '"Barter App" <zucklol1453@gmail.com>', // Better formatted sender
+      from:
+        process.env.EMAIL_FROM || `"Barter App" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: subject,
       html: message,

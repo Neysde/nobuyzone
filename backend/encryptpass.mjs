@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs"; //check for bcryptjs if this is working or not. If not, change it back to bcrypt or rewrite the encrypt code.
 
-const saltRounds = 10; //will be moved to .env file.
+const saltRounds = parseInt(process.env.PASSWORD_SALT_ROUNDS);
 
 export const hashPassword = async (password) => {
   const salt = await bcrypt.genSalt(saltRounds);

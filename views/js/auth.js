@@ -239,12 +239,6 @@ function initPasswordResetForm(form) {
     // Get form data
     const password = form.querySelector("#password").value;
 
-    //Get the user ID and token from the URL
-    const urlParts = window.location.pathname.split("/"); //For example, if the URL is 
-    //https://example.com/12345/abcde, urlParts would be ["", "12345", "abcde"].
-    const userId = urlParts[1];
-    const token = urlParts[2];
-
     // Validate form
     if (!validatePassword(password)) {
       showError(
@@ -259,8 +253,12 @@ function initPasswordResetForm(form) {
     setLoading(submitBtn, true);
 
     try {
+      // The current page URL is of the form /reset/:id/:token, which is the target for the POST request.
+      const targetUrl = window.location.pathname;
+
       // Send password reset request
-      const response = await fetch(`/${userId}/${token}`, {
+      const response = await fetch(targetUrl, {
+        // Use the current page's full path
         method: "POST",
         headers: {
           "Content-Type": "application/json",
