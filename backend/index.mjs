@@ -106,9 +106,9 @@ mongoose
 
 app.set("view engine", "ejs");
 
-// Homepage redirect to find-posts
+// Homepage now renders the main page with the map
 app.get("/", (req, res) => {
-  res.redirect("/find-posts");
+  res.render("main", { user: req.user });
 });
 
 app.use(routes); // all routes

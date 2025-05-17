@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", function () {
     "radius-fullscreen-toggle"
   );
   const globalSearchButton = document.getElementById("global-search-button");
-  const apiKey = "67f036a6524c4571002304nfp4826b8"; // Will be moved to .env
+  let apiKey = "67f036a6524c4571002304nfp4826b8"; // Will be moved to .env
 
   // Data variables for location
   let cities = [];
@@ -745,41 +745,59 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // City select - enable/disable district select based on selection
-    globalCity.addEventListener("change", function () {
+    globalCity.addEventListener("change", async function () {
       const searchBar = document.querySelector(".search-bar");
+      const selectedCityId = this.value;
+      let cityNameForFilter = "";
 
       // Reset district when city changes
       globalDistrict.value = "";
+      globalDistrict.innerHTML = '<option value="">Select District</option>'; // Clear old districts
 
-      if (this.value) {
+      if (selectedCityId) {
+        const selectedCityObject = cities.find((c) => c.id === selectedCityId);
+        cityNameForFilter = selectedCityObject ? selectedCityObject.name : "";
+
         // Enable and show district
         globalDistrict.disabled = false;
-
-        // Show district wrapper with animation
         document.getElementById("district-wrapper").classList.remove("hidden");
-
-        // Update width distribution classes
         searchBar.classList.remove("city-only");
         searchBar.classList.add("city-district");
-
-        // Populate districts for the selected city
-        populateDistrictsGlobal(this.value);
+        await populateDistrictsGlobal(selectedCityId); // Populate districts for the selected city
       } else {
-        // Disable dependent field (district already reset above)
+        // No city selected
         globalDistrict.disabled = true;
-
-        // Hide district wrapper with animation
         document.getElementById("district-wrapper").classList.add("hidden");
-
-        // Update width distribution classes
         searchBar.classList.add("city-only");
         searchBar.classList.remove("city-district");
       }
+      // Update filters: pass the city NAME, reset district, reset page, disable radius search
+      updateFilters({
+        city: cityNameForFilter,
+        district: "",
+        page: 1,
+        useRadius: false,
+      });
     });
 
-    // District select event listener - remove map update functionality
+    // District select event listener
     globalDistrict.addEventListener("change", function () {
-      // REMOVED: Don't update map position when selecting district in search bar
+      const selectedDistrictId = this.value;
+      let districtNameForFilter = "";
+      if (selectedDistrictId) {
+        const selectedDistrictObject = districts.find(
+          (d) => d.id === selectedDistrictId
+        );
+        districtNameForFilter = selectedDistrictObject
+          ? selectedDistrictObject.name
+          : "";
+      }
+      // Update filters: pass the district NAME, reset page, disable radius search
+      updateFilters({
+        district: districtNameForFilter,
+        page: 1,
+        useRadius: false,
+      });
     });
 
     // Radius city select - modify to use proper geocoding
@@ -897,15 +915,15 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
 
-    // Apply the new filters
+    // Apply the new filters (which fetches posts)
     applyFilters();
 
-    // Update UI to reflect filter state
+    // Update UI to reflect filter state (which now also calls updateURL)
     updateFilterUI();
   }
 
   /**
-   * Standardizes location names for consistency
+   * Standardizes location names for consistency (e.g., Turkish Title Case)
    * @param {string} name - The location name to standardize
    * @return {string} - The standardized name
    */
@@ -928,49 +946,100 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**
+   * Converts Turkish characters in a city name to their common English equivalents for URLs.
+   * @param {string} cityName - The city name with potentially Turkish characters.
+   * @returns {string} - The city name with Turkish characters replaced by English ones.
+   */
+  function anglicizeCityName(cityName) {
+    if (!cityName) return "";
+    let name = cityName.trim();
+    const turkishChars = {
+      İ: "I",
+      ı: "i",
+      Ş: "S",
+      ş: "s",
+      Ğ: "G",
+      ğ: "g",
+      Ö: "O",
+      ö: "o",
+      Ü: "U",
+      ü: "u",
+      Ç: "C",
+      ç: "c",
+    };
+    name = name.replace(/[İıŞşĞğÖöÜüÇç]/g, function (match) {
+      return turkishChars[match];
+    });
+    return name;
+  }
+
+  /**
+   * Converts a string to title case.
+   * Example: "hello world" -> "Hello World", "ISTANBUL" -> "Istanbul"
+   * @param {string} str - The string to convert.
+   * @returns {string} - The title-cased string.
+   */
+  function toTitleCase(str) {
+    if (!str) return "";
+    return str.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase()); // Lowercase all then uppercase first letter of each word
+  }
+
+  /**
    * Apply current filters to posts data and update the display
    */
   function applyFilters() {
-    // In a real application, this would make an API call with the filter parameters
-    console.log("Applying filters:", currentFilters);
+    console.log(
+      "Applying filters with currentFilters state:",
+      JSON.parse(JSON.stringify(currentFilters))
+    );
 
-    // Convert IDs to actual names for the API call
     const apiFilters = { ...currentFilters };
 
-    // Convert city ID to city name if needed
+    // Ensure city and district are names and standardized for the API call.
+    // currentFilters.city and currentFilters.district should now store the actual names.
     if (apiFilters.city) {
-      const selectedCity = cities.find((city) => city.id === apiFilters.city);
-      if (selectedCity) {
-        // Standardize to match database format (Istanbul without İ)
-        apiFilters.city = standardizeLocationName(selectedCity.name);
-
-        // Also log the city name we're searching with
-        console.log("Searching with city name:", apiFilters.city);
-      }
+      apiFilters.city = standardizeLocationName(apiFilters.city);
+      console.log("Standardized city name for API:", apiFilters.city);
+    } else {
+      apiFilters.city = ""; // Ensure it's an empty string if null/undefined for consistency
     }
 
-    // Convert district ID to district name if needed
     if (apiFilters.district) {
-      const selectedDistrict = districts.find(
-        (district) => district.id === apiFilters.district
-      );
-      if (selectedDistrict) {
-        // Standardize to match database format (Title case like Beylikdüzü)
-        apiFilters.district = standardizeLocationName(selectedDistrict.name);
+      apiFilters.district = standardizeLocationName(apiFilters.district);
+      console.log("Standardized district name for API:", apiFilters.district);
+    } else {
+      apiFilters.district = ""; // Ensure it's an empty string
+    }
 
-        // Also log the district name we're searching with
-        console.log("Searching with district name:", apiFilters.district);
-      }
+    // Remove radius parameters if useRadius is false, to avoid sending them to the API if not needed.
+    if (!apiFilters.useRadius) {
+      delete apiFilters.radiusLat;
+      delete apiFilters.radiusLng;
+      delete apiFilters.radiusKm;
     }
 
     // This would be replaced with actual API call
+    console.log(
+      "Filters being sent to fetchPosts (apiFilters):",
+      JSON.parse(JSON.stringify(apiFilters))
+    );
     fetchPosts(apiFilters);
+
+    // After initial filters are applied (which updates currentFilters based on URL params),
+    // call updateFilterUI again to ensure dropdowns reflect this state.
+    updateFilterUI();
   }
 
   /**
    * Update UI elements to reflect the current filter state
    */
   function updateFilterUI() {
+    console.log(
+      "[DEBUG] updateFilterUI called. currentFilters.city:",
+      currentFilters.city,
+      "globalCity.value before update:",
+      globalCity.value
+    );
     //Update category buttons
     categoryButtons.forEach((button) => {
       const category = button
@@ -989,8 +1058,70 @@ document.addEventListener("DOMContentLoaded", function () {
     //Update global search inputs
     globalSearchInput.value = currentFilters.search || "";
     globalCategories.value = currentFilters.category || "all";
-    globalCity.value = currentFilters.city || "";
-    globalDistrict.value = currentFilters.district || "";
+
+    // Update globalCity dropdown
+    if (currentFilters.city && cities.length > 0) {
+      const cityNameNormalized = standardizeLocationName(
+        currentFilters.city
+      ).toLowerCase();
+      const foundCity = cities.find(
+        (city) =>
+          standardizeLocationName(city.name).toLowerCase() ===
+          cityNameNormalized
+      );
+      if (foundCity) {
+        globalCity.value = foundCity.id;
+        console.log(
+          "[DEBUG] updateFilterUI: Set globalCity.value to:",
+          foundCity.id,
+          "for city:",
+          currentFilters.city
+        );
+        // If a city is set, populate its districts
+        // This ensures districts are loaded if city is set programmatically (e.g., from URL)
+        populateDistrictsGlobal(foundCity.id);
+      } else {
+        globalCity.value = "";
+        // Clear districts if city becomes invalid or empty
+        globalDistrict.innerHTML = '<option value="">Select District</option>';
+        globalDistrict.value = "";
+        globalDistrict.disabled = true;
+      }
+    } else {
+      globalCity.value = "";
+      // Clear districts if no city in filters
+      globalDistrict.innerHTML = '<option value="">Select District</option>';
+      globalDistrict.value = "";
+      globalDistrict.disabled = true;
+    }
+
+    // Update globalDistrict dropdown
+    if (currentFilters.district && globalCity.value && districts.length > 0) {
+      const districtNameNormalized = standardizeLocationName(
+        currentFilters.district
+      ).toLowerCase();
+      const relevantDistricts = districts.filter(
+        (d) => d.il_id === globalCity.value
+      ); // globalCity.value is an ID here
+      const foundDistrict = relevantDistricts.find(
+        (dist) =>
+          standardizeLocationName(dist.name).toLowerCase() ===
+          districtNameNormalized
+      );
+      if (foundDistrict) {
+        globalDistrict.value = foundDistrict.id;
+      } else {
+        globalDistrict.value = "";
+      }
+    } else {
+      // If no current district filter, or no city selected, ensure district dropdown is reset if it wasn't by city logic.
+      if (!globalCity.value) {
+        // If city is also empty, this is redundant but safe
+        globalDistrict.innerHTML = '<option value="">Select District</option>';
+        globalDistrict.disabled = true;
+      }
+      globalDistrict.value = ""; // Always reset value if no specific district found/kept
+    }
 
     //Update wrappers visibility
     const districtWrapper = document.getElementById("district-wrapper");
@@ -1044,6 +1175,55 @@ document.addEventListener("DOMContentLoaded", function () {
     prevButton.disabled = currentFilters.page === 1;
     // In a real app, you would check if there are more pages
     // nextButton.disabled = !hasMorePages;
+
+    // Update URL after UI is synced with filters
+    updateURL(currentFilters);
+  }
+
+  /**
+   * Updates the browser URL based on the current filters.
+   * @param {Object} filters - The current filter state.
+   */
+  function updateURL(filters) {
+    const params = new URLSearchParams();
+    if (filters.search) params.append("search", filters.search);
+    if (filters.category && filters.category !== "all")
+      params.append("category", filters.category);
+
+    // For city, use anglicized and then title-cased name for the URL.
+    if (filters.city) {
+      params.append("city", toTitleCase(anglicizeCityName(filters.city)));
+    }
+    // For district, continue using standardizeLocationName for now.
+    if (filters.district) {
+      params.append("district", standardizeLocationName(filters.district));
+    }
+    if (filters.sort && filters.sort !== "newest")
+      params.append("sort", filters.sort);
+    if (filters.page && filters.page !== 1) params.append("page", filters.page);
+
+    // Radius search params
+    if (
+      filters.useRadius &&
+      filters.radiusLat &&
+      filters.radiusLng &&
+      filters.radiusKm
+    ) {
+      params.append("useRadius", "true");
+      params.append("radiusLat", filters.radiusLat);
+      params.append("radiusLng", filters.radiusLng);
+      params.append("radiusKm", filters.radiusKm);
+    }
+
+    const queryString = params.toString();
+    const newUrl =
+      window.location.pathname + (queryString ? "?" + queryString : "");
+
+    // Only push state if the URL actually changes to avoid duplicate history entries
+    if (newUrl !== window.location.href) {
+      window.history.pushState({ path: newUrl, filters: filters }, "", newUrl);
+      console.log("URL Updated:", newUrl);
+    }
   }
 
   /**
@@ -1680,23 +1860,68 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Initialize the page
   async function init() {
-    // Load location data first
+    // Load location data first and ensure it's complete
     await loadLocationData();
+    console.log(
+      "[DEBUG] init: loadLocationData complete. Cities loaded:",
+      cities.length > 0
+    );
 
-    // Initialize the radius map
+    // Initialize the radius map (can happen before or after city/district setup)
     initRadiusMap();
 
-    // Then initialize event listeners
+    const urlParams = new URLSearchParams(window.location.search);
+    const cityParam = urlParams.get("city");
+
+    if (cityParam) {
+      console.log("[DEBUG] init: Found cityParam in URL:", cityParam);
+      // Normalize both cityParam and city names from the array to lowercase with Turkish locale and trim for comparison
+      const cityParamNormalized = cityParam.toLocaleLowerCase("tr-TR").trim();
+
+      const matchingCity = cities.find(
+        (city) =>
+          city.name.toLocaleLowerCase("tr-TR").trim() === cityParamNormalized
+      );
+
+      if (matchingCity) {
+        console.log(
+          "[DEBUG] init: CityParam matched. Name from il.json:",
+          matchingCity.name,
+          "ID:",
+          matchingCity.id
+        );
+        currentFilters.city = matchingCity.name; // Store the canonical name from il.json for filters
+        globalCity.value = matchingCity.id; // Directly set the dropdown value
+
+        // Populate districts and make wrapper visible immediately
+        await populateDistrictsGlobal(matchingCity.id);
+        document.getElementById("district-wrapper").classList.remove("hidden");
+        document.querySelector(".search-bar").classList.remove("city-only");
+        document.querySelector(".search-bar").classList.add("city-district");
+      } else {
+        console.log(
+          "[DEBUG] init: CityParam (",
+          cityParamNormalized,
+          ") did not match any city in cities array. Using original param as name for filter."
+        );
+        currentFilters.city = cityParam; // Use the original param for filtering if no match
+        globalCity.value = ""; // Ensure city dropdown is not set
+        document.getElementById("district-wrapper").classList.add("hidden"); // Hide district
+        document.querySelector(".search-bar").classList.add("city-only");
+        document.querySelector(".search-bar").classList.remove("city-district");
+      }
+    } else {
+      // No cityParam, ensure district is hidden by default
+      document.getElementById("district-wrapper").classList.add("hidden");
+      document.querySelector(".search-bar").classList.add("city-only");
+    }
+
+    // Initialize event listeners AFTER potential initial UI setup from cityParam
     initEventListeners();
 
-    // Hide district section on initial load
-    document.getElementById("district-wrapper").classList.add("hidden");
-
-    //Set initial class for width distribution
-    document.querySelector(".search-bar").classList.add("city-only");
-
-    //Initial load of posts
+    // Always apply filters at the end to load posts and sync UI further
     applyFilters();
+    // updateFilterUI() is called at the end of applyFilters(), so no need for a separate call here.
   }
 
   //Start the application

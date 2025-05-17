@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Takasla</title>
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Leaflet Harita CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  </head>
+
+  <body>
+    <main>
+      <div id="map"></div>
+    </main>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="map.js"></script>
+    <script src="kategoriler.js"></script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        // 1. KATEGORİLERİ YÜKLE
+        const categorySelect = document.getElementById("categorySelect");
+        if (typeof kategoriler !== "undefined") {
+          kategoriler.forEach((kategori) => {
+            const option = document.createElement("option");
+            option.value = kategori;
+            option.textContent = kategori;
+            categorySelect.appendChild(option);
+          });
+        }
+
+        // 2. ŞEHİR ve İLÇELERİ YÜKLE
+        const citySelect = document.getElementById("locationSelect");
+        const districtSelect = document.getElementById("districtSelect");
+
+        try {
+          const [ilResponse, ilceResponse] = await Promise.all([
+            fetch("il.json"),
+            fetch("ilce.json"),
+          ]);
+
+          const ilJson = await ilResponse.json();
+          const ilceJson = await ilceResponse.json();
+
+          const cities = ilJson.find((item) => item.name === "il").data;
+          const districts = ilceJson.find((item) => item.name === "ilce").data;
+
+          cities.forEach((city) => {
+            const option = document.createElement("option");
+            option.value = city.id;
+            option.textContent = city.name;
+            citySelect.appendChild(option);
+          });
+
+          citySelect.addEventListener("change", () => {
+            const selectedCityId = citySelect.value;
+            districtSelect.innerHTML = '<option value="">İlçe seçin</option>';
+
+            if (selectedCityId) {
+              const filteredDistricts = districts.filter(
+                (ilce) => ilce.il_id === selectedCityId
+              );
+
+              filteredDistricts.forEach((ilce) => {
+                const option = document.createElement("option");
+                option.value = ilce.name;
+                option.textContent = ilce.name;
+                districtSelect.appendChild(option);
+              });
+
+              districtSelect.disabled = false;
+            } else {
+              districtSelect.disabled = true;
+            }
+          });
+        } catch (error) {
+          console.error("Veriler yüklenemedi:", error);
+        }
+    </script>
+  </body>
+</html>

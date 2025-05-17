@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Barter App | Find Items to Trade</title>
+    <meta
+      name="description"
+      content="Find items to barter in your area. Trade goods with people near you."
+    />
+    <link rel="stylesheet" href="/css/header.css" />
+    <link rel="stylesheet" href="/css/footer.css" />
+    <link rel="stylesheet" href="/css/main.css" />
+    <!-- Leaflet CSS for the map -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+  </head>
+  <body>
+    <!-- Button container for "See all posts" - positioned below header and above map -->
+    <div class="button-container">
+      <div class="header-button">
+        <a href="/find-posts" class="cta-button">See all posts</a>
+      </div>
+    </div>
+
+    <!-- Main content - the map -->
+    <div class="map-container">
+      <div id="map"></div>
+
+      <div class="map-legend">
+        <div class="legend-item">
+          <span class="color-box default"></span>
+          <span>No posts</span>
+        </div>
+        <div class="legend-item">
+          <span class="color-box has-posts"></span>
+          <span>Has posts</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- We don't include the footer as we want the map to take the full viewport -->
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/js/main.js"></script>
+    <!-- Socket.IO client script for notifications -->
+    <script src="/socket.io/socket.io.js"></script>
+  </body>
+</html>

@@ -311,6 +311,9 @@ router.post("/api/drafts", isAuthenticated, async (req, res) => {
  */
 router.get("/api/posts", async (req, res) => {
   try {
+    // Log raw request parameters for debugging
+    console.log("[DEBUG] GET /api/posts: Received query params:", req.query);
+
     const {
       category,
       search,
@@ -346,6 +349,7 @@ router.get("/api/posts", async (req, res) => {
 
     // Location filters
     if (city) {
+      console.log(`[DEBUG] GET /api/posts: Filtering for city: ${city}`);
       const normalizedCity = normalizeText(city);
       console.log(`Searching for city: ${city}, normalized: ${normalizedCity}`);
 
@@ -369,9 +373,16 @@ router.get("/api/posts", async (req, res) => {
 
       filter.$and = filter.$and || [];
       filter.$and.push({ $or: cityConditions });
+      console.log(
+        "[DEBUG] GET /api/posts: City filter conditions:",
+        JSON.stringify(cityConditions, null, 2)
+      );
     }
 
     if (district) {
+      console.log(
+        `[DEBUG] GET /api/posts: Filtering for district: ${district}`
+      );
       const normalizedDistrict = normalizeText(district);
       console.log(
         `Searching for district: ${district}, normalized: ${normalizedDistrict}`
@@ -488,7 +499,10 @@ router.get("/api/posts", async (req, res) => {
     ];
 
     // Log the generated pipeline for debugging
-    console.log("Search pipeline:", JSON.stringify(pipeline, null, 2));
+    console.log(
+      "[DEBUG] GET /api/posts: Search pipeline:",
+      JSON.stringify(pipeline, null, 2)
+    );
 
     // Execute aggregation pipeline
     const posts = await Post.aggregate(pipeline);
@@ -519,6 +533,84 @@ router.get("/api/posts", async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Server error fetching posts",
+    });
+  }
+});
+
+/**
+ * Get post counts by city
+ * This endpoint returns the count of active posts for each city
+ */
+router.get("/api/posts/count-by-city", async (req, res) => {
+  try {
+    console.log("[DEBUG] /api/posts/count-by-city route started");
+    // Query only active posts and count by city
+    const cityCountsAggregation = await Post.aggregate([
+      { $match: { status: "active" } },
+      // Add a match stage to ensure location.city is a valid, non-empty string
+      {
+        $match: {
+          "location.city": { $exists: true, $type: "string", $ne: "" },
+        },
+      },
+      // Group by the original city name first to get counts per unique original name
+      {
+        $group: {
+          _id: "$location.city", // Group by original city name
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0, // Exclude the default _id from $group
+          cityName: "$_id", // Original city name from DB
+          count: 1,
+        },
+      },
+    ]);
+
+    // Log the raw aggregation result for debugging
+    console.log(
+      "[DEBUG] Raw city counts from aggregation:",
+      JSON.stringify(cityCountsAggregation, null, 2)
+    );
+
+    // Transform to object where keys are JavaScript-normalized city names (tr-TR lowercase, trimmed) and values are counts
+    const cityCountsMap = {};
+    cityCountsAggregation.forEach((item, index) => {
+      // Ensure cityName is a non-empty string before normalization
+      console.log(`[DEBUG] Processing item ${index}:`, JSON.stringify(item));
+      if (
+        item.cityName &&
+        typeof item.cityName === "string" &&
+        item.cityName.trim() !== ""
+      ) {
+        const normalizedKey = item.cityName.toLowerCase("tr-TR").trim();
+        // If multiple original city names normalize to the same key (e.g., "istanbul" and "İstanbul"), sum their counts.
+        cityCountsMap[normalizedKey] =
+          (cityCountsMap[normalizedKey] || 0) + item.count;
+      } else {
+        console.warn(
+          `[DEBUG] Skipping item ${index} due to invalid cityName:`,
+          JSON.stringify(item)
+        );
+      }
+    });
+
+    // Log the final transformed map for debugging
+    console.log("[DEBUG] Transformed city counts map:", cityCountsMap);
+
+    res.status(200).json({
+      success: true,
+      data: cityCountsMap,
+    });
+  } catch (error) {
+    console.error("[ERROR] Error in /api/posts/count-by-city:", error);
+    res.status(500).json({
+      success: false,
+      error:
+        "Server error fetching post counts by city. Check server logs for details.", // More specific error
+      details: error.message, // Include error message if available
     });
   }
 });
