@@ -1,9 +1,9 @@
 /* CSS Variables and Base Styles */
 :root {
   /* Colors */
-  --primary: #f0a04b;
-  --primary-dark: #e08a35;
-  --primary-light: #f4b573;
+  --primary: #60a5fa;
+  --primary-dark: #3b82f6;
+  --primary-light: #bfdbfe;
 
   /* Neutral Colors */
   --neutral-100: #ffffff;
@@ -739,7 +739,7 @@ body {
 
 .radius-search-card.active {
   border: 2px solid var(--primary);
-  box-shadow: 0 4px 12px rgba(240, 160, 75, 0.2);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.2);
 }
 
 .radius-search-card .map-container {
@@ -850,7 +850,7 @@ select::-ms-expand {
 .radius-location-select-wrapper select:focus {
   border-color: var(--primary);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(240, 160, 75, 0.2);
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
 }
 
 /* Add a custom dropdown arrow */

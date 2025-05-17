@@ -1,12 +1,12 @@
 /* CSS Variables and Base Styles */
 :root {
   /* Colors */
-  --primary: #f0a04b;
-  --primary-dark: #e08a35;
-  --primary-light: #f4b573;
-  --primary-600: #f0a04b;
-  --primary-700: #e08a35;
-  --primary-800: #c97b2e;
+  --primary: #60a5fa;
+  --primary-dark: #3b82f6;
+  --primary-light: #bfdbfe;
+  --primary-600: #60a5fa;
+  --primary-700: #3b82f6;
+  --primary-800: #2563eb;
 
   /* Neutral Colors */
   --neutral-100: #ffffff;

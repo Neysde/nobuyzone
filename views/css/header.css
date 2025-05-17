@@ -8,9 +8,9 @@
 /* Header Styles */
 :root {
   /* Colors */
-  --primary: #f0a04b;
-  --primary-dark: #e08a35;
-  --primary-light: #f4b573;
+  --primary: #60a5fa;
+  --primary-dark: #3b82f6;
+  --primary-light: #bfdbfe;
 
   /* Neutral Colors */
   --neutral-100: #ffffff;
@@ -119,6 +119,14 @@
   background-color: var(--primary-dark);
 }
 
+/* Specific style for the Create Post button in desktop header */
+.header .header-actions > a.button.button-primary {
+  height: 40px;
+  padding: 0 var(--space-lg); /* 0 top/bottom, 1.5rem left/right */
+  font-size: 1rem;
+  line-height: 1; /* Ensure text is vertically centered for the given height */
+}
+
 /* Outline button */
 .button-outline {
   background-color: transparent;
@@ -199,12 +207,14 @@
 .dropdown-menu {
   position: absolute;
   top: 40px; /* Position directly below the button */
-  right: 0;
+  left: auto !important; /* Ensure positioning from right */
+  right: 0 !important; /* Anchor to the right */
   margin-top: 8px; /* Add space between button and dropdown */
   background-color: var(--neutral-100);
   border: 1px solid var(--neutral-300);
   border-radius: var(--radius-md);
-  width: 200px;
+  width: 200px !important; /* Enforce width */
+  min-width: 200px !important; /* Enforce min-width */
   opacity: 0;
   visibility: hidden;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -301,11 +311,13 @@
     display: flex;
   }
 
-  /* Primary button in mobile */
-  .mobile-actions .button-primary {
-    height: 32px; /* changed it to 32px again it fits better */
-    padding: 0 var(--space-sm);
+  /* Primary button in mobile - made more specific */
+  .header .mobile-actions > a.button.button-primary {
+    height: 32px !important; /* Enforce specific height for header button */
+    min-height: 32px !important; /* Override min-height from post-detail.css */
+    padding: 0 var(--space-sm) !important; /* Enforce specific padding for header button */
     font-size: 1rem;
+    line-height: 1; /* Ensure consistent vertical alignment */
     white-space: nowrap;
     color: white;
     font-weight: 500;
@@ -342,20 +354,14 @@
     height: 18px;
   }
 
-  /* Adjust badge position for mobile */
-  .mobile-actions .notification-bell .unread-badge {
-    top: -5px;
-    right: -5px;
-    min-width: 16px;
-    height: 16px;
-    font-size: 9px;
-  }
-
   /* Adjust dropdown positioning in mobile view */
-  .mobile-actions .dropdown-menu {
+  .header .mobile-actions .user-dropdown .dropdown-menu {
+    /* Increased specificity */
     top: 34px;
-    right: 0;
-    width: 140px;
+    left: auto !important; /* Ensure left is not the primary anchor */
+    right: 0 !important; /* Anchor to the right, so it opens to the left */
+    width: 140px !important; /* Enforce mobile width */
+    min-width: 140px !important; /* Enforce mobile min-width */
   }
 
   /* Match dropdown menu text to desktop size */
@@ -423,13 +429,13 @@
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(240, 160, 75, 0.4);
+    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.4);
   }
   70% {
-    box-shadow: 0 0 0 8px rgba(240, 160, 75, 0);
+    box-shadow: 0 0 0 8px rgba(96, 165, 250, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(240, 160, 75, 0);
+    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0);
   }
 }
 

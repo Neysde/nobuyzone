@@ -467,9 +467,15 @@ function initializeMap() {
     className: "map-tiles", // Add class for potential styling
   }).addTo(map);
 
-  // Only add a marker if we have valid coordinates
+  // Add a circle instead of a marker for privacy
   if (!(lat === 41.0082 && lng === 28.9784)) {
-    const marker = L.marker([lat, lng]).addTo(map);
+    // Create a circle with 200m radius (0.2km)
+    const circle = L.circle([lat, lng], {
+      color: "#f03",
+      fillColor: "#f03",
+      fillOpacity: 0.3,
+      radius: 200, // 200 meters = 0.2km
+    }).addTo(map);
   }
 
   // Handle fullscreen toggle if it exists
@@ -648,78 +654,89 @@ function setupContactButton() {
         // If we reach here, user is authenticated
         showNotification("Opening chat with seller...", "info");
 
-        // Get seller ID from response
+        // Get seller ID and other details from API response
         const data = await response.json();
 
-        // Instead of redirecting, open the chat directly in the page
-        if (data && data.sellerId) {
-          // Check if Chat module is loaded and initialize it if not
-          if (!window.Chat) {
-            console.log("Chat module not found. Loading chat.js...");
-            try {
-              // Load the chat script dynamically if not already present
-              await new Promise((resolve, reject) => {
-                const script = document.createElement("script");
-                script.src = "/js/chat.js";
-                script.onload = resolve;
-                script.onerror = reject;
-                document.head.appendChild(script);
-              });
-            } catch (error) {
-              console.error("Failed to load chat.js:", error);
-              showNotification(
-                "Chat functionality is unavailable. Please try again later.",
-                "error"
-              );
-              window.isOpeningChat = false;
-              return;
-            }
-          }
+        // Create and dispatch the custom event to open the chat
+        console.log("Raw API data for chat:", JSON.parse(JSON.stringify(data)));
 
-          // Create a short delay to ensure Chat module is fully initialized
-          await new Promise((resolve) => setTimeout(resolve, 100));
-
-          // Create and dispatch the custom event to open the chat
-          console.log("Creating chat event with data:", {
-            postId,
-            sellerId: data.sellerId,
-            sellerName: data.sellerName,
-            avatar: data.sellerAvatar,
-            postTitle: data.postTitle,
-            username: data.username,
-            showUsername: data.showUsername,
-            dataType: typeof data.showUsername,
-          });
-
-          // Convert showUsername to a consistent boolean before sending
-          const parsedShowUsername =
-            data.showUsername === true ||
-            String(data.showUsername).toLowerCase() === "true";
-
-          const chatEvent = new CustomEvent("openChat", {
-            detail: {
-              postId: postId,
-              recipientId: data.sellerId,
-              firstName: data.firstName || "",
-              lastName: data.lastName || "",
-              username: data.username || "",
-              recipientName: data.sellerName || "",
-              avatar: data.sellerAvatar || "/img/default-avatar.svg",
-              postTitle: data.postTitle || "Post",
-              showUsername: parsedShowUsername,
-            },
-          });
-
-          // Dispatch the event
-          document.dispatchEvent(chatEvent);
-
-          // Reset the flag after a delay
-          setTimeout(() => {
-            window.isOpeningChat = false;
-          }, 2000);
-        } else {
-          throw new Error("Could not get seller information");
+        // Sanitize firstName from API data
+        let sanFirstName = data.firstName;
+        if (
+          sanFirstName === false ||
+          (typeof sanFirstName === "string" &&
+            sanFirstName.toLowerCase() === "false")
+        ) {
+          // If firstName is boolean false or string "false", treat as empty
+          sanFirstName = "";
         }
+
+        // Sanitize lastName from API data - ensure it's a string, fallback to empty
+        let sanLastName = data.lastName || "";
+
+        // Sanitize username from API data
+        let sanUsername = data.username;
+        if (
+          sanUsername === true ||
+          (typeof sanUsername === "string" &&
+            sanUsername.toLowerCase() === "true")
+        ) {
+          // If username is boolean true or string "true", treat as empty.
+          // A legitimate username "true" is an edge case and likely an issue if it occurs.
+          sanUsername = "";
+        }
+
+        // Ensure showUsername from API data is a proper boolean
+        const actualShowUsername =
+          data.showUsername === true ||
+          String(data.showUsername).toLowerCase() === "true";
+
+        // Determine recipientName with fallbacks, using sanitized values
+        let rName = data.sellerName || ""; // Use sellerName from API if available
+        if (!rName) {
+          // If sellerName is empty or not provided, construct from sanitized parts
+          if (actualShowUsername && sanUsername) {
+            rName = `@${sanUsername}`;
+          } else if (sanFirstName) {
+            // Use firstName, and add lastName if available
+            rName = sanFirstName + (sanLastName ? ` ${sanLastName}` : "");
+          } else if (sanUsername) {
+            // Fallback to username if no firstName, even if showUsername is false (better than generic "Seller")
+            rName = `@${sanUsername}`;
+          } else {
+            rName = "Seller"; // Absolute fallback for recipientName
+          }
+        }
+
+        // Prepare event detail with sanitized and structured data
+        const eventDetail = {
+          postId: postId, // Use original postId variable from function scope
+          recipientId: data.sellerId,
+          firstName: sanFirstName || "", // Ensure empty string if still falsey after sanitization
+          lastName: sanLastName || "", // Ensure empty string
+          username: sanUsername || "", // Ensure empty string
+          recipientName: rName, // This is now carefully constructed
+          avatar: data.sellerAvatar || "/img/default-avatar.svg",
+          postTitle: data.postTitle || "Post", // Use original postTitle from API or fallback
+          showUsername: actualShowUsername, // This is a definite boolean
+        };
+
+        console.log(
+          "Dispatching openChat event with sanitized detail:",
+          JSON.parse(JSON.stringify(eventDetail))
+        );
+
+        const chatEvent = new CustomEvent("openChat", {
+          detail: eventDetail,
+        });
+
+        // Dispatch the event
+        document.dispatchEvent(chatEvent);
+
+        // Reset the flag after a delay
+        setTimeout(() => {
+          window.isOpeningChat = false;
+        }, 2000);
       } catch (fetchError) {
         // Handle any fetch errors as authentication issues if they might be related
         if (

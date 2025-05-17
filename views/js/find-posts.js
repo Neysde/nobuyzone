@@ -181,7 +181,7 @@ document.addEventListener("DOMContentLoaded", function () {
     overlay.setAttribute("y", "0");
     overlay.setAttribute("width", "100%");
     overlay.setAttribute("height", "100%");
-    overlay.setAttribute("fill", "rgba(240, 160, 75, 0.2)"); // Orange/amber tint
+    overlay.setAttribute("fill", "rgba(96, 165, 250, 0.2)"); // Blue tint matching primary color
     overlay.setAttribute("mask", "url(#fixed-circle-mask)");
     svg.appendChild(overlay);
 
@@ -912,11 +912,18 @@ document.addEventListener("DOMContentLoaded", function () {
   function standardizeLocationName(name) {
     if (!name) return "";
 
-    // Convert to title case and trim
+    // Convert to title case using Turkish locale for character conversions
     return name
       .trim()
       .split(" ")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .map((word) => {
+        if (word.length === 0) return "";
+        //!!!!!!!!Convert the first character to uppercase using Turkish locale
+        const firstChar = word.charAt(0).toLocaleUpperCase("tr-TR");
+        //!!!!!!!!!!!!!! Convert the rest of the word to lowercase using Turkish locale
+        const rest = word.slice(1).toLocaleLowerCase("tr-TR");
+        return firstChar + rest;
+      })
       .join(" ");
   }
 
@@ -1373,7 +1380,6 @@ document.addEventListener("DOMContentLoaded", function () {
               day: "numeric",
             })}</span>
           </div>
-          <p class="post-description">${post.description}</p>
           <div class="post-tags">
             <span class="tag">${post.category}</span>
             <span class="tag">${post.condition}</span>

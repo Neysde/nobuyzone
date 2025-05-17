@@ -18,13 +18,21 @@ router.get("/find-posts", (req, res, next) => {
     }
 
     try {
-      const posts = await Post.find({ status: "active" }).sort({
+      // Base query filter
+      const baseFilter = { status: "active" };
+
+      // If user is logged in, add a filter to exclude their own posts
+      if (user) {
+        baseFilter.createdBy = { $ne: user._id };
+      }
+
+      const posts = await Post.find(baseFilter).sort({
         createdAt: -1,
       });
 
       //Count posts by category for sidebar display THIS will be used later for other purposes!!!
       const categoryCounts = await Post.aggregate([
-        { $match: { status: "active" } },
+        { $match: baseFilter }, // Apply the same filter here
         { $group: { _id: "$category", count: { $sum: 1 } } },
       ]);
 
@@ -35,7 +43,7 @@ router.get("/find-posts", (req, res, next) => {
       });
 
       // Total count for "All Categories"
-      const totalCount = await Post.countDocuments({ status: "active" });
+      const totalCount = await Post.countDocuments(baseFilter); // Apply the same filter here
 
       // Fetch complete user data if user is authenticated
       let userData = null;
@@ -76,6 +84,17 @@ router.get("/posts/:id", async (req, res) => {
     if (!post) {
       // Redirect instead of rendering error page
       return res.redirect("/");
+    }
+
+    // Check if the logged-in user is the creator of the post
+    if (
+      req.user &&
+      post.createdBy &&
+      post.createdBy.toString() === req.user._id.toString()
+    ) {
+      // If so, redirect them to the find-posts page, as they should not see their own post's detail page from here.
+      // Alternatively, you could show an error message or redirect to their dashboard.
+      return res.redirect("/find-posts");
     }
 
     // Fetch post creator's user data

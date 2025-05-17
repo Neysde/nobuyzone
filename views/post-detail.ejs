@@ -22,7 +22,7 @@
         /* Fix potential overflow issues */
         body,
         html {
-          overflow-x: hidden;
+          /* overflow-x: hidden; */ /* Commented out for testing */
           width: 100%;
           max-width: 100%;
         }
@@ -135,7 +135,7 @@
                 <div class="meta-item">
                   <span class="meta-label">Posted:</span>
                   <span class="meta-value"
-                    ><%= new Date(post.createdAt).toLocaleDateString("tr-TR")
+                    ><%= new Date(post.updatedAt).toLocaleDateString("tr-TR")
                     %></span
                   >
                 </div>

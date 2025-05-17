@@ -91,17 +91,17 @@ router.get("/panel", isAdmin, async (req, res) => {
         mongooseSortOptions = { title: -1 };
         break;
       case "flagCount_desc":
-        mongooseSortOptions = { flagCount: -1, createdAt: -1 }; // Secondary sort by date
+        mongooseSortOptions = { flagCount: -1, updatedAt: -1 }; // Secondary sort by date
         break;
       case "flagCount_asc":
-        mongooseSortOptions = { flagCount: 1, createdAt: -1 }; // Secondary sort by date
+        mongooseSortOptions = { flagCount: 1, updatedAt: -1 }; // Secondary sort by date
         break;
       case "date_asc": // Oldest first
-        mongooseSortOptions = { createdAt: 1 };
+        mongooseSortOptions = { updatedAt: 1 };
         break;
       case "date_desc": // Newest first
       default:
-        mongooseSortOptions = { createdAt: -1 };
+        mongooseSortOptions = { updatedAt: -1 };
         break;
     }
     // --- End Post Sorting Logic --- //

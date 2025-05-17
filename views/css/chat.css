@@ -4,8 +4,8 @@
 
 /* Chat Interface Styles */
 :root {
-  --chat-primary: #3366ff;
-  --chat-primary-dark: #2952cc;
+  --chat-primary: #60a5fa;
+  --chat-primary-dark: #3b82f6;
   --chat-bg: #ffffff;
   --chat-text: #333333;
   --chat-text-light: #666666;

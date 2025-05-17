@@ -1105,6 +1105,9 @@ document.addEventListener("DOMContentLoaded", function () {
       delete jsonData.latitude;
       delete jsonData.longitude;
 
+      // Set isDraft to false when the post is being submitted
+      jsonData.isDraft = "false";
+
       const response = await fetch(apiUrl, {
         method: method,
         headers: {

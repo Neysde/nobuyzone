@@ -69,15 +69,29 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
       category,
       condition,
       description,
-      location: { city, district, neighborhood, street }, //location properties are nested in the location object!!!
-      latitude,
-      longitude,
+      location, // This is the entire location object
       contactPreferences, // Now using array of preferences
       phoneNumber, // Added phone number field
       isDraft,
       imageUrls,
       imageIds,
     } = req.body;
+
+    // Extract location properties
+    const city = location?.city || "";
+    const district = location?.district || "";
+    const neighborhood = location?.neighborhood || "";
+    const street = location?.street || "";
+
+    // Extract coordinates - they can be either at the top level or nested in location.coordinates
+    let latitude = req.body.latitude;
+    let longitude = req.body.longitude;
+
+    // If not found at top level, try to get from location.coordinates
+    if ((!latitude || !longitude) && location?.coordinates) {
+      latitude = location.coordinates.latitude;
+      longitude = location.coordinates.longitude;
+    }
 
     // Validate required fields
     if (!title || !category || !condition || !description) {
@@ -121,6 +135,37 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
       phone: phoneNumber || "",
     };
 
+    // Add random offset to coordinates for privacy (0.003 ≈ 300m)
+    const offset = 0.003;
+
+    // Parse coordinates, handling both string and number types
+    let parsedLat = 0;
+    let parsedLng = 0;
+
+    if (latitude && !isNaN(parseFloat(latitude))) {
+      parsedLat = parseFloat(latitude);
+    }
+
+    if (longitude && !isNaN(parseFloat(longitude))) {
+      parsedLng = parseFloat(longitude);
+    }
+
+    console.log("Coordinates before offset:", {
+      lat: parsedLat,
+      lng: parsedLng,
+    });
+
+    // Add random offset only if we have valid coordinates
+    if (parsedLat !== 0 || parsedLng !== 0) {
+      // Generate random offset between -300m and +300m
+      parsedLat += Math.random() * offset * 2 - offset;
+      parsedLng += Math.random() * offset * 2 - offset;
+      console.log("Coordinates after offset:", {
+        lat: parsedLat,
+        lng: parsedLng,
+      });
+    }
+
     // Create new post
     const post = new Post({
       title,
@@ -129,18 +174,16 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
       description,
       location: {
         // Ensure we have valid strings for all required location fields
-        city: city && city.trim() ? city.trim() : "",
-        district: district && district.trim() ? district.trim() : "",
+        city: city && city.trim ? city.trim() : city || "",
+        district: district && district.trim ? district.trim() : district || "",
         neighborhood:
-          neighborhood && neighborhood.trim() ? neighborhood.trim() : "",
-        street: street && street.trim() ? street.trim() : "",
+          neighborhood && neighborhood.trim
+            ? neighborhood.trim()
+            : neighborhood || "",
+        street: street && street.trim ? street.trim() : street || "",
         coordinates: {
-          latitude:
-            latitude && !isNaN(parseFloat(latitude)) ? parseFloat(latitude) : 0,
-          longitude:
-            longitude && !isNaN(parseFloat(longitude))
-              ? parseFloat(longitude)
-              : 0,
+          latitude: parsedLat,
+          longitude: parsedLng,
         },
       },
       images,
@@ -192,8 +235,62 @@ router.post("/api/posts/draft", isAuthenticated, async (req, res) => {
  */
 router.post("/api/drafts", isAuthenticated, async (req, res) => {
   try {
+    // Extract and process location data with random offset if coordinates are present
+    const draftData = { ...req.body };
+
+    // Process coordinates if they exist - either in location.coordinates or at top level
+    let hasCoordinates = false;
+
+    // Create location object if it doesn't exist
+    if (!draftData.location) {
+      draftData.location = {};
+    }
+
+    // Create coordinates object if it doesn't exist
+    if (!draftData.location.coordinates) {
+      draftData.location.coordinates = {};
+    }
+
+    // Check for coordinates at top level or in location
+    let rawLat =
+      draftData.latitude ||
+      (draftData.location.coordinates &&
+        draftData.location.coordinates.latitude);
+    let rawLng =
+      draftData.longitude ||
+      (draftData.location.coordinates &&
+        draftData.location.coordinates.longitude);
+
+    if (rawLat || rawLng) {
+      hasCoordinates = true;
+      // Add random offset to coordinates for privacy (0.003 ≈ 300m)
+      const offset = 0.003;
+
+      // Parse and validate coordinates
+      let lat = !isNaN(parseFloat(rawLat)) ? parseFloat(rawLat) : 0;
+      let lng = !isNaN(parseFloat(rawLng)) ? parseFloat(rawLng) : 0;
+
+      console.log("Draft API - Coordinates before offset:", { lat, lng });
+
+      // Add random offset only if we have valid coordinates
+      if (lat !== 0 || lng !== 0) {
+        // Generate random offset between -300m and +300m
+        lat += Math.random() * offset * 2 - offset;
+        lng += Math.random() * offset * 2 - offset;
+        console.log("Draft API - Coordinates after offset:", { lat, lng });
+      }
+
+      // Update coordinates with offset values
+      draftData.location.coordinates.latitude = lat;
+      draftData.location.coordinates.longitude = lng;
+
+      // Delete any top-level coordinate properties to avoid confusion
+      delete draftData.latitude;
+      delete draftData.longitude;
+    }
+
     const newDraft = new Post({
-      ...req.body,
+      ...draftData,
       status: "draft",
       createdBy: req.user._id,
     });
@@ -236,6 +333,11 @@ router.get("/api/posts", async (req, res) => {
 
     // Build filter query
     const filter = { status: "active" };
+
+    // If user is logged in (via req.user being populated by Passport), exclude their own posts
+    if (req.user && req.user._id) {
+      filter.createdBy = { $ne: req.user._id };
+    }
 
     // Category filter
     if (category && category !== "all") {
@@ -367,10 +469,10 @@ router.get("/api/posts", async (req, res) => {
     }
 
     // Sort options
-    let sortOption = { createdAt: -1 }; // default: newest first
+    let sortOption = { updatedAt: -1 }; // default: newest first
 
     if (sort === "oldest") {
-      sortOption = { createdAt: 1 };
+      sortOption = { updatedAt: 1 };
     } else if (sort === "a-z") {
       sortOption = { title: 1 };
     } else if (sort === "z-a") {
@@ -501,23 +603,111 @@ router.put("/api/posts/:id", isAuthenticated, async (req, res) => {
       delete updateData.imageIds;
     }
 
-    // Handle draft status - maintain existing status if it's a draft unless explicitly changing
-    if (post.status === "draft" && !updateData.isDraft) {
-      // Keep as draft unless explicitly set to publish
-      updateData.status = "draft";
-    } else if (updateData.isDraft === "true") {
-      // If isDraft is true, set status to draft
-      updateData.status = "draft";
-    } else if (updateData.isDraft === "false") {
-      // If isDraft is false, set status to active
-      updateData.status = "active";
-    }
+    // Handle draft status
+    // Check if 'isDraft' was actually provided in the request body
+    if (updateData.hasOwnProperty("isDraft")) {
+      // Normalize the isDraft value to a lowercase string to handle both boolean and string inputs consistently
+      // e.g., boolean true -> "true", boolean false -> "false", "True" -> "true"
+      const isDraftValue = String(updateData.isDraft).toLowerCase();
 
-    // Remove the isDraft field as we've handled it
+      if (isDraftValue === "true") {
+        // Explicitly set status to draft if isDraft is true (boolean or string "true")
+        updateData.status = "draft";
+      } else if (isDraftValue === "false") {
+        // Explicitly set status to active if isDraft is false (boolean or string "false")
+        // This handles publishing a draft.
+        updateData.status = "active";
+      }
+      // If isDraft is present but its stringified, lowercased value isn't "true" or "false"
+      // (e.g., null, an empty string, "on", etc.), updateData.status is not modified by this specific block.
+      // The post's original status would be preserved unless 'status' was also explicitly sent in updateData.
+    }
+    // If 'isDraft' was not part of the request (i.e., not in updateData), this entire block is skipped.
+    // In this case, updateData.status is not affected by this isDraft logic,
+    // preserving the post's existing status or allowing 'status' to be updated if sent directly in the request body.
+
+    // Remove the isDraft field from updateData as its primary purpose (determining status) is now complete.
+    // This prevents it from being directly applied to the Post model if there's no 'isDraft' schema field
+    // or if its presence might cause unintended side effects in Mongoose's update.
     delete updateData.isDraft;
 
-    // Remove the draftId field if it exists
-    delete updateData.draftId;
+    // First, check for coordinates either at the top level or in the location object
+    const hasCoordinatesToUpdate =
+      updateData.latitude ||
+      updateData.longitude ||
+      (updateData.location &&
+        updateData.location.coordinates &&
+        (updateData.location.coordinates.latitude ||
+          updateData.location.coordinates.longitude));
+
+    if (hasCoordinatesToUpdate) {
+      // Add random offset to coordinates for privacy (0.003 ≈ 300m)
+      const offset = 0.003;
+
+      // Check all possible places where coordinates might be
+      let rawLat = updateData.latitude;
+      let rawLng = updateData.longitude;
+
+      // If not at top level, try to get from location.coordinates
+      if (
+        (!rawLat || !rawLng) &&
+        updateData.location &&
+        updateData.location.coordinates
+      ) {
+        rawLat = rawLat || updateData.location.coordinates.latitude;
+        rawLng = rawLng || updateData.location.coordinates.longitude;
+      }
+
+      // Parse latitude, with fallbacks
+      let parsedLat =
+        rawLat && !isNaN(parseFloat(rawLat))
+          ? parseFloat(rawLat)
+          : post.location && post.location.coordinates
+          ? post.location.coordinates.latitude
+          : 0;
+
+      // Parse longitude, with fallbacks
+      let parsedLng =
+        rawLng && !isNaN(parseFloat(rawLng))
+          ? parseFloat(rawLng)
+          : post.location && post.location.coordinates
+          ? post.location.coordinates.longitude
+          : 0;
+
+      console.log("Update - Coordinates before offset:", {
+        lat: parsedLat,
+        lng: parsedLng,
+      });
+
+      // Add random offset only if we have valid coordinates
+      if (parsedLat !== 0 || parsedLng !== 0) {
+        // Generate random offset between -300m and +300m
+        parsedLat += Math.random() * offset * 2 - offset;
+        parsedLng += Math.random() * offset * 2 - offset;
+        console.log("Update - Coordinates after offset:", {
+          lat: parsedLat,
+          lng: parsedLng,
+        });
+      }
+
+      // Create location object if it doesn't exist
+      if (!updateData.location) {
+        updateData.location = {};
+      }
+
+      // Create coordinates object if it doesn't exist
+      if (!updateData.location.coordinates) {
+        updateData.location.coordinates = {};
+      }
+
+      // Update coordinates with offset values
+      updateData.location.coordinates.latitude = parsedLat;
+      updateData.location.coordinates.longitude = parsedLng;
+
+      // Remove separate lat/lng properties
+      delete updateData.latitude;
+      delete updateData.longitude;
+    }
 
     // Log the update for debugging
     console.log("Updating post with data:", updateData);
@@ -723,7 +913,7 @@ router.get("/api/user/posts", isAuthenticated, async (req, res) => {
     const posts = await Post.find({
       createdBy: req.user._id,
       status: "active",
-    }).sort({ createdAt: -1 });
+    }).sort({ updatedAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -828,6 +1018,37 @@ router.post("/api/post-drafts", isAuthenticated, async (req, res) => {
       // Ensure coordinates exist
       if (!draftData.location.coordinates) {
         draftData.location.coordinates = { latitude: 0, longitude: 0 };
+      } else {
+        // Add random offset to coordinates for privacy (0.003 ≈ 300m)
+        const offset = 0.003;
+
+        // Get coordinate values from all possible locations
+        let rawLat =
+          draftData.location.coordinates.latitude || draftData.latitude;
+        let rawLng =
+          draftData.location.coordinates.longitude || draftData.longitude;
+
+        // Parse and validate coordinates
+        let lat = !isNaN(parseFloat(rawLat)) ? parseFloat(rawLat) : 0;
+        let lng = !isNaN(parseFloat(rawLng)) ? parseFloat(rawLng) : 0;
+
+        console.log("Draft - Coordinates before offset:", { lat, lng });
+
+        // Add random offset only if we have valid coordinates
+        if (lat !== 0 || lng !== 0) {
+          // Generate random offset between -300m and +300m
+          lat += Math.random() * offset * 2 - offset;
+          lng += Math.random() * offset * 2 - offset;
+          console.log("Draft - Coordinates after offset:", { lat, lng });
+        }
+
+        // Update coordinates with offset values
+        draftData.location.coordinates.latitude = lat;
+        draftData.location.coordinates.longitude = lng;
+
+        // Delete any top-level coordinate properties to avoid confusion
+        delete draftData.latitude;
+        delete draftData.longitude;
       }
     }
 

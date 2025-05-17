@@ -155,6 +155,13 @@ app.get("/posting", isAuthenticated, async (req, res) => {
   }
 });
 
+// 404 Handler - !!!!!! This must be the last middleware to catch all unhandled routes
+app.use((req, res, next) => {
+  res.status(404).render("404", {
+    layout: false,
+  });
+});
+
 // Start the server with httpServer instead of app, using PORT from env
 const PORT = parseInt(process.env.PORT);
 httpServer.listen(PORT, () => {
