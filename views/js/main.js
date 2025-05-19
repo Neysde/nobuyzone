@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Initialize map centered on Turkey with appropriate zoom
   const map = L.map("map", {
     center: [39.0, 35.0],
-    zoom: 6,
+    zoom: 5,
     zoomControl: true,
     maxBounds: [
       [33.0, 25.0], // Southwest bounds

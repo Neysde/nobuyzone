@@ -53,8 +53,11 @@ body {
   line-height: 1.5;
   color: var(--neutral-800);
   background-color: var(--neutral-200);
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Container for header - matching find-posts page */
@@ -68,9 +71,9 @@ body {
 .map-container {
   position: relative;
   width: 100%;
-  height: calc(
-    100vh - 120px
-  ); /* Adjust height to account for header + button container */
+  height: calc(100vh - 120px);
+  min-height: 500px;
+  flex: 1;
   overflow: hidden;
 }
 

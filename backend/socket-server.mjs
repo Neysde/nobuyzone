@@ -335,6 +335,81 @@ export function initializeSocketServer(httpServer) {
       }
     });
 
+    // Handle leaving a chat room
+    socket.on("leave-chat", async ({ postId, recipientId }) => {
+      try {
+        const currentUserId = socket.user._id || socket.user.id;
+
+        if (!currentUserId) {
+          console.error(
+            "Cannot leave chat room: User has no valid ID (socket.user._id is missing)"
+          );
+          socket.emit("error", {
+            message: "Authentication error: Invalid user ID for leaving chat.",
+          });
+          return;
+        }
+
+        if (!postId || !recipientId) {
+          console.error(
+            `Cannot leave chat room: Missing postId or recipientId. Received postId: ${postId}, recipientId: ${recipientId}`
+          );
+          socket.emit("error", {
+            message: "Invalid parameters for leaving chat room.",
+          });
+          return;
+        }
+
+        // Construct the room ID. The order of user IDs in the room name needs to be consistent.
+        // We'll assume the server always constructs it with the smaller ID first, or uses a consistent order.
+        // For simplicity, let's use the same format as join-chat implies (current user, then other user)
+        // However, it's crucial that this matches how rooms are named and tracked.
+        // The join-chat event uses `chat:${postId}:${currentUserId}:${userId}` where userId is the other person.
+        // So, when leaving, postId, currentUserId, and recipientId (the other person) are used.
+        const roomId = `chat:${postId}:${currentUserId}:${recipientId}`;
+        const alternativeRoomId = `chat:${postId}:${recipientId}:${currentUserId}`; // In case the order was swapped
+
+        // Leave the room
+        socket.leave(roomId);
+        socket.leave(alternativeRoomId); // Attempt to leave both possible room name orders
+
+        console.log(`${socket.user.name} left chat room ${roomId}`);
+        if (roomId !== alternativeRoomId) {
+          console.log(
+            `Also attempted to leave ${alternativeRoomId} just in case.`
+          );
+        }
+
+        // Update userRooms tracking
+        if (userRooms[currentUserId]) {
+          const initialSize = userRooms[currentUserId].size;
+          userRooms[currentUserId].delete(roomId);
+          userRooms[currentUserId].delete(alternativeRoomId);
+          const finalSize = userRooms[currentUserId].size;
+          if (initialSize > finalSize) {
+            console.log(
+              `Room ${roomId} (or ${alternativeRoomId}) removed from tracking for user ${currentUserId}. New room count: ${finalSize}`
+            );
+          } else {
+            console.log(
+              `Room ${roomId} (and ${alternativeRoomId}) not found in tracking for user ${currentUserId} for removal. Current rooms: ${Array.from(
+                userRooms[currentUserId]
+              )}`
+            );
+          }
+        } else {
+          console.warn(
+            `User ${currentUserId} not found in userRooms tracking during leave-chat.`
+          );
+        }
+      } catch (error) {
+        console.error("Error handling leave-chat event:", error);
+        socket.emit("error", {
+          message: "Server error while trying to leave chat room.",
+        });
+      }
+    });
+
     // Handle sending a message
     socket.on("send-message", async (messageData) => {
       try {

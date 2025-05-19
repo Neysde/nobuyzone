@@ -580,13 +580,14 @@ function setupContactButton() {
   // Set up individual contact method buttons
   if (contactMethodBtns.length > 0) {
     contactMethodBtns.forEach((btn) => {
-      btn.addEventListener("click", async function () {
+      btn.addEventListener("click", async function (e) {
         const method = this.dataset.method;
         const postId = this.dataset.postId;
 
         try {
           // Make API call to get contact information
           if (method === "in-app") {
+            e.stopPropagation(); // Prevent other general listeners from firing for this specific button
             // Handle in-app messaging
             await handleInAppContact(postId);
           } else if (method === "email" || method === "phone") {
@@ -660,31 +661,23 @@ function setupContactButton() {
         // Create and dispatch the custom event to open the chat
         console.log("Raw API data for chat:", JSON.parse(JSON.stringify(data)));
 
-        // Sanitize firstName from API data
-        let sanFirstName = data.firstName;
-        if (
-          sanFirstName === false ||
-          (typeof sanFirstName === "string" &&
-            sanFirstName.toLowerCase() === "false")
-        ) {
-          // If firstName is boolean false or string "false", treat as empty
-          sanFirstName = "";
-        }
+        // Helper function to sanitize name fields
+        // Converts non-strings, or literal "true"/"false" strings (case-insensitive) to an empty string.
+        const sanitizeNameField = (fieldValue) => {
+          if (typeof fieldValue === "string") {
+            const lowerCaseValue = fieldValue.toLowerCase();
+            if (lowerCaseValue === "true" || lowerCaseValue === "false") {
+              return ""; // Convert string "true" or "false" to empty string
+            }
+            return fieldValue; // Return original string if it's not "true" or "false"
+          }
+          return ""; // Convert booleans, numbers, null, undefined to empty string
+        };
 
-        // Sanitize lastName from API data - ensure it's a string, fallback to empty
-        let sanLastName = data.lastName || "";
-
-        // Sanitize username from API data
-        let sanUsername = data.username;
-        if (
-          sanUsername === true ||
-          (typeof sanUsername === "string" &&
-            sanUsername.toLowerCase() === "true")
-        ) {
-          // If username is boolean true or string "true", treat as empty.
-          // A legitimate username "true" is an edge case and likely an issue if it occurs.
-          sanUsername = "";
-        }
+        // Sanitize firstName, lastName, and username from API data
+        const sanFirstName = sanitizeNameField(data.firstName);
+        const sanLastName = sanitizeNameField(data.lastName);
+        const sanUsername = sanitizeNameField(data.username);
 
         // Ensure showUsername from API data is a proper boolean
         const actualShowUsername =
@@ -692,30 +685,40 @@ function setupContactButton() {
           String(data.showUsername).toLowerCase() === "true";
 
         // Determine recipientName with fallbacks, using sanitized values
-        let rName = data.sellerName || ""; // Use sellerName from API if available
-        if (!rName) {
-          // If sellerName is empty or not provided, construct from sanitized parts
-          if (actualShowUsername && sanUsername) {
-            rName = `@${sanUsername}`;
-          } else if (sanFirstName) {
-            // Use firstName, and add lastName if available
-            rName = sanFirstName + (sanLastName ? ` ${sanLastName}` : "");
-          } else if (sanUsername) {
-            // Fallback to username if no firstName, even if showUsername is false (better than generic "Seller")
-            rName = `@${sanUsername}`;
-          } else {
-            rName = "Seller"; // Absolute fallback for recipientName
-          }
+        let rNameForEventDetail;
+        if (actualShowUsername && sanUsername) {
+          rNameForEventDetail = `@${sanUsername}`;
+        } else if (sanFirstName && sanLastName) {
+          rNameForEventDetail = `${sanFirstName} ${sanLastName}`.trim();
+        } else if (sanFirstName) {
+          // Only first name available
+          rNameForEventDetail = sanFirstName.trim();
+        } else if (sanLastName) {
+          // Only last name available
+          rNameForEventDetail = sanLastName.trim();
+        } else if (sanUsername) {
+          // Fallback to username if no first/last names
+          rNameForEventDetail = `@${sanUsername}`;
+        }
+
+        // If rNameForEventDetail is empty (e.g. all parts were empty) or just "@" (empty username), default to "Seller"
+        // Also ensure that if it somehow became an empty string after trimming, it defaults to "Seller"
+        if (
+          !rNameForEventDetail ||
+          rNameForEventDetail === "@" ||
+          rNameForEventDetail.trim() === ""
+        ) {
+          rNameForEventDetail = "Seller";
         }
 
         // Prepare event detail with sanitized and structured data
         const eventDetail = {
           postId: postId, // Use original postId variable from function scope
           recipientId: data.sellerId,
-          firstName: sanFirstName || "", // Ensure empty string if still falsey after sanitization
-          lastName: sanLastName || "", // Ensure empty string
-          username: sanUsername || "", // Ensure empty string
-          recipientName: rName, // This is now carefully constructed
+          firstName: sanFirstName, // Now a clean string (actual first name or empty)
+          lastName: sanLastName, // Now a clean string (actual last name or empty)
+          username: sanUsername, // Now a clean string (actual username or empty)
+          recipientName: rNameForEventDetail, // This is now carefully constructed from clean parts or defaults to "Seller"
           avatar: data.sellerAvatar || "/img/default-avatar.svg",
           postTitle: data.postTitle || "Post", // Use original postTitle from API or fallback
           showUsername: actualShowUsername, // This is a definite boolean

@@ -617,6 +617,11 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("Error waiting for rate limit:", error);
     }
 
+    console.log("[DEBUG] Populating districts for city ID:", cityId);
+    console.log("[DEBUG] Current filters before population:", {
+      ...currentFilters,
+    });
+
     // Clear current options except the first one
     globalDistrict.innerHTML = '<option value="">Select District</option>';
 
@@ -638,6 +643,20 @@ document.addEventListener("DOMContentLoaded", function () {
       option.textContent = district.name;
       globalDistrict.appendChild(option);
     });
+
+    // If we have a stored districtId in currentFilters, restore the selection
+    if (currentFilters.districtId) {
+      console.log(
+        "[DEBUG] Attempting to restore district selection:",
+        currentFilters.districtId
+      );
+      globalDistrict.value = currentFilters.districtId;
+    }
+
+    console.log(
+      "[DEBUG] Districts populated. Current selection:",
+      globalDistrict.value
+    );
   }
 
   /**
@@ -686,7 +705,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function initEventListeners() {
     // Category filter
     categoryButtons.forEach((button) => {
-      button.addEventListener("click", function () {
+      button.addEventListener("click", async function () {
         // Remove active class from all buttons
         categoryButtons.forEach((btn) => btn.classList.remove("active"));
         // Add active class to clicked button
@@ -702,7 +721,7 @@ document.addEventListener("DOMContentLoaded", function () {
             : categoryName.toLowerCase();
 
         // Update filters with category and reset to page 1
-        updateFilters({
+        await updateFilters({
           category: category,
           page: 1,
           // Always disable radius search when filtering by category
@@ -712,15 +731,15 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Sorting functionality
-    sortSelect.addEventListener("change", function () {
-      updateFilters({
+    sortSelect.addEventListener("change", async function () {
+      await updateFilters({
         sort: this.value,
         // Do not disable radius search when just changing sort order
       });
     });
 
     // Global Search Bar functionality
-    globalSearchButton.addEventListener("click", function () {
+    globalSearchButton.addEventListener("click", async function () {
       // Collect all search parameters
       const searchParams = {
         search: globalSearchInput.value.trim(),
@@ -734,11 +753,11 @@ document.addEventListener("DOMContentLoaded", function () {
       };
 
       // Update filters and perform search
-      updateFilters(searchParams);
+      await updateFilters(searchParams);
     });
 
     // Global search input - search on Enter key
-    globalSearchInput.addEventListener("keyup", function (e) {
+    globalSearchInput.addEventListener("keyup", async function (e) {
       if (e.key === "Enter") {
         globalSearchButton.click();
       }
@@ -746,13 +765,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // City select - enable/disable district select based on selection
     globalCity.addEventListener("change", async function () {
+      console.log("[DEBUG] City selection changed. Selected ID:", this.value);
+
       const searchBar = document.querySelector(".search-bar");
       const selectedCityId = this.value;
       let cityNameForFilter = "";
 
-      // Reset district when city changes
+      // Reset district-related state
+      currentFilters.district = "";
+      currentFilters.districtId = "";
       globalDistrict.value = "";
-      globalDistrict.innerHTML = '<option value="">Select District</option>'; // Clear old districts
+      globalDistrict.innerHTML = '<option value="">Select District</option>';
 
       if (selectedCityId) {
         const selectedCityObject = cities.find((c) => c.id === selectedCityId);
@@ -763,7 +786,9 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("district-wrapper").classList.remove("hidden");
         searchBar.classList.remove("city-only");
         searchBar.classList.add("city-district");
-        await populateDistrictsGlobal(selectedCityId); // Populate districts for the selected city
+
+        console.log("[DEBUG] Populating districts for new city");
+        await populateDistrictsGlobal(selectedCityId);
       } else {
         // No city selected
         globalDistrict.disabled = true;
@@ -771,30 +796,52 @@ document.addEventListener("DOMContentLoaded", function () {
         searchBar.classList.add("city-only");
         searchBar.classList.remove("city-district");
       }
+
       // Update filters: pass the city NAME, reset district, reset page, disable radius search
-      updateFilters({
+      await updateFilters({
         city: cityNameForFilter,
         district: "",
+        districtId: "",
         page: 1,
         useRadius: false,
       });
     });
 
     // District select event listener
-    globalDistrict.addEventListener("change", function () {
+    globalDistrict.addEventListener("change", async function () {
       const selectedDistrictId = this.value;
+      console.log(
+        "[DEBUG] District selection changed. Selected ID:",
+        selectedDistrictId
+      );
+
       let districtNameForFilter = "";
+      let selectedDistrictObject = null;
+
       if (selectedDistrictId) {
-        const selectedDistrictObject = districts.find(
+        selectedDistrictObject = districts.find(
           (d) => d.id === selectedDistrictId
         );
         districtNameForFilter = selectedDistrictObject
           ? selectedDistrictObject.name
           : "";
+
+        console.log("[DEBUG] Found district object:", selectedDistrictObject);
       }
-      // Update filters: pass the district NAME, reset page, disable radius search
-      updateFilters({
+
+      // Store both name and ID in currentFilters before calling updateFilters
+      currentFilters.district = districtNameForFilter;
+      currentFilters.districtId = selectedDistrictId;
+
+      console.log("[DEBUG] Updating filters with district:", {
+        name: districtNameForFilter,
+        id: selectedDistrictId,
+      });
+
+      // Update filters: pass both district NAME and ID, reset page, disable radius search
+      await updateFilters({
         district: districtNameForFilter,
+        districtId: selectedDistrictId,
         page: 1,
         useRadius: false,
       });
@@ -902,7 +949,7 @@ document.addEventListener("DOMContentLoaded", function () {
    * Update filters and refresh the posts display
    * @param {Object} newFilters
    */
-  function updateFilters(newFilters) {
+  async function updateFilters(newFilters) {
     // Update the filter state
     currentFilters = { ...currentFilters, ...newFilters };
 
@@ -916,10 +963,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // Apply the new filters (which fetches posts)
-    applyFilters();
+    await applyFilters();
 
     // Update UI to reflect filter state (which now also calls updateURL)
-    updateFilterUI();
+    await updateFilterUI();
   }
 
   /**
@@ -987,7 +1034,7 @@ document.addEventListener("DOMContentLoaded", function () {
   /**
    * Apply current filters to posts data and update the display
    */
-  function applyFilters() {
+  async function applyFilters() {
     console.log(
       "Applying filters with currentFilters state:",
       JSON.parse(JSON.stringify(currentFilters))
@@ -1027,20 +1074,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // After initial filters are applied (which updates currentFilters based on URL params),
     // call updateFilterUI again to ensure dropdowns reflect this state.
-    updateFilterUI();
+    await updateFilterUI();
   }
 
   /**
    * Update UI elements to reflect the current filter state
    */
-  function updateFilterUI() {
-    console.log(
-      "[DEBUG] updateFilterUI called. currentFilters.city:",
-      currentFilters.city,
-      "globalCity.value before update:",
-      globalCity.value
-    );
-    //Update category buttons
+  async function updateFilterUI() {
+    console.log("[DEBUG] updateFilterUI called with currentFilters:", {
+      city: currentFilters.city,
+      district: currentFilters.district,
+      districtId: currentFilters.districtId,
+    });
+
+    // Update category buttons
     categoryButtons.forEach((button) => {
       const category = button
         .querySelector(".category-name")
@@ -1055,7 +1102,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
 
-    //Update global search inputs
+    // Update global search inputs
     globalSearchInput.value = currentFilters.search || "";
     globalCategories.value = currentFilters.category || "all";
 
@@ -1072,14 +1119,33 @@ document.addEventListener("DOMContentLoaded", function () {
       if (foundCity) {
         globalCity.value = foundCity.id;
         console.log(
-          "[DEBUG] updateFilterUI: Set globalCity.value to:",
-          foundCity.id,
-          "for city:",
-          currentFilters.city
+          "[DEBUG] Found and set city:",
+          foundCity.name,
+          "ID:",
+          foundCity.id
         );
-        // If a city is set, populate its districts
-        // This ensures districts are loaded if city is set programmatically (e.g., from URL)
-        populateDistrictsGlobal(foundCity.id);
+
+        // Enable district selection
+        globalDistrict.disabled = false;
+        document.getElementById("district-wrapper").classList.remove("hidden");
+        document.querySelector(".search-bar").classList.remove("city-only");
+        document.querySelector(".search-bar").classList.add("city-district");
+
+        // Ensure districts are populated
+        const currentDistrictOptions = globalDistrict.options.length;
+        if (currentDistrictOptions <= 1) {
+          console.log("[DEBUG] Populating districts in updateFilterUI");
+          await populateDistrictsGlobal(foundCity.id);
+        }
+
+        // Set district value if we have an ID
+        if (currentFilters.districtId) {
+          console.log(
+            "[DEBUG] Setting district value to:",
+            currentFilters.districtId
+          );
+          globalDistrict.value = currentFilters.districtId;
+        }
       } else {
         globalCity.value = "";
         // Clear districts if city becomes invalid or empty
@@ -1095,53 +1161,7 @@ document.addEventListener("DOMContentLoaded", function () {
       globalDistrict.disabled = true;
     }
 
-    // Update globalDistrict dropdown
-    if (currentFilters.district && globalCity.value && districts.length > 0) {
-      const districtNameNormalized = standardizeLocationName(
-        currentFilters.district
-      ).toLowerCase();
-      const relevantDistricts = districts.filter(
-        (d) => d.il_id === globalCity.value
-      ); // globalCity.value is an ID here
-      const foundDistrict = relevantDistricts.find(
-        (dist) =>
-          standardizeLocationName(dist.name).toLowerCase() ===
-          districtNameNormalized
-      );
-      if (foundDistrict) {
-        globalDistrict.value = foundDistrict.id;
-      } else {
-        globalDistrict.value = "";
-      }
-    } else {
-      // If no current district filter, or no city selected, ensure district dropdown is reset if it wasn't by city logic.
-      if (!globalCity.value) {
-        // If city is also empty, this is redundant but safe
-        globalDistrict.innerHTML = '<option value="">Select District</option>';
-        globalDistrict.disabled = true;
-      }
-      globalDistrict.value = ""; // Always reset value if no specific district found/kept
-    }
-
-    //Update wrappers visibility
-    const districtWrapper = document.getElementById("district-wrapper");
-    const searchBar = document.querySelector(".search-bar");
-
-    //Reset all classes for width distribution
-    searchBar.classList.remove("city-only", "city-district");
-
-    //Show/hide based on current values
-    if (globalCity.value) {
-      globalDistrict.disabled = false;
-      districtWrapper.classList.remove("hidden");
-      searchBar.classList.add("city-district");
-    } else {
-      globalDistrict.disabled = true;
-      districtWrapper.classList.add("hidden");
-      searchBar.classList.add("city-only");
-    }
-
-    //Update sort select
+    // Update sort select
     sortSelect.value = currentFilters.sort;
 
     // Update radius search card visual state
@@ -1173,11 +1193,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Disable/enable pagination buttons
     prevButton.disabled = currentFilters.page === 1;
-    // In a real app, you would check if there are more pages
-    // nextButton.disabled = !hasMorePages;
 
     // Update URL after UI is synced with filters
     updateURL(currentFilters);
+
+    console.log(
+      "[DEBUG] End of updateFilterUI. District value:",
+      globalDistrict.value
+    );
   }
 
   /**
@@ -1194,9 +1217,13 @@ document.addEventListener("DOMContentLoaded", function () {
     if (filters.city) {
       params.append("city", toTitleCase(anglicizeCityName(filters.city)));
     }
-    // For district, continue using standardizeLocationName for now.
+    // For district, store both name and ID in URL
     if (filters.district) {
       params.append("district", standardizeLocationName(filters.district));
+      // Store district ID if available
+      if (filters.districtId) {
+        params.append("districtId", filters.districtId);
+      }
     }
     if (filters.sort && filters.sort !== "newest")
       params.append("sort", filters.sort);
@@ -1920,12 +1947,11 @@ document.addEventListener("DOMContentLoaded", function () {
     initEventListeners();
 
     // Always apply filters at the end to load posts and sync UI further
-    applyFilters();
-    // updateFilterUI() is called at the end of applyFilters(), so no need for a separate call here.
+    await applyFilters();
   }
 
   //Start the application
-  init();
+  init().catch(console.error);
 
   // Add the new function to update city/district based on map position
   /**

@@ -39,31 +39,65 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Listen for events from other pages (like post-detail)
   document.addEventListener("openChat", function (event) {
+    const currentEventDetail = event.detail; // Use a unique name for this event's detail
+
+    // Log the raw detail object received by the listener.
+    // Use a simple loop for stringify in case of complex objects or circular refs for basic inspection
+    let detailString = "{";
+    for (const key in currentEventDetail) {
+      if (Object.hasOwnProperty.call(currentEventDetail, key)) {
+        detailString += `"${key}": "${String(currentEventDetail[key])}", `;
+      }
+    }
+    detailString = detailString.replace(/, $/, "") + "}";
+    console.log(
+      "Chat.js DOM Listener: Received currentEventDetail (stringified props):",
+      detailString
+    );
+    console.log(
+      "Chat.js DOM Listener: Actual currentEventDetail object for inspection:",
+      currentEventDetail
+    );
+
+    // Destructure ALL expected fields directly from the 'currentEventDetail' object.
     const {
       postId,
       recipientId,
       recipientName,
       avatar,
       postTitle,
-      username,
+      username, // These are critical
       firstName,
       lastName,
       showUsername,
-    } = event.detail;
+    } = currentEventDetail;
 
-    console.log(
-      "Chat.js: DOMContentLoaded - Received openChat event with detail:",
-      JSON.parse(JSON.stringify(event.detail))
-    );
+    // Log the destructured values immediately.
+    console.log("Chat.js DOM Listener: Destructured values (type and value):", {
+      dest_postId: { value: postId, type: typeof postId },
+      dest_recipientId: { value: recipientId, type: typeof recipientId },
+      dest_recipientName: { value: recipientName, type: typeof recipientName },
+      dest_avatar: { value: avatar, type: typeof avatar },
+      dest_postTitle: { value: postTitle, type: typeof postTitle },
+      dest_username: { value: username, type: typeof username },
+      dest_firstName: { value: firstName, type: typeof firstName },
+      dest_lastName: { value: lastName, type: typeof lastName },
+      dest_showUsername: { value: showUsername, type: typeof showUsername },
+    });
 
-    const validAvatar =
+    // Create final copies of variables to ensure closure safety for the .then() callback
+    const finalPostId = postId;
+    const finalRecipientId = recipientId;
+    const finalRecipientName = recipientName;
+    const finalAvatar =
       avatar && avatar !== "" ? avatar : "/img/default-avatar.svg";
+    const finalPostTitle = postTitle;
+    const finalUsername = username;
+    const finalFirstName = firstName;
+    const finalLastName = lastName;
+    const finalShowUsername = showUsername; // This is the raw value from currentEventDetail
 
-    // Ensure showUsername is properly converted to boolean for Chat.openChat
-    const parsedShowUsername =
-      showUsername === true || String(showUsername).toLowerCase() === "true";
-
-    const chatIdentifier = `${postId}:${recipientId}`;
+    const chatIdentifier = `${finalPostId}:${finalRecipientId}`;
 
     if (isProcessingOpenChat && currentProcessingChatId === chatIdentifier) {
       console.log(
@@ -72,7 +106,10 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    if (Chat.isCurrentChat && Chat.isCurrentChat(postId, recipientId)) {
+    if (
+      Chat.isCurrentChat &&
+      Chat.isCurrentChat(finalPostId, finalRecipientId)
+    ) {
       console.log(
         "Chat.js: DOMContentLoaded - This chat is already open, just focusing it"
       );
@@ -90,18 +127,60 @@ document.addEventListener("DOMContentLoaded", function () {
     Chat.loadChatComponent()
       .then(() => {
         // Call Chat.openChat with refined parameters.
-        // Note: recipientName is passed through, openChat will decide how to use it
-        // alongside explicit firstName, lastName if showUsername is false.
+        // Use the 'final' prefixed variables from the outer scope of the listener
+
+        // Parse showUsername from the captured 'finalShowUsername'
+        const parsedShowUsername =
+          finalShowUsername === true ||
+          String(finalShowUsername).toLowerCase() === "true";
+
+        // Log values being PASSED to Chat.openChat
+        console.log(
+          "Chat.js DOM Listener .then(): Calling Chat.openChat with (type and value):",
+          {
+            call_postId: { value: finalPostId, type: typeof finalPostId },
+            call_recipientId: {
+              value: finalRecipientId,
+              type: typeof finalRecipientId,
+            },
+            call_recipientName: {
+              value: finalRecipientName,
+              type: typeof finalRecipientName,
+            },
+            call_avatar: { value: finalAvatar, type: typeof finalAvatar },
+            call_postTitle: {
+              value: finalPostTitle,
+              type: typeof finalPostTitle,
+            },
+            call_p_username: {
+              value: finalUsername,
+              type: typeof finalUsername,
+            },
+            call_p_firstName: {
+              value: finalFirstName,
+              type: typeof finalFirstName,
+            },
+            call_p_lastName: {
+              value: finalLastName,
+              type: typeof finalLastName,
+            },
+            call_p_showUsername: {
+              value: parsedShowUsername,
+              type: typeof parsedShowUsername,
+            },
+          }
+        );
+
         Chat.openChat(
-          postId,
-          recipientId,
-          recipientName, // Original recipientName, for context or if f/l names are not in event.detail
-          validAvatar,
-          postTitle,
-          username, // Pass distinct username
-          firstName, // Pass distinct firstName
-          lastName, // Pass distinct lastName
-          parsedShowUsername // Pass parsed boolean showUsername
+          finalPostId,
+          finalRecipientId,
+          finalRecipientName,
+          finalAvatar,
+          finalPostTitle,
+          finalUsername, // Becomes p_username in Chat.openChat
+          finalFirstName, // Becomes p_firstName in Chat.openChat
+          finalLastName, // Becomes p_lastName in Chat.openChat
+          parsedShowUsername // Becomes p_showUsername in Chat.openChat
         );
 
         setTimeout(() => {
@@ -212,9 +291,9 @@ const Chat = (function () {
     chatAvatar = document.getElementById("chat-avatar")?.querySelector("img");
     typingName = document.querySelector(".typing-name");
 
-    // Find all in-app chat buttons
+    // Find all in-app chat buttons that DON'T have a custom handler
     chatButtons = document.querySelectorAll(
-      '.contact-method-btn[data-method="in-app"]'
+      '.contact-method-btn[data-method="in-app"]:not([data-custom-handler="true"])'
     );
 
     // If chat isn't available or not on a page with chat, return early
@@ -819,13 +898,14 @@ const Chat = (function () {
   async function openChat(
     postId,
     recipientId,
-    recipientName, // This is a display name, potentially full name or @username
+    recipientName, // Original recipientName, for context or if f/l names are not in event.detail
     avatar,
     postTitle,
-    username, // Explicit username
-    firstName, // Explicit first name
-    lastName, // Explicit last name
-    showUsername // Boolean showUsername preference
+    // Explicit parameter names for clarity in THIS function's scope
+    p_username, // Parameter for username
+    p_firstName, // Parameter for firstName
+    p_lastName, // Parameter for lastName
+    p_showUsername // Parameter for showUsername (expected to be a boolean from the caller)
   ) {
     // If not authenticated, redirect to login
     if (!isAuthenticated) {
@@ -838,23 +918,52 @@ const Chat = (function () {
 
     // Log incoming parameters for debugging
     console.log(
-      "FIXED VERSION - openChat function called with params:",
+      "Chat.openChat: RAW PARAMS RECEIVED:",
       JSON.parse(
         JSON.stringify({
-          // Log a deep copy to see the state at call time
           postId,
           recipientId,
           recipientName,
           avatar,
           postTitle,
-          username,
-          firstName,
-          lastName,
-          showUsername,
-          showUsernameType: typeof showUsername,
+          username: p_username, // param username
+          firstName: p_firstName, // param firstName
+          lastName: p_lastName, // param lastName
+          showUsername: p_showUsername, // param showUsername
+          showUsernameType: typeof p_showUsername,
         })
       )
     );
+
+    // Helper to sanitize name fields passed as parameters.
+    // Converts boolean true/false to "", and string "true"/"false" (case-insensitive) to "".
+    // Ensures other defined, non-null values are strings, or "" if undefined/null.
+    const sanitizeNameParameter = (paramValue) => {
+      if (typeof paramValue === "string") {
+        const lowerCaseValue = paramValue.toLowerCase();
+        if (lowerCaseValue === "true" || lowerCaseValue === "false") {
+          return ""; // Convert string "true" or "false" to empty string
+        }
+        return paramValue; // Return original string if it's not "true" or "false"
+      }
+      if (typeof paramValue === "boolean") {
+        return ""; // Convert boolean true or false to empty string
+      }
+      // For other types (numbers, undefined, null), ensure empty string if undefined/null, or stringify
+      return paramValue !== undefined && paramValue !== null
+        ? String(paramValue)
+        : "";
+    };
+
+    // Sanitize the incoming name parameters IMMEDIATELY.
+    const sanFirstName = sanitizeNameParameter(p_firstName);
+    const sanLastName = sanitizeNameParameter(p_lastName);
+    const sanUsername = sanitizeNameParameter(p_username);
+    // p_showUsername is expected to be a boolean from the caller (DOM listener)
+    // but we still parse it for full safety for other potential callers.
+    const parsedShowUsername =
+      p_showUsername === true ||
+      String(p_showUsername).toLowerCase() === "true";
 
     // Mark chat as active and clear any inactivity timer
     isChatActive = true;
@@ -922,40 +1031,66 @@ const Chat = (function () {
     const chatRoomId = `chat:${postId}:${currentUser?._id}:${recipientId}`;
     socket.currentChatRoom = chatRoomId;
 
-    // Parse showUsername to a boolean consistently.
-    const parsedShowUsername =
-      showUsername === true || String(showUsername).toLowerCase() === "true";
+    // Logic for finalFirstName and finalLastName
+    let finalFirstName;
+    let finalLastName;
 
-    // Prepare the userData object for updateChatHeader.
-    let finalFirstName = firstName || ""; // Prioritize explicit firstName parameter
-    let finalLastName = lastName || ""; // Prioritize explicit lastName parameter
-    const finalUsername = username || ""; // Use explicit username parameter or empty string
+    // If p_firstName and/or p_lastName were originally passed (i.e., not undefined),
+    // use their sanitized versions. This explicitly avoids the recipientName parsing
+    // if the original call intended to provide first/last names, even if those names,
+    // after this function's sanitization, are empty strings.
+    if (p_firstName !== undefined || p_lastName !== undefined) {
+      finalFirstName = sanFirstName; // Use sanitized p_firstName if p_firstName was provided
+      finalLastName = sanLastName; // Use sanitized p_lastName if p_lastName was provided
+      // If one was undefined, its sanitized version will be "", which is correct.
+      console.log(
+        "Chat.openChat: Using provided p_firstName/p_lastName (post-sanitization).",
+        { finalFirstName, finalLastName }
+      );
+    } else {
+      // BOTH p_firstName AND p_lastName were undefined in the call.
+      // This indicates an "old call pattern" or a situation where only recipientName is available.
+      // Now, try to parse from recipientName if appropriate.
+      console.log(
+        "Chat.openChat: p_firstName & p_lastName were undefined. Attempting to parse recipientName."
+      );
+      finalFirstName = ""; // Default before parsing
+      finalLastName = ""; // Default before parsing
 
-    // If explicit firstName/lastName were not provided (e.g. old call pattern),
-    // and we are not showing username, try to parse from recipientName.
-    if (
-      (!finalFirstName || !finalLastName) &&
-      !parsedShowUsername &&
-      recipientName &&
-      recipientName !== "Seller" &&
-      recipientName !== "Unknown User" &&
-      recipientName !== "@" + finalUsername
-    ) {
-      const nameParts = recipientName.split(" ");
-      if (!finalFirstName && nameParts.length >= 1) {
-        finalFirstName = nameParts[0];
-      }
-      if (!finalLastName && nameParts.length >= 2) {
-        finalLastName = nameParts.slice(1).join(" ");
+      if (
+        !parsedShowUsername &&
+        recipientName &&
+        recipientName !== "Seller" &&
+        recipientName !== "Unknown User" &&
+        recipientName !== "@" + sanUsername && // Use sanUsername (already sanitized from p_username)
+        !recipientName.startsWith("@")
+      ) {
+        const nameParts = recipientName.split(" ");
+        if (nameParts.length > 0) {
+          finalFirstName = sanitizeNameParameter(nameParts[0]);
+        }
+        if (nameParts.length > 1) {
+          finalLastName = sanitizeNameParameter(nameParts.slice(1).join(" "));
+        }
+        console.log(
+          `Chat.openChat: Parsed recipientName. finalFirstName="${finalFirstName}", finalLastName="${finalLastName}"`
+        );
+      } else {
+        console.log(
+          "Chat.openChat: Did not parse recipientName (e.g., showUsername true, or recipientName unsuitable)."
+        );
       }
     }
 
+    const finalUsernameToUse = sanUsername; // Already sanitized from p_username
+
+    // Prepare the userData object for updateChatHeader.
     const userData = {
       firstName: finalFirstName,
       lastName: finalLastName,
-      username: finalUsername,
+      username: finalUsernameToUse,
       avatar: avatar && avatar !== "" ? avatar : "/img/default-avatar.svg",
-      showUsername: parsedShowUsername,
+      showUsername: parsedShowUsername, // Use the reliably parsed boolean
     };
 
     console.log(
@@ -1021,8 +1156,6 @@ const Chat = (function () {
    */
   async function loadChatHistory(postId, userId) {
     try {
-      showLoadingState();
-
       // Validate parameters
       if (!postId || !userId) {
         console.error("Invalid parameters for loadChatHistory", {
@@ -1162,40 +1295,72 @@ const Chat = (function () {
 
     // Determine and set the recipient's display name in the chat header
     if (chatRecipientName) {
-      if (user.showUsername && user.username) {
+      let displayName = "User"; // Ultimate fallback
+
+      // Trim and prepare name parts from user object. Default to empty string if null/undefined.
+      const uFirstName = user.firstName ? String(user.firstName).trim() : "";
+      const uLastName = user.lastName ? String(user.lastName).trim() : "";
+      const uUsername = user.username ? String(user.username).trim() : "";
+      // user.showUsername is already a boolean from Chat.openChat's userData
+
+      if (user.showUsername && uUsername) {
         // If showUsername is true and username is available, display username
-        chatRecipientName.textContent = user.username;
+        displayName = uUsername;
         console.log(
           "Chat.js: updateChatHeader - Displaying username:",
-          user.username
+          uUsername
         );
-      } else if (!user.showUsername && user.firstName && user.lastName) {
-        // If showUsername is false and full name is available, display FirstName LastName
-        chatRecipientName.textContent =
-          `${user.firstName} ${user.lastName}`.trim();
+      } else if (user.showUsername === false) {
+        // Explicitly check for false
+        // If showUsername is false, prioritize FirstName LastName
+        if (uFirstName && uLastName) {
+          displayName = `${uFirstName} ${uLastName}`;
+          console.log(
+            "Chat.js: updateChatHeader - Displaying full name:",
+            displayName
+          );
+        } else if (uFirstName) {
+          displayName = uFirstName;
+          console.log(
+            "Chat.js: updateChatHeader - Displaying first name (fallback firstName only):",
+            displayName
+          );
+        } else if (uLastName) {
+          // Added case for only last name
+          displayName = uLastName;
+          console.log(
+            "Chat.js: updateChatHeader - Displaying last name (fallback lastName only):",
+            displayName
+          );
+        } else if (uUsername) {
+          // If no first/last name, but username exists (even if showUsername is false), use username as next fallback
+          displayName = uUsername;
+          console.log(
+            "Chat.js: updateChatHeader - Displaying username (fallback as full name missing):",
+            uUsername
+          );
+        }
+        // If displayName is still "User" here, it means uFirstName, uLastName, and uUsername were all empty.
+      } else if (uUsername) {
+        // Fallback for cases where showUsername might not be explicitly false (e.g. undefined from an old call pattern)
+        // but username is available. This is a weaker condition than user.showUsername === true.
+        displayName = uUsername;
         console.log(
-          "Chat.js: updateChatHeader - Displaying full name:",
-          chatRecipientName.textContent
+          "Chat.js: updateChatHeader - Displaying username (showUsername not strictly false, fallback to username):",
+          uUsername
         );
-      } else if (!user.showUsername && user.firstName) {
-        // Fallback: If showUsername is false and only firstName is available
-        chatRecipientName.textContent = user.firstName.trim();
+      }
+
+      // Final cleanup: if displayName ended up empty, or just "@" (from an empty username being prefixed), default to "User".
+      const finalTrimmedDisplayName = displayName.trim();
+      if (!finalTrimmedDisplayName || finalTrimmedDisplayName === "@") {
+        displayName = "User";
+      }
+
+      chatRecipientName.textContent = displayName;
+      if (displayName === "User") {
         console.log(
-          "Chat.js: updateChatHeader - Displaying first name (fallback):",
-          chatRecipientName.textContent
-        );
-      } else if (user.username) {
-        // Fallback: If other conditions aren't met but username is available (e.g. showUsername is false but no first/last name)
-        chatRecipientName.textContent = user.username;
-        console.log(
-          "Chat.js: updateChatHeader - Displaying username (fallback as full name missing):",
-          user.username
-        );
-      } else {
-        // Ultimate fallback if no usable name information is found
-        chatRecipientName.textContent = "User";
-        console.log(
-          "Chat.js: updateChatHeader - Using ultimate fallback name: User"
+          "Chat.js: updateChatHeader - Using ultimate fallback name: User (due to all parts being empty or invalid)"
         );
       }
     }
@@ -1435,20 +1600,6 @@ const Chat = (function () {
   }
 
   /**
-   * Show loading state in the chat
-   */
-  function showLoadingState() {
-    if (!chatMessages) return;
-
-    chatMessages.innerHTML = `
-      <div class="chat-loading">
-        <div class="loading-spinner"></div>
-        <p>Loading messages...</p>
-      </div>
-    `;
-  }
-
-  /**
    * Show empty state in the chat
    */
   function showEmptyState() {
@@ -1489,18 +1640,31 @@ const Chat = (function () {
       window.chatRoomCheckInterval = null;
     }
 
+    // Store IDs before clearing them
+    const oldPostId = currentPostId;
+    const oldRecipientId = currentRecipientId;
+
     // Clear chat content
     clearChat();
 
     // Reset current chat IDs
-    const oldPostId = currentPostId;
-    const oldRecipientId = currentRecipientId;
     currentPostId = "";
     currentRecipientId = "";
 
     // Mark chat as inactive and start the socket inactivity timer
     isChatActive = false;
     startSocketInactivityTimer();
+
+    // Emit an event to the server to leave the chat room
+    if (socket && socket.connected && oldPostId && oldRecipientId) {
+      console.log(
+        `Chat.js: closeChat - Emitting leave-chat for post ${oldPostId} with user ${oldRecipientId}`
+      );
+      socket.emit("leave-chat", {
+        postId: oldPostId,
+        recipientId: oldRecipientId, // This is the ID of the other user in the chat
+      });
+    }
 
     // Log for debugging
     console.log("Chat closed and state reset");
