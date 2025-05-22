@@ -318,4 +318,34 @@ router.get("/:id/verify/:token/success", (req, res) => {
   });
 });
 
+// About Us page
+router.get("/about-us", (req, res, next) => {
+  // Authenticate without redirecting - just check if user is logged in
+  passport.authenticate("jwt", { session: false }, async (err, user) => {
+    if (err) {
+      console.error("Authentication error:", err);
+      return next(err);
+    }
+
+    try {
+      // Fetch complete user data if user is authenticated
+      let userData = null;
+      if (user) {
+        userData = await User.findById(user._id);
+      }
+
+      // Render the about-us page
+      res.render("about-us", {
+        user: userData,
+      });
+    } catch (error) {
+      console.error("Error rendering about-us page:", error);
+      res.status(500).render("error", {
+        message: "Error loading about-us page",
+        error: { status: 500 },
+      });
+    }
+  })(req, res, next);
+});
+
 export default router;

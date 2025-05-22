@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     center: [39.0, 35.0],
     zoom: 5,
     zoomControl: true,
+    scrollWheelZoom: false,
     maxBounds: [
       [33.0, 25.0], // Southwest bounds
       [43.0, 45.0], // Northeast bounds
