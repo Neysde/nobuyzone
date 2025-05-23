@@ -127,7 +127,7 @@ export const uploadImage = async (req, res) => {
     // Upload to Cloudinary
     const result = await uploader.upload(fileContent, {
       resource_type: "auto",
-      folder: "barter/posts",
+      folder: "nobuyzone/posts",
       allowed_formats: ["jpg", "png", "webp", "jpeg"],
     });
 

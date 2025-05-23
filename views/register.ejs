@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Register | Barter</title>
+    <title>Kayıt Ol | NoBuyZone</title>
     <link rel="stylesheet" href="/css/header.css" />
     <link rel="stylesheet" href="/css/footer.css" />
     <link rel="stylesheet" href="/css/auth.css" />
@@ -13,83 +13,97 @@
       <div class="container">
         <div class="auth-card">
           <div class="auth-header">
-            <h1>Create Account</h1>
-            <p>Join Barter to start trading</p>
+            <h1>Hesap Oluştur</h1>
+            <p>Takas yapmaya başlamak için NoBuyZone'a katılın</p>
           </div>
 
           <form id="register-form" class="auth-form">
             <div class="form-group">
-              <label for="username">Username</label>
+              <label for="username">Kullanıcı Adı</label>
               <input
                 type="text"
                 id="username"
                 name="username"
                 required
-                placeholder="Choose a username"
+                placeholder="Bir kullanıcı adı seçin"
                 minlength="3"
                 autocomplete="username"
               />
-              <span class="hint">Username must be at least 3 characters</span>
+              <span class="hint">Kullanıcı adı en az 3 karakter olmalıdır</span>
             </div>
 
             <div class="form-group">
-              <label for="firstName">First Name</label>
+              <label for="firstName">Ad</label>
               <input
                 type="text"
                 id="firstName"
                 name="firstName"
                 required
-                placeholder="Enter your first name"
+                placeholder="Adınızı girin"
                 autocomplete="given-name"
               />
             </div>
 
             <div class="form-group">
-              <label for="lastName">Last Name</label>
+              <label for="lastName">Soyad</label>
               <input
                 type="text"
                 id="lastName"
                 name="lastName"
                 required
-                placeholder="Enter your last name"
+                placeholder="Soyadınızı girin"
                 autocomplete="family-name"
               />
             </div>
 
             <div class="form-group">
-              <label for="email">Email</label>
+              <label for="email">E-posta</label>
               <input
                 type="email"
                 id="email"
                 name="email"
                 required
-                placeholder="Enter your email address"
+                placeholder="E-posta adresinizi girin"
                 autocomplete="email"
               />
             </div>
 
             <div class="form-group">
-              <label for="password">Password</label>
+              <label for="password">Şifre</label>
               <input
                 type="password"
                 id="password"
                 name="password"
                 required
-                placeholder="Create a strong password"
+                placeholder="Güçlü bir şifre oluşturun"
                 autocomplete="new-password"
               />
               <span class="hint">
-                Password must be at least 8 characters with at least one
-                uppercase, lowercase, number, and special character
+                Şifre en az 8 karakter ve en az bir büyük harf, bir küçük harf,
+                bir rakam ve bir özel karakter içermelidir
               </span>
             </div>
 
+            <div class="form-group terms-checkbox">
+              <input
+                type="checkbox"
+                id="termsAccepted"
+                name="termsAccepted"
+                required
+              />
+              <label for="termsAccepted">
+                <a href="/terms-of-use" target="_blank">Kullanım Şartları</a> ve
+                <a href="/privacy-policy" target="_blank">Gizlilik Politikası</a
+                >'nı okudum ve kabul ediyorum
+              </label>
+            </div>
+
             <button type="submit" class="button button-primary full-width">
-              Create Account
+              Hesap Oluştur
             </button>
 
             <div class="auth-footer">
-              Already have an account? <a href="/api/login">Sign in</a>
+              Zaten hesabınız var mı? <a href="/api/login">Giriş Yap</a>
             </div>
           </form>
         </div>

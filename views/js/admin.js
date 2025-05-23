@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (
           confirm(
-            `Are you sure you want to delete this user (ID: ${userId})? This action cannot be undone.`
+            `Bu kullanıcıyı silmek istediğinizden emin misiniz (ID: ${userId})? Bu işlem geri alınamaz.`
           )
         ) {
           try {
@@ -22,13 +22,13 @@ document.addEventListener("DOMContentLoaded", () => {
               // Remove the user's row from the table
               const row = button.closest("tr");
               row.remove();
-              alert(result.message || "User deleted successfully.");
+              alert(result.message || "Kullanıcı başarıyla silindi.");
             } else {
-              alert(result.message || "Failed to delete user.");
+              alert(result.message || "Kullanıcı silinemedi.");
             }
           } catch (error) {
             console.error("Error deleting user:", error);
-            alert("An error occurred while trying to delete the user.");
+            alert("Kullanıcıyı silmeye çalışırken bir hata oluştu.");
           }
         }
       }
@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (
           confirm(
-            `Are you sure you want to delete this post (ID: ${postId})? This action cannot be undone.`
+            `Bu gönderiyi silmek istediğinizden emin misiniz (ID: ${postId})? Bu işlem geri alınamaz.`
           )
         ) {
           try {
@@ -57,13 +57,13 @@ document.addEventListener("DOMContentLoaded", () => {
             if (response.ok && result.success) {
               const row = button.closest("tr");
               row.remove();
-              alert(result.message || "Post deleted successfully.");
+              alert(result.message || "Gönderi başarıyla silindi.");
             } else {
-              alert(result.message || "Failed to delete post.");
+              alert(result.message || "Gönderi silinemedi.");
             }
           } catch (error) {
             console.error("Error deleting post:", error);
-            alert("An error occurred while trying to delete the post.");
+            alert("Gönderiyi silmeye çalışırken bir hata oluştu.");
           }
         }
       }

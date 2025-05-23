@@ -40,4 +40,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".about-section .card").forEach((section) => {
     observer.observe(section);
   });
+
+  // Immediately trigger animation for all cards
+  document.querySelectorAll(".about-section .card").forEach((section) => {
+    section.classList.add("visible");
+  });
 });

@@ -63,7 +63,7 @@ function initializeGallery() {
 
     // Make navigation buttons accessible via keyboard
     prevBtn.setAttribute("tabindex", "0");
-    prevBtn.setAttribute("aria-label", "Previous image");
+    prevBtn.setAttribute("aria-label", "Önceki resim");
     prevBtn.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
@@ -80,7 +80,7 @@ function initializeGallery() {
 
     // Make navigation buttons accessible via keyboard
     nextBtn.setAttribute("tabindex", "0");
-    nextBtn.setAttribute("aria-label", "Next image");
+    nextBtn.setAttribute("aria-label", "Sonraki resim");
     nextBtn.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
@@ -165,7 +165,7 @@ function initializeCarousel() {
     // Make close button accessible
     closeBtn.setAttribute("tabindex", "0");
     closeBtn.setAttribute("role", "button");
-    closeBtn.setAttribute("aria-label", "Close image carousel");
+    closeBtn.setAttribute("aria-label", "Resim galerisi kapat");
     closeBtn.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
@@ -1158,10 +1158,10 @@ function initializePostActions() {
           // Update UI based on the response
           if (data.isFavorited) {
             favoriteBtn.classList.add("active");
-            showNotification("Added to favorites", "success");
+            showNotification("Favorilere eklendi", "success");
           } else {
             favoriteBtn.classList.remove("active");
-            showNotification("Removed from favorites", "success");
+            showNotification("Favorilerden çıkarıldı", "success");
           }
         } else {
           // Try to parse error response if it's JSON
@@ -1169,12 +1169,12 @@ function initializePostActions() {
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.includes("application/json")) {
               const data = await response.json();
-              throw new Error(data.message || "Failed to update favorites");
+              throw new Error(data.message || "Favoriler güncellenemedi");
             } else {
-              throw new Error("Failed to update favorites");
+              throw new Error("Favoriler güncellenemedi");
             }
           } catch (parseError) {
-            throw new Error("Failed to update favorites");
+            throw new Error("Favoriler güncellenemedi");
           }
         }
       } catch (error) {
@@ -1237,10 +1237,10 @@ function initializePostActions() {
           // Update UI based on the response
           if (data.isFlagged) {
             flagBtn.classList.add("active");
-            showNotification("Post has been flagged", "success");
+            showNotification("Gönderi işaretlendi", "success");
           } else {
             flagBtn.classList.remove("active");
-            showNotification("Post has been unflagged", "success");
+            showNotification("Gönderinin işareti kaldırıldı", "success");
           }
         } else {
           // Try to parse error response if it's JSON
@@ -1248,12 +1248,12 @@ function initializePostActions() {
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.includes("application/json")) {
               const data = await response.json();
-              throw new Error(data.message || "Failed to update flag status");
+              throw new Error(data.message || "Gönderi işaretleme durumu güncellenemedi");
             } else {
-              throw new Error("Failed to update flag status");
+              throw new Error("Gönderi işaretleme durumu güncellenemedi");
             }
           } catch (parseError) {
-            throw new Error("Failed to update flag status");
+            throw new Error("Gönderi işaretleme durumu güncellenemedi");
           }
         }
       } catch (error) {

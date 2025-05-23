@@ -725,8 +725,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
       // Step 3: Update button text
       fullscreenToggle.innerHTML = mapContainer.classList.contains("fullscreen")
-        ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/></svg> Exit Fullscreen'
-        : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/></svg> Fullscreen';
+        ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/></svg> Tam Ekrandan Çık'
+        : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/></svg> Tam Ekran';
 
       // Step 4: Unlock state after everything is complete
       setTimeout(() => {
@@ -738,13 +738,13 @@ document.addEventListener("DOMContentLoaded", function () {
   // Handle location button click
   useMyLocationBtn.addEventListener("click", () => {
     if (!navigator.geolocation) {
-      showNotification("Geolocation is not supported by your browser", "error");
+      showNotification("Konum belirleme özelliği tarayıcınız tarafından desteklenmiyor", "error");
       return;
     }
 
     useMyLocationBtn.disabled = true;
     useMyLocationBtn.innerHTML =
-      '<span class="loading-spinner"></span> Getting location...';
+      '<span class="loading-spinner"></span> Konum alınıyor...';
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -756,7 +756,7 @@ document.addEventListener("DOMContentLoaded", function () {
       },
       (error) => {
         console.error("Error getting location:", error);
-        showNotification("Could not get your location", "error");
+        showNotification("Konumunuz alınamadı", "error");
         useMyLocationBtn.disabled = false;
         useMyLocationBtn.innerHTML =
           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2"/></svg> Use My Location';
@@ -880,7 +880,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // Show progress to user
         hideLoadingState(loader);
         loader = showLoadingState(
-          `Processing images... (0/${imageItems.length})`
+          `Resimler işleniyor... (0/${imageItems.length})`
         );
 
         // Process each image
@@ -891,7 +891,7 @@ document.addEventListener("DOMContentLoaded", function () {
           // Update progress message
           hideLoadingState(loader);
           loader = showLoadingState(
-            `Processing images... (${i + 1}/${imageItems.length})`
+            `Resimler işleniyor... (${i + 1}/${imageItems.length})`
           );
 
           // If already uploaded to Cloudinary (not a data URL), add directly

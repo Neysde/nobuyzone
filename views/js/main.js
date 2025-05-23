@@ -23,9 +23,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const createTooltipContent = (cityName, postCount) => {
     return `
       <div class="city-tooltip">
-        <span class="post-count">${postCount}</span> posts were listed in 
-        <span class="city-name">${cityName}</span>
-        <div class="tooltip-hint">To see these posts, click into ${cityName}</div>
+        <span class="post-count">${postCount}</span> ilan 
+        <span class="city-name">${cityName}</span> şehrinde listelendi
+        <div class="tooltip-hint">Bu ilanları görmek için ${cityName} şehrine tıklayın</div>
       </div>
     `;
   };
@@ -138,14 +138,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Ensure map shows all features
     map.fitBounds(geoLayer.getBounds(), { padding: [20, 20] });
   } catch (error) {
-    console.error("Error loading map data:", error);
+    console.error("Harita verilerini yüklerken hata:", error);
 
     // Display error message on the map
     const errorDiv = document.createElement("div");
     errorDiv.className = "map-error";
     errorDiv.innerHTML = `
-      <p>Failed to load map data. Please try refreshing the page.</p>
-      <p>Error: ${error.message}</p>
+      <p>Harita verileri yüklenemedi. Lütfen sayfayı yenileyin.</p>
+      <p>Hata: ${error.message}</p>
     `;
 
     document.querySelector(".map-container").appendChild(errorDiv);

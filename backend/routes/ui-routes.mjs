@@ -319,33 +319,111 @@ router.get("/:id/verify/:token/success", (req, res) => {
 });
 
 // About Us page
-router.get("/about-us", (req, res, next) => {
-  // Authenticate without redirecting - just check if user is logged in
-  passport.authenticate("jwt", { session: false }, async (err, user) => {
-    if (err) {
-      console.error("Authentication error:", err);
-      return next(err);
-    }
+router.get("/about-us", (req, res) => {
+  try {
+    res.render("about-us", {
+      user: req.user,
+      title: "Hakkımızda | NoBuyZone",
+      page: "about-us",
+      layout: "layout",
+    });
+  } catch (error) {
+    console.error("Error rendering about-us page:", error);
+    res.status(500).render("error", {
+      message: "Error loading about-us page",
+      error: { status: 500 },
+    });
+  }
+});
 
-    try {
-      // Fetch complete user data if user is authenticated
-      let userData = null;
-      if (user) {
-        userData = await User.findById(user._id);
-      }
+// Safety page
+router.get("/safety", (req, res) => {
+  try {
+    res.render("safety", {
+      user: req.user,
+      title: "Güvenlik | NoBuyZone",
+      page: "safety",
+      layout: "layout",
+    });
+  } catch (error) {
+    console.error("Error rendering safety page:", error);
+    res.status(500).render("error", {
+      message: "Error loading safety page",
+      error: { status: 500 },
+    });
+  }
+});
 
-      // Render the about-us page
-      res.render("about-us", {
-        user: userData,
-      });
-    } catch (error) {
-      console.error("Error rendering about-us page:", error);
-      res.status(500).render("error", {
-        message: "Error loading about-us page",
-        error: { status: 500 },
-      });
-    }
-  })(req, res, next);
+// Terms of Use page
+router.get("/terms-of-use", (req, res) => {
+  try {
+    res.render("terms-of-use", {
+      user: req.user,
+      title: "Kullanım Koşulları | NoBuyZone",
+      page: "terms-of-use",
+      layout: "layout",
+    });
+  } catch (error) {
+    console.error("Error rendering terms-of-use page:", error);
+    res.status(500).render("error", {
+      message: "Error loading terms-of-use page",
+      error: { status: 500 },
+    });
+  }
+});
+
+// Contact Us page
+router.get("/contact-us", (req, res) => {
+  try {
+    res.render("contact-us", {
+      user: req.user,
+      title: "Bize Ulaşın | NoBuyZone",
+      page: "contact-us",
+      layout: "layout",
+    });
+  } catch (error) {
+    console.error("Error rendering contact-us page:", error);
+    res.status(500).render("error", {
+      message: "Error loading contact-us page",
+      error: { status: 500 },
+    });
+  }
+});
+
+// Privacy Policy page
+router.get("/privacy-policy", (req, res) => {
+  try {
+    res.render("privacy-policy", {
+      user: req.user,
+      title: "Gizlilik Politikası | NoBuyZone",
+      page: "privacy-policy",
+      layout: "layout",
+    });
+  } catch (error) {
+    console.error("Error rendering privacy-policy page:", error);
+    res.status(500).render("error", {
+      message: "Error loading privacy-policy page",
+      error: { status: 500 },
+    });
+  }
+});
+
+// Cookie Policy page
+router.get("/cookie-policy", (req, res) => {
+  try {
+    res.render("cookie-policy", {
+      user: req.user,
+      title: "Çerez Politikası | NoBuyZone",
+      page: "cookie-policy",
+      layout: "layout",
+    });
+  } catch (error) {
+    console.error("Error rendering cookie-policy page:", error);
+    res.status(500).render("error", {
+      message: "Error loading cookie-policy page",
+      error: { status: 500 },
+    });
+  }
 });
 
 export default router;

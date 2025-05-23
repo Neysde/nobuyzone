@@ -42,12 +42,15 @@
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--space-xl);
   margin-bottom: var(--space-xl);
+  justify-content: center;
+  text-align: center;
 }
 
 .footer-section h4 {
   color: var(--neutral-100);
   font-size: var(--font-size-lg);
   margin-bottom: var(--space-md);
+  text-align: center;
 }
 
 .footer-section ul {

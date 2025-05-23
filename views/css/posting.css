@@ -226,6 +226,7 @@ body {
 
 .posting-sidebar .card:last-child {
   margin-bottom: 0;
+  flex: 1; /* Make the card fill available space */
 }
 
 .posting-main .card:last-child {
@@ -480,7 +481,7 @@ textarea {
 .map-container {
   position: relative;
   margin: -var(--space-lg);
-  margin-bottom: var(--space-md);
+  margin-bottom: -var(--space-lg);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   overflow: hidden;
 }
@@ -523,11 +524,17 @@ textarea {
 
 #use-my-location {
   margin: var(--space-md);
+  margin-bottom: -var(--space-sm); /* Reduced negative margin to bring elements closer */
   width: calc(100% - var(--space-md) * 2);
 }
 
 .location-fields {
   padding: 0 var(--space-md);
+  padding-top: 0;
+  margin-top: -var(--space-sm); /* Adjusted to reduce the gap */
+  position: relative;
+  z-index: 1;
+  padding-bottom: var(--space-md); /* Added padding at bottom for consistent spacing */
 }
 
 /* Contact Options */
@@ -537,8 +544,10 @@ textarea {
 }
 
 .contact-card {
-  /* No explicit height */
-  margin-bottom: 0;
+  /* Match height with location card */
+  margin-bottom: 0px;
+  display: flex;
+  flex-direction: column;
 }
 
 .contact-description {
@@ -666,6 +675,11 @@ textarea {
 }
 
 /* Action Buttons */
+.location-card {
+  display: flex;
+  flex-direction: column;
+}
+
 .action-card {
   display: flex;
   flex-direction: column;

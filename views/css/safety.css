@@ -1,0 +1,240 @@
+/* safety.css - Copied from about-us.css for the Safety page */
+/* - Safety Page Styles (copied from about-us.css) */
+:root {
+  /* Colors */
+  --primary: #60a5fa;
+  --primary-dark: #3b82f6;
+  --primary-light: #bfdbfe;
+
+  /* Neutral Colors */
+  --neutral-100: #ffffff;
+  --neutral-200: #f7f7f7;
+  --neutral-300: #e5e5e5;
+  --neutral-400: #d4d4d4;
+  --neutral-500: #a3a3a3;
+  --neutral-600: #737373;
+  --neutral-700: #404040;
+  --neutral-800: #262626;
+  --neutral-900: #171717;
+
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-xxl: 3rem;
+
+  /* Font Sizes */
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 2rem;
+  --font-size-4xl: 2.5rem;
+}
+
+/* Base styles for safety page */
+.about-us-page {
+  padding: var(--space-xl) 0;
+  background-color: var(--neutral-200);
+  min-height: calc(100vh - 200px);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+.about-us-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 var(--space-md);
+}
+
+/* Hero section styles */
+.hero {
+  text-align: center;
+  margin-bottom: var(--space-xxl);
+}
+
+.page-title {
+  font-size: var(--font-size-4xl);
+  font-weight: 700;
+  color: var(--neutral-800);
+  margin-bottom: var(--space-md);
+}
+
+.underline {
+  height: 4px;
+  width: 80px;
+  background-color: var(--primary);
+  margin: 0 auto;
+  animation: expand 1.5s ease-out forwards;
+}
+
+@keyframes expand {
+  from {
+    width: 0;
+  }
+  to {
+    width: 80px;
+  }
+}
+
+/* Card styles for content sections */
+.card {
+  background-color: var(--neutral-100);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-xl);
+}
+
+/* Animation styles for cards */
+.animate-card {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.animate-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Add staggered animation delay for sections */
+.mission-section .animate-card {
+  transition-delay: 0.1s;
+}
+
+.what-section .animate-card {
+  transition-delay: 0.2s;
+}
+
+.values-section .animate-card {
+  transition-delay: 0.3s;
+}
+
+/* Section styles */
+.about-section {
+  margin-bottom: var(--space-xl);
+}
+
+.about-section h2 {
+  font-size: var(--font-size-2xl);
+  color: var(--neutral-800);
+  margin-bottom: var(--space-md);
+  position: relative;
+}
+
+.about-section h2::after {
+  content: "";
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  width: 50px;
+  height: 3px;
+  background-color: var(--primary);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s ease-out 0.2s;
+}
+
+.visible .about-section h2::after,
+.about-section h2::after.visible {
+  transform: scaleX(1);
+}
+
+.about-section p {
+  font-size: var(--font-size-lg);
+  line-height: 1.6;
+  color: var(--neutral-700);
+  margin-bottom: var(--space-md);
+}
+
+.about-section p:last-child {
+  margin-bottom: 0;
+}
+
+/* Additional styles for main-content when on safety page */
+.main-content {
+  background-color: var(--neutral-200);
+  min-height: calc(100vh - 200px);
+}
+
+/* Call to action container - remove since we don't have the join section anymore */
+.cta-container {
+  display: none;
+}
+
+/* Button styles */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md) var(--space-lg);
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: var(--font-size-md);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.button-primary {
+  background-color: var(--primary);
+  color: white;
+}
+
+.button-primary:hover {
+  background-color: var(--primary-dark);
+}
+
+.button-outline {
+  background-color: transparent;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+}
+
+.button-outline:hover {
+  background-color: var(--primary-light);
+  border-color: var(--primary-dark);
+}
+
+/* Media queries for responsive design */
+@media (max-width: 768px) {
+  .page-title {
+    font-size: var(--font-size-3xl);
+  }
+
+  .about-section h2 {
+    font-size: var(--font-size-xl);
+  }
+
+  .about-section p {
+    font-size: var(--font-size-md);
+  }
+
+  .card {
+    padding: var(--space-lg);
+  }
+
+  .cta-container {
+    flex-direction: column;
+  }
+
+  .button {
+    width: 100%;
+  }
+}
+
+/* Indented list for safety page */
+.indented-list {
+  padding-left: 2em;
+  margin-bottom: var(--space-md);
+}
+
+@media (max-width: 600px) {
+  .indented-list {
+    padding-left: 1em;
+  }
+}

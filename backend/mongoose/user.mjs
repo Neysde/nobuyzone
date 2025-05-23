@@ -38,6 +38,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  termsAccepted: {
+    type: Boolean,
+    required: true,
+  },
   //Store user's favorite posts
   favorites: [
     {

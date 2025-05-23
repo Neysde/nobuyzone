@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
   <head>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title><%= post.title %> | Barter</title>
+    <title><%= post.title %> | NoBuyZone</title>
     <link rel="stylesheet" href="/css/header.css" />
     <link rel="stylesheet" href="/css/footer.css" />
     <link rel="stylesheet" href="/css/post-detail.css" />
@@ -121,7 +121,7 @@
                     <circle cx="8.5" cy="8.5" r="1.5" />
                     <path d="M20.4 14.5L16 10 4 20" />
                   </svg>
-                  <p>No images available</p>
+                  <p>Resim yok</p>
                 </div>
               </div>
               <% } %>
@@ -133,26 +133,60 @@
 
               <div class="post-meta">
                 <div class="meta-item">
-                  <span class="meta-label">Posted:</span>
+                  <span class="meta-label">Yayınlanma Tarihi:</span>
                   <span class="meta-value"
                     ><%= new Date(post.updatedAt).toLocaleDateString("tr-TR")
                     %></span
                   >
                 </div>
                 <div class="meta-item">
-                  <span class="meta-label">Category:</span>
-                  <span class="meta-value category-badge"
-                    ><%= post.category.charAt(0).toUpperCase() +
-                    post.category.slice(1) %></span
-                  >
+                  <span class="meta-label">Kategori:</span>
+                  <span class="meta-value category-badge">
+                    <% 
+                    let categoryDisplay = "";
+                    switch(post.category) {
+                      case "elektronik": categoryDisplay = "Elektronik"; break;
+                      case "ev-dekorasyonu": categoryDisplay = "Ev Dekorasyonu"; break;
+                      case "evcil-hayvan-urunleri": categoryDisplay = "Evcil Hayvan Ürünleri"; break;
+                      case "gida": categoryDisplay = "Gıda"; break;
+                      case "giyim": categoryDisplay = "Giyim"; break;
+                      case "hediyelik-esya": categoryDisplay = "Hediyelik Eşya"; break;
+                      case "kitap-kirtasiye": categoryDisplay = "Kitap & Kırtasiye"; break;
+                      case "kozmetik-kisisel-bakim": categoryDisplay = "Kozmetik & Kişisel Bakım"; break;
+                      case "mobilya": categoryDisplay = "Mobilya"; break;
+                      case "oto-aksesuar-yedek-parca": categoryDisplay = "Oto Aksesuar & Yedek Parça"; break;
+                      case "saglik-medikal": categoryDisplay = "Sağlık & Medikal"; break;
+                      case "spor-outdoor": categoryDisplay = "Spor & Outdoor"; break;
+                      case "teknoloji": categoryDisplay = "Teknoloji"; break;
+                      case "diger": categoryDisplay = "Diğer"; break;
+                      // Fallback for old categories
+                      case "furniture": categoryDisplay = "Mobilya"; break;
+                      case "electronics": categoryDisplay = "Elektronik"; break;
+                      case "clothing": categoryDisplay = "Giyim"; break;
+                      case "books": categoryDisplay = "Kitap & Kırtasiye"; break;
+                      case "other": categoryDisplay = "Diğer"; break;
+                      default: categoryDisplay = post.category.charAt(0).toUpperCase() + post.category.slice(1).replace(/-/g, ' '); break;
+                    }
+                    %>
+                    <%= categoryDisplay %>
+                  </span>
                 </div>
                 <div class="meta-item">
-                  <span class="meta-label">Condition:</span>
+                  <span class="meta-label">Durum:</span>
                   <span
                     class="meta-value condition-badge condition-<%= post.condition %>"
                   >
-                    <%= post.condition.charAt(0).toUpperCase() +
-                    post.condition.slice(1).replace('-', ' ') %>
+                    <% 
+                    let conditionDisplay = "";
+                    switch(post.condition) {
+                      case "new": conditionDisplay = "Yeni"; break;
+                      case "like-new": conditionDisplay = "Yeni Gibi"; break;
+                      case "good": conditionDisplay = "İyi"; break;
+                      case "fair": conditionDisplay = "Orta"; break;
+                      default: conditionDisplay = post.condition.charAt(0).toUpperCase() + post.condition.slice(1).replace('-', ' '); break;
+                    }
+                    %>
+                    <%= conditionDisplay %>
                   </span>
                 </div>
               </div>
@@ -160,7 +194,7 @@
               <div class="section-divider"></div>
 
               <div class="description-section">
-                <h2>Description</h2>
+                <h2>Açıklama</h2>
                 <div class="description-content"><%= post.description %></div>
               </div>
             </div>
@@ -170,7 +204,7 @@
           <div class="post-sidebar flex-column">
             <!-- User Actions Card -->
             <div class="card user-actions-card">
-              <h2>Actions</h2>
+              <h2>İşlemler</h2>
               <div class="action-buttons">
                 <button
                   id="favorite-btn"
@@ -189,7 +223,7 @@
                       d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"
                     ></path>
                   </svg>
-                  <span>Favorite</span>
+                  <span>Favorilere Ekle</span>
                 </button>
                 <button
                   id="flag-btn"
@@ -209,14 +243,14 @@
                     ></path>
                     <line x1="4" y1="22" x2="4" y2="15"></line>
                   </svg>
-                  <span>Flag</span>
+                  <span>Şikayet Et</span>
                 </button>
               </div>
             </div>
 
             <!-- Contact Card -->
             <div class="card contact-card">
-              <h2>Contact Information</h2>
+              <h2>İletişim Bilgileri</h2>
 
               <!-- Posted by section -->
               <div class="posted-by-section">
@@ -244,7 +278,7 @@
                   <% } %>
                 </div>
                 <div class="posted-by-content">
-                  <span class="posted-by-label">Posted by:</span>
+                  <span class="posted-by-label">İlan Sahibi:</span>
                   <span class="posted-by-name">
                     <% if (post.createdByUser && post.createdByUser.showUsername
                     && post.createdByUser.username) { %> <%=
@@ -276,17 +310,19 @@
                 </div>
                 <div class="contact-details">
                   <span class="contact-type">
-                    <% if (preference === 'in-app') { %> In-App Chat <% } else
-                    if (preference === 'email') { %> Email <% } else { %> Phone
-                    <% } %>
+                    <% if (preference === 'in-app') { %> Uygulama İçi Sohbet <%
+                    } else if (preference === 'email') { %> E-posta <% } else {
+                    %> Telefon <% } %>
                   </span>
                   <span class="contact-info">
-                    <% if (preference === 'in-app') { %> Message the seller <% }
-                    else if (preference === 'email') { %>
+                    <% if (preference === 'in-app') { %> Satıcıya mesaj gönder
+                    <% } else if (preference === 'email') { %>
                     <!-- Don't show partial email information -->
-                    Contact via email <% } else if (preference === 'phone') { %>
+                    E-posta ile iletişime geç <% } else if (preference ===
+                    'phone') { %>
                     <!-- Don't show partial phone information -->
-                    Contact via phone <% } else { %> Contact for details <% } %>
+                    Telefon ile iletişime geç <% } else { %> Detaylar için
+                    iletişime geç <% } %>
                   </span>
                 </div>
 
@@ -316,7 +352,7 @@
                         d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
                       />
                     </svg>
-                    Text
+                    Mesaj
                   </button>
                   <% } else if (preference === 'email') { %>
                   <button
@@ -336,7 +372,7 @@
                       />
                       <polyline points="22,6 12,13 2,6" />
                     </svg>
-                    Get Email
+                    E-Posta
                   </button>
                   <% } else if (preference === 'phone') { %>
                   <button
@@ -355,7 +391,7 @@
                         d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"
                       />
                     </svg>
-                    Get Phone
+                    Telefon Al
                   </button>
                   <% } %>
                 </div>
@@ -367,8 +403,8 @@
                   <span>💬</span>
                 </div>
                 <div class="contact-details">
-                  <span class="contact-type">In-App Chat</span>
-                  <span class="contact-info">Message the seller</span>
+                  <span class="contact-type">Uygulama İçi Sohbet</span>
+                  <span class="contact-info">Satıcıya mesaj gönder</span>
                 </div>
               </div>
               <% } %>
@@ -376,7 +412,7 @@
 
             <!-- Location Card -->
             <div class="card location-card">
-              <h2>Location</h2>
+              <h2>Konum</h2>
               <div class="location-details">
                 <div class="map-container">
                   <div
@@ -402,7 +438,7 @@
                           d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"
                         />
                       </svg>
-                      <span class="fullscreen-text">Fullscreen</span>
+                      <span class="fullscreen-text">Tam Ekran</span>
                     </button>
                   </div>
                 </div>

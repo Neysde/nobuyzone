@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard | Barter</title>
+    <title>Kontrol Paneli | NoBuyZone</title>
     <link rel="stylesheet" href="/css/header.css" />
     <link rel="stylesheet" href="/css/footer.css" />
     <link rel="stylesheet" href="/css/dashboard.css" />
@@ -36,7 +36,7 @@
               ></path>
               <polyline points="17 21 17 13 7 13 7 21"></polyline>
             </svg>
-            Postings
+            İlanlarım
           </a>
           <a href="#drafts" class="tab-link" data-tab="drafts">
             <svg
@@ -53,7 +53,7 @@
                 d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
               ></path>
             </svg>
-            Drafts
+            Taslaklar
           </a>
           <a href="#favorites" class="tab-link" data-tab="favorites">
             <svg
@@ -67,7 +67,7 @@
                 d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"
               ></path>
             </svg>
-            Favorites
+            Favoriler
           </a>
           <a href="#messages" class="tab-link" data-tab="messages">
             <svg
@@ -81,7 +81,7 @@
                 d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
               ></path>
             </svg>
-            Messages
+            Mesajlar
           </a>
           <a href="#account" class="tab-link" data-tab="account">
             <svg
@@ -94,7 +94,7 @@
               <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            Account
+            Hesap
           </a>
         </div>
 
@@ -104,7 +104,7 @@
           <div id="postings" class="tab-pane active">
             <div class="card">
               <div class="section-header">
-                <h2>Your Postings</h2>
+                <h2>İlanlarınız</h2>
                 <a href="/posting" class="button button-primary">
                   <svg
                     width="16"
@@ -115,7 +115,7 @@
                   >
                     <path d="M12 5v14M5 12h14"></path>
                   </svg>
-                  New Posting
+                  Yeni İlan
                 </a>
               </div>
 
@@ -124,12 +124,12 @@
                 <table class="data-table">
                   <thead>
                     <tr>
-                      <th>Image</th>
-                      <th>Title</th>
-                      <th>Category</th>
-                      <th>Location</th>
-                      <th>Published</th>
-                      <th class="th-actions">Actions</th>
+                      <th>Resim</th>
+                      <th>Başlık</th>
+                      <th>Kategori</th>
+                      <th>Konum</th>
+                      <th>Yayınlanma</th>
+                      <th class="th-actions">İşlemler</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -147,10 +147,35 @@
                         <a href="/post/<%= post._id %>"><%= post.title %></a>
                       </td>
                       <td class="post-category">
-                        <span class="category-badge"
-                          ><%= post.category.charAt(0).toUpperCase() +
-                          post.category.slice(1) %></span
-                        >
+                        <span class="category-badge">
+                          <% 
+                          let categoryDisplay = "";
+                          switch(post.category) {
+                            case "elektronik": categoryDisplay = "Elektronik"; break;
+                            case "ev-dekorasyonu": categoryDisplay = "Ev Dekorasyonu"; break;
+                            case "evcil-hayvan-urunleri": categoryDisplay = "Evcil Hayvan Ürünleri"; break;
+                            case "gida": categoryDisplay = "Gıda"; break;
+                            case "giyim": categoryDisplay = "Giyim"; break;
+                            case "hediyelik-esya": categoryDisplay = "Hediyelik Eşya"; break;
+                            case "kitap-kirtasiye": categoryDisplay = "Kitap & Kırtasiye"; break;
+                            case "kozmetik-kisisel-bakim": categoryDisplay = "Kozmetik & Kişisel Bakım"; break;
+                            case "mobilya": categoryDisplay = "Mobilya"; break;
+                            case "oto-aksesuar-yedek-parca": categoryDisplay = "Oto Aksesuar & Yedek Parça"; break;
+                            case "saglik-medikal": categoryDisplay = "Sağlık & Medikal"; break;
+                            case "spor-outdoor": categoryDisplay = "Spor & Outdoor"; break;
+                            case "teknoloji": categoryDisplay = "Teknoloji"; break;
+                            case "diger": categoryDisplay = "Diğer"; break;
+                            // Fallback for old categories
+                            case "furniture": categoryDisplay = "Mobilya"; break;
+                            case "electronics": categoryDisplay = "Elektronik"; break;
+                            case "clothing": categoryDisplay = "Giyim"; break;
+                            case "books": categoryDisplay = "Kitap & Kırtasiye"; break;
+                            case "other": categoryDisplay = "Diğer"; break;
+                            default: categoryDisplay = post.category.charAt(0).toUpperCase() + post.category.slice(1).replace(/-/g, ' '); break;
+                          }
+                          %>
+                          <%= categoryDisplay %>
+                        </span>
                       </td>
                       <td class="post-location">
                         <%= post.location.city %>, <%= post.location.district %>
@@ -178,7 +203,7 @@
                               <line x1="10" y1="11" x2="10" y2="17"></line>
                               <line x1="14" y1="11" x2="14" y2="17"></line>
                             </svg>
-                            Remove
+                            Kaldır
                           </button>
                         </div>
                       </td>
@@ -201,10 +226,10 @@
                   ></path>
                   <polyline points="17 21 17 13 7 13 7 21"></polyline>
                 </svg>
-                <h3>No postings yet</h3>
-                <p>Create your first posting to start bartering</p>
+                <h3>Henüz ilan yok</h3>
+                <p>Takas yapmaya başlamak için ilk ilanınızı oluşturun</p>
                 <a href="/posting" class="button button-primary"
-                  >Create Posting</a
+                  >İlan Oluştur</a
                 >
               </div>
               <% } %>
@@ -214,21 +239,19 @@
           <!-- Drafts Tab -->
           <div id="drafts" class="tab-pane">
             <div class="card">
-              <div class="section-header">
-                <h2>Your Drafts</h2>
-              </div>
+              <div class="section-header"><h2>Taslaklarınız</h2></div>
 
               <% if (drafts && drafts.length > 0) { %>
               <div class="table-responsive">
                 <table class="data-table">
                   <thead>
                     <tr>
-                      <th>Image</th>
-                      <th>Title</th>
-                      <th>Category</th>
-                      <th>Location</th>
-                      <th>Last Edited</th>
-                      <th class="th-actions">Actions</th>
+                      <th>Resim</th>
+                      <th>Başlık</th>
+                      <th>Kategori</th>
+                      <th>Konum</th>
+                      <th>Son Düzenleme</th>
+                      <th class="th-actions">İşlemler</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -247,23 +270,48 @@
                       </td>
                       <td class="post-title">
                         <a href="/posting?draft=<%= draft._id %>">
-                          <%= draft.title || 'Untitled Draft' %>
+                          <%= draft.title || 'Başlıksız Taslak' %>
                         </a>
                       </td>
                       <td class="post-category">
                         <% if (draft.category) { %>
-                        <span class="category-badge"
-                          ><%= draft.category.charAt(0).toUpperCase() +
-                          draft.category.slice(1) %></span
-                        >
+                        <span class="category-badge">
+                          <% 
+                          let categoryDisplay = "";
+                          switch(draft.category) {
+                            case "elektronik": categoryDisplay = "Elektronik"; break;
+                            case "ev-dekorasyonu": categoryDisplay = "Ev Dekorasyonu"; break;
+                            case "evcil-hayvan-urunleri": categoryDisplay = "Evcil Hayvan Ürünleri"; break;
+                            case "gida": categoryDisplay = "Gıda"; break;
+                            case "giyim": categoryDisplay = "Giyim"; break;
+                            case "hediyelik-esya": categoryDisplay = "Hediyelik Eşya"; break;
+                            case "kitap-kirtasiye": categoryDisplay = "Kitap & Kırtasiye"; break;
+                            case "kozmetik-kisisel-bakim": categoryDisplay = "Kozmetik & Kişisel Bakım"; break;
+                            case "mobilya": categoryDisplay = "Mobilya"; break;
+                            case "oto-aksesuar-yedek-parca": categoryDisplay = "Oto Aksesuar & Yedek Parça"; break;
+                            case "saglik-medikal": categoryDisplay = "Sağlık & Medikal"; break;
+                            case "spor-outdoor": categoryDisplay = "Spor & Outdoor"; break;
+                            case "teknoloji": categoryDisplay = "Teknoloji"; break;
+                            case "diger": categoryDisplay = "Diğer"; break;
+                            // Fallback for old categories
+                            case "furniture": categoryDisplay = "Mobilya"; break;
+                            case "electronics": categoryDisplay = "Elektronik"; break;
+                            case "clothing": categoryDisplay = "Giyim"; break;
+                            case "books": categoryDisplay = "Kitap & Kırtasiye"; break;
+                            case "other": categoryDisplay = "Diğer"; break;
+                            default: categoryDisplay = draft.category.charAt(0).toUpperCase() + draft.category.slice(1).replace(/-/g, ' '); break;
+                          }
+                          %>
+                          <%= categoryDisplay %>
+                        </span>
                         <% } else { %>
-                        <span class="category-badge category-empty">None</span>
+                        <span class="category-badge category-empty">Yok</span>
                         <% } %>
                       </td>
                       <td class="post-location">
                         <% if (draft.location && draft.location.city) { %> <%=
                         draft.location.city %>, <%= draft.location.district %>
-                        <% } else { %> Not specified <% } %>
+                        <% } else { %> Belirtilmemiş <% } %>
                       </td>
                       <td class="post-date">
                         <%= new
@@ -288,7 +336,7 @@
                               <line x1="10" y1="11" x2="10" y2="17"></line>
                               <line x1="14" y1="11" x2="14" y2="17"></line>
                             </svg>
-                            Remove
+                            Kaldır
                           </button>
                         </div>
                       </td>
@@ -313,8 +361,8 @@
                     d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
                   ></path>
                 </svg>
-                <h3>No drafts saved</h3>
-                <p>Your saved drafts will appear here</p>
+                <h3>Kaydedilmiş taslak yok</h3>
+                <p>Kaydettiğiniz taslaklar burada görünecek</p>
               </div>
               <% } %>
             </div>
@@ -323,21 +371,19 @@
           <!-- Favorites Tab -->
           <div id="favorites" class="tab-pane">
             <div class="card">
-              <div class="section-header">
-                <h2>Your Favorites</h2>
-              </div>
+              <div class="section-header"><h2>Favorileriniz</h2></div>
 
               <% if (favorites && favorites.length > 0) { %>
               <div class="table-responsive">
                 <table class="data-table">
                   <thead>
                     <tr>
-                      <th>Image</th>
-                      <th>Title</th>
-                      <th>Category</th>
-                      <th>Location</th>
-                      <th>Added</th>
-                      <th class="th-actions">Actions</th>
+                      <th>Resim</th>
+                      <th>Başlık</th>
+                      <th>Kategori</th>
+                      <th>Konum</th>
+                      <th>Eklenme</th>
+                      <th class="th-actions">İşlemler</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -360,10 +406,35 @@
                         >
                       </td>
                       <td class="post-category">
-                        <span class="category-badge"
-                          ><%= favorite.post.category.charAt(0).toUpperCase() +
-                          favorite.post.category.slice(1) %></span
-                        >
+                        <span class="category-badge">
+                          <% 
+                          let categoryDisplay = "";
+                          switch(favorite.post.category) {
+                            case "elektronik": categoryDisplay = "Elektronik"; break;
+                            case "ev-dekorasyonu": categoryDisplay = "Ev Dekorasyonu"; break;
+                            case "evcil-hayvan-urunleri": categoryDisplay = "Evcil Hayvan Ürünleri"; break;
+                            case "gida": categoryDisplay = "Gıda"; break;
+                            case "giyim": categoryDisplay = "Giyim"; break;
+                            case "hediyelik-esya": categoryDisplay = "Hediyelik Eşya"; break;
+                            case "kitap-kirtasiye": categoryDisplay = "Kitap & Kırtasiye"; break;
+                            case "kozmetik-kisisel-bakim": categoryDisplay = "Kozmetik & Kişisel Bakım"; break;
+                            case "mobilya": categoryDisplay = "Mobilya"; break;
+                            case "oto-aksesuar-yedek-parca": categoryDisplay = "Oto Aksesuar & Yedek Parça"; break;
+                            case "saglik-medikal": categoryDisplay = "Sağlık & Medikal"; break;
+                            case "spor-outdoor": categoryDisplay = "Spor & Outdoor"; break;
+                            case "teknoloji": categoryDisplay = "Teknoloji"; break;
+                            case "diger": categoryDisplay = "Diğer"; break;
+                            // Fallback for old categories
+                            case "furniture": categoryDisplay = "Mobilya"; break;
+                            case "electronics": categoryDisplay = "Elektronik"; break;
+                            case "clothing": categoryDisplay = "Giyim"; break;
+                            case "books": categoryDisplay = "Kitap & Kırtasiye"; break;
+                            case "other": categoryDisplay = "Diğer"; break;
+                            default: categoryDisplay = favorite.post.category.charAt(0).toUpperCase() + favorite.post.category.slice(1).replace(/-/g, ' '); break;
+                          }
+                          %>
+                          <%= categoryDisplay %>
+                        </span>
                       </td>
                       <td class="post-location">
                         <%= favorite.post.location.city %>, <%=
@@ -390,7 +461,7 @@
                                 d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"
                               ></path>
                             </svg>
-                            Unfavorite
+                            Favorilerden Çıkar
                           </button>
                         </div>
                       </td>
@@ -412,10 +483,10 @@
                     d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"
                   ></path>
                 </svg>
-                <h3>No favorites yet</h3>
-                <p>Items you favorite will appear here</p>
+                <h3>Henüz favori yok</h3>
+                <p>Favorileriniz burada görünecek</p>
                 <a href="/find-posts" class="button button-primary"
-                  >Browse Items</a
+                  >Ürünlere Göz At</a
                 >
               </div>
               <% } %>
@@ -425,20 +496,18 @@
           <!-- Messages Tab -->
           <div id="messages" class="tab-pane">
             <div class="card">
-              <div class="section-header">
-                <h2>Your Messages</h2>
-              </div>
+              <div class="section-header"><h2>Mesajlarınız</h2></div>
 
               <% if (chats && chats.length > 0) { %>
               <div class="table-responsive">
                 <table class="data-table">
                   <thead>
                     <tr>
-                      <th>Contact</th>
-                      <th>Post</th>
-                      <th>Last Message</th>
-                      <th>Date</th>
-                      <th class="th-actions">Actions</th>
+                      <th>Kişi</th>
+                      <th>İlan</th>
+                      <th>Son Mesaj</th>
+                      <th>Tarih</th>
+                      <th class="th-actions">İşlemler</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -478,7 +547,7 @@
                         <span
                           class="<%= chat.unreadCount > 0 ? 'unread-message' : '' %>"
                         >
-                          <% if (chat.lastMessage.sentByCurrentUser) { %> You:
+                          <% if (chat.lastMessage.sentByCurrentUser) { %> Siz:
                           <%= chat.lastMessage.content %> <% } else { %> <%=
                           chat.lastMessage.content %> <% } %>
                         </span>
@@ -502,7 +571,7 @@
                                 d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
                               ></path>
                             </svg>
-                            Open Chat
+                            Sohbeti Aç
                           </button>
                         </div>
                       </td>
@@ -524,10 +593,10 @@
                     d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
                   ></path>
                 </svg>
-                <h3>No messages yet</h3>
-                <p>Your conversations will appear here</p>
+                <h3>Henüz mesaj yok</h3>
+                <p>Konuşmalarınız burada görünecek</p>
                 <a href="/find-posts" class="button button-primary"
-                  >Browse Items</a
+                  >Ürünlere Göz At</a
                 >
               </div>
               <% } %>
@@ -569,7 +638,7 @@
                         d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
                       ></path>
                     </svg>
-                    Upload Photo
+                    Fotoğraf Yükle
                   </button>
                 </div>
                 <div class="profile-info">
@@ -582,13 +651,11 @@
             </div>
 
             <div class="card">
-              <div class="section-header">
-                <h2>Account Details</h2>
-              </div>
+              <div class="section-header"><h2>Hesap Bilgileri</h2></div>
 
               <div class="account-details">
                 <div class="account-field">
-                  <div class="field-label">Username</div>
+                  <div class="field-label">Kullanıcı Adı</div>
                   <div class="field-value">
                     <span id="username-value"><%= user.username %></span>
                     <div
@@ -606,13 +673,13 @@
                           id="save-username"
                           class="button button-small button-primary"
                         >
-                          Save
+                          Kaydet
                         </button>
                         <button
                           id="cancel-username-edit"
                           class="button button-small button-outline"
                         >
-                          Cancel
+                          İptal
                         </button>
                       </div>
                     </div>
@@ -634,28 +701,26 @@
                           d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
                         ></path>
                       </svg>
-                      Change Username
+                      Kullanıcı Adını Değiştir
                     </button>
                   </div>
                 </div>
 
                 <div class="account-field">
-                  <div class="field-label">First Name</div>
+                  <div class="field-label">Ad</div>
                   <div class="field-value"><%= user.firstName %></div>
                 </div>
-
                 <div class="account-field">
-                  <div class="field-label">Last Name</div>
+                  <div class="field-label">Soyad</div>
                   <div class="field-value"><%= user.lastName %></div>
                 </div>
-
                 <div class="account-field">
-                  <div class="field-label">Email</div>
+                  <div class="field-label">E-posta</div>
                   <div class="field-value"><%= user.email %></div>
                 </div>
 
                 <div class="account-field">
-                  <div class="field-label">Password</div>
+                  <div class="field-label">Şifre</div>
                   <div class="field-value">
                     <span>••••••••</span>
                     <a
@@ -679,20 +744,20 @@
                         ></rect>
                         <path d="M7 11V7a5 5 0 0110 0v4"></path>
                       </svg>
-                      Change Password
+                      Şifre Değiştir
                     </a>
                   </div>
                 </div>
 
                 <!-- Privacy Settings -->
                 <div class="account-field">
-                  <div class="field-label">Privacy</div>
+                  <div class="field-label">Gizlilik</div>
                   <div class="field-value privacy-setting">
                     <label class="checkbox-container">
                       <!-- Checkbox to control whether to show username only or full name to other users -->
                       <span
-                        >Only show your username. This will hide your first and
-                        last name from other users.</span
+                        >Sadece kullanıcı adınızı göster. Bu, adınızı ve
+                        soyadınızı diğer kullanıcılardan gizleyecektir.</span
                       >
                       <input type="checkbox" id="show-username-toggle" <%=
                       user.showUsername ? 'checked' : '' %> >
@@ -711,7 +776,7 @@
     <div id="photo-cropper-modal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>Crop Profile Photo</h3>
+          <h3>Profil Fotoğrafı Kırp</h3>
           <button type="button" class="close-button" id="close-cropper">
             <svg
               width="16"
@@ -726,21 +791,22 @@
         </div>
         <div class="modal-body">
           <div class="cropper-container">
-            <img id="image-to-crop" src="" alt="Image to crop" />
+            <img id="image-to-crop" src="" alt="Kırpılacak görsel" />
           </div>
           <div class="cropper-instructions">
             <p>
-              Drag to reposition. Drag handles to resize. Double-click to switch
-              between crop and move modes.
+              Yeniden konumlandırmak için sürükleyin. Boyutlandırmak için kenar
+              tutamaçlarını sürükleyin. Kırpma ve taşıma modları arasında geçiş
+              yapmak için çift tıklayın.
             </p>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="button button-outline" id="cancel-crop">
-            Cancel
+            İptal
           </button>
           <button type="button" class="button button-primary" id="apply-crop">
-            Apply Crop
+            Kırpmayı Uygula
           </button>
         </div>
       </div>
@@ -765,27 +831,31 @@
 
     <!-- Add helper function for formatting timestamps -->
     <script>
-      // Helper function to format dates for chat messages
+      // Helper function to format dates for chat messages in Turkish format
       function formatTime(dateString) {
         const date = new Date(dateString);
         const now = new Date();
 
         // If it's today, show time
         if (date.toDateString() === now.toDateString()) {
-          return date.toLocaleTimeString([], {
+          return date.toLocaleTimeString('tr-TR', {
             hour: "2-digit",
             minute: "2-digit",
           });
         }
 
-        // If it's within a week, show day name
+        // If it's within a week, show day name in Turkish
         const dayDiff = Math.floor((now - date) / (1000 * 60 * 60 * 24));
         if (dayDiff < 7) {
-          return date.toLocaleDateString([], { weekday: "short" });
+          return date.toLocaleDateString('tr-TR', { weekday: "short" });
         }
 
-        // Otherwise show date
-        return date.toLocaleDateString([], { month: "short", day: "numeric" });
+        // Otherwise show date in Turkish format (DD.MM.YYYY)
+        return date.toLocaleDateString('tr-TR', { 
+          day: "2-digit", 
+          month: "2-digit", 
+          year: "numeric" 
+        });
       }
 
       // Initialize chat functionality when the document is ready

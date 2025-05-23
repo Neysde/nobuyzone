@@ -95,7 +95,7 @@ function initPostActions() {
 
       if (
         confirm(
-          "Are you sure you want to delete this post? This action cannot be undone."
+          "Bu gönderiyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
         )
       ) {
         deletePost(postId);
@@ -110,7 +110,7 @@ function initPostActions() {
       e.stopPropagation(); // Prevent row click
       const postId = this.dataset.postId;
 
-      if (confirm("Are you sure you want to delete this draft?")) {
+      if (confirm("Bu taslağı silmek istediğinizden emin misiniz?")) {
         deleteDraft(postId);
       }
     });
@@ -143,7 +143,7 @@ async function deletePost(postId) {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to delete post");
+      throw new Error("Gönderi silinemedi");
     }
 
     // Remove the post row
@@ -169,17 +169,17 @@ async function deletePost(postId) {
             <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"></path>
             <polyline points="17 21 17 13 7 13 7 21"></polyline>
           </svg>
-          <h3>No postings yet</h3>
-          <p>Create your first posting to start bartering</p>
-          <a href="/posting" class="button button-primary">Create Posting</a>
+          <h3>Henüz gönderi yok</h3>
+          <p>Takas yapmaya başlamak için ilk gönderinizi oluşturun</p>
+          <a href="/posting" class="button button-primary">Gönderi Oluştur</a>
         </div>
       `;
     }
 
-    showNotification("Post deleted successfully", "success");
+    showNotification("Gönderi başarıyla silindi", "success");
   } catch (error) {
     console.error("Error deleting post:", error);
-    showNotification("Failed to delete post", "error");
+    showNotification("Gönderi silinemedi", "error");
   } finally {
     hideLoadingState();
   }
@@ -201,7 +201,7 @@ async function deleteDraft(draftId) {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to delete draft");
+      throw new Error("Taslak silinemedi");
     }
 
     // Remove the draft row
@@ -225,16 +225,16 @@ async function deleteDraft(draftId) {
             <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
             <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
           </svg>
-          <h3>No drafts saved</h3>
-          <p>Your saved drafts will appear here</p>
+          <h3>Kaydedilmiş taslak yok</h3>
+          <p>Kaydettiğiniz taslaklar burada görünecek</p>
         </div>
       `;
     }
 
-    showNotification("Draft deleted successfully", "success");
+    showNotification("Taslak başarıyla silindi", "success");
   } catch (error) {
     console.error("Error deleting draft:", error);
-    showNotification("Failed to delete draft", "error");
+    showNotification("Taslak silinemedi", "error");
   } finally {
     hideLoadingState();
   }
@@ -257,7 +257,7 @@ async function removeFromFavorites(postId) {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to remove from favorites");
+      throw new Error("Favorilerden kaldırılamadı");
     }
 
     // Remove the favorite row
@@ -282,17 +282,17 @@ async function removeFromFavorites(postId) {
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"></path>
           </svg>
-          <h3>No favorites yet</h3>
-          <p>Items you favorite will appear here</p>
-          <a href="/find-posts" class="button button-primary">Browse Items</a>
+          <h3>Henüz favori yok</h3>
+          <p>Favori olarak işaretlediğiniz ürünler burada görünecek</p>
+          <a href="/find-posts" class="button button-primary">Ürünlere Göz At</a>
         </div>
       `;
     }
 
-    showNotification("Removed from favorites", "success");
+    showNotification("Favorilerden kaldırıldı", "success");
   } catch (error) {
     console.error("Error removing from favorites:", error);
-    showNotification("Failed to remove from favorites", "error");
+    showNotification("Favorilerden kaldırılamadı", "error");
   } finally {
     hideLoadingState();
   }
@@ -326,14 +326,14 @@ function initProfilePhoto() {
       const file = e.target.files[0];
       const fileType = file.type;
       if (!fileType.startsWith("image/")) {
-        showNotification("Please select an image file", "error");
+        showNotification("Lütfen bir resim dosyası seçin", "error");
         return;
       }
 
       // Check file size (max 5MB)
       const maxSize = 5 * 1024 * 1024; // 5MB in bytes
       if (file.size > maxSize) {
-        showNotification("Image file size must be less than 5MB", "error");
+        showNotification("Resim dosyası boyutu 5MB'den küçük olmalıdır", "error");
         return;
       }
 
@@ -449,13 +449,13 @@ function initProfilePhoto() {
       });
 
       if (!uploadResponse.ok) {
-        throw new Error("Failed to upload profile picture");
+        throw new Error("Profil resmi yüklenemedi");
       }
 
       const uploadData = await uploadResponse.json();
 
       if (!uploadData.success) {
-        throw new Error(uploadData.error || "Image upload failed");
+        throw new Error(uploadData.error || "Resim yükleme başarısız");
       }
 
       // Step 2: Update the user profile with the new image URL
@@ -471,7 +471,7 @@ function initProfilePhoto() {
       });
 
       if (!updateResponse.ok) {
-        throw new Error("Failed to update profile picture");
+        throw new Error("Profil resmi güncellenemedi");
       }
 
       const data = await updateResponse.json();
@@ -494,10 +494,10 @@ function initProfilePhoto() {
         profileAvatar.appendChild(imgElement);
       }
 
-      showNotification("Profile picture updated successfully", "success");
+      showNotification("Profil resmi başarıyla güncellendi", "success");
     } catch (error) {
       console.error("Error uploading profile picture:", error);
-      showNotification("Failed to update profile picture", "error");
+      showNotification("Profil resmi güncellenemedi", "error");
     } finally {
       hideLoadingState();
     }

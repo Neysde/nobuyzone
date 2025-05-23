@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 // Connection string
-const connectionString = "mongodb+srv://root:1Ow6PKsLv1It8K2S@cluster0.ok6h4.mongodb.net/bartertest?retryWrites=true&w=majority&appName=Cluster0";
+const connectionString = "mongodb+srv://root:1Ow6PKsLv1It8K2S@cluster0.ok6h4.mongodb.net/nobuyzonetest?retryWrites=true&w=majority&appName=Cluster0";
 
 async function testLocationSearch() {
   try {
