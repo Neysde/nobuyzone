@@ -345,7 +345,7 @@ export function initializeSocketServer(httpServer) {
             "Cannot leave chat room: User has no valid ID (socket.user._id is missing)"
           );
           socket.emit("error", {
-            message: "Authentication error: Invalid user ID for leaving chat.",
+            message: "Kimlik doğrulama hatası: Sohbetten çıkmak için geçersiz kullanıcı kimliği.",
           });
           return;
         }
@@ -355,7 +355,7 @@ export function initializeSocketServer(httpServer) {
             `Cannot leave chat room: Missing postId or recipientId. Received postId: ${postId}, recipientId: ${recipientId}`
           );
           socket.emit("error", {
-            message: "Invalid parameters for leaving chat room.",
+            message: "Sohbet odasından çıkmak için geçersiz parametreler.",
           });
           return;
         }
@@ -405,7 +405,7 @@ export function initializeSocketServer(httpServer) {
       } catch (error) {
         console.error("Error handling leave-chat event:", error);
         socket.emit("error", {
-          message: "Server error while trying to leave chat room.",
+          message: "Sohbet odasından çıkmaya çalışırken sunucu hatası.",
         });
       }
     });
@@ -416,7 +416,9 @@ export function initializeSocketServer(httpServer) {
         const { postId, recipientId, content } = messageData;
 
         if (!postId || !recipientId || !content) {
-          socket.emit("error", { message: "Missing required fields" });
+          socket.emit("error", {
+            message: "Gerekli alanlar eksik",
+          });
           return;
         }
 
@@ -426,7 +428,7 @@ export function initializeSocketServer(httpServer) {
         if (!currentUserId) {
           console.error("Cannot send message: User has no valid ID");
           socket.emit("error", {
-            message: "Authentication error: Invalid user ID",
+            message: "Kimlik doğrulama hatası: Geçersiz kullanıcı kimliği",
           });
           return;
         }
@@ -490,7 +492,7 @@ export function initializeSocketServer(httpServer) {
         // Send notification to recipient
         io.to(`user:${recipientId}`).emit("notification", {
           type: "new-message",
-          message: `New message from ${socket.user.name || "a user"}`,
+          message: `${socket.user.name || "bir kullanıcı"}'dan yeni mesaj`,
           sender: {
             _id: currentUserId,
             name:
@@ -564,7 +566,7 @@ export function initializeSocketServer(httpServer) {
 
         // Ensure we have at least something to display
         if (!firstName && !lastName) {
-          firstName = "Someone";
+          firstName = "Birisi";
         }
 
         console.log(

@@ -13,7 +13,7 @@ import mongoose from 'mongoose';
 import Post from '../mongoose/post.mjs';
 
 // MongoDB connection string - replace with your actual connection string
-const MONGODB_URI = 'mongodb://localhost:27017/barter-app';
+const MONGODB_URI = 'mongodb://localhost:27017/nobuyzone-app';
 
 // Connect to MongoDB
 mongoose.connect(MONGODB_URI)

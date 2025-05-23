@@ -13,18 +13,18 @@
             <rect width="48" height="48" rx="8" fill="var(--primary)" />
             <path d="M12 20H36M12 28H36" stroke="white" stroke-width="3" />
           </svg>
-          <span>barter</span>
+          <span>NoBuyZone</span>
         </a>
         <!-- Add mobile-actions container for mobile view buttons -->
         <div class="mobile-actions"></div>
       </div>
       <div class="header-actions">
         <!-- Create post button always visible -->
-        <a href="/posting" class="button button-primary">Create Post</a>
+        <a href="/posting" class="button button-primary">İlan Oluştur</a>
 
         <% if (typeof user === 'undefined' || !user) { %>
         <!-- Sign in button for non-authenticated users -->
-        <a href="/api/login" class="button button-outline">Sign In</a>
+        <a href="/api/login" class="button button-outline">Giriş Yap</a>
         <% } else { %>
         <!-- Notification bell icon with unread count -->
         <a
@@ -58,7 +58,7 @@
               />
               <% } else { %>
               <div class="avatar-placeholder">
-                <%= user.firstName ? user.firstName.charAt(0) : 'U' %>
+                <%= user.firstName ? user.firstName.charAt(0) : 'K' %>
               </div>
               <% } %>
             </div>
@@ -68,12 +68,12 @@
             </span>
           </a>
           <div class="dropdown-menu">
-            <a href="/dashboard/<%= user._id %>#postings">Posts</a>
-            <a href="/dashboard/<%= user._id %>#drafts">Drafts</a>
-            <a href="/dashboard/<%= user._id %>#favorites">Favorites</a>
-            <a href="/dashboard/<%= user._id %>#messages">Messages</a>
-            <a href="/dashboard/<%= user._id %>#account">Account</a>
-            <a href="#" id="logout-link">Logout</a>
+            <a href="/dashboard/<%= user._id %>#postings">İlanlarım</a>
+            <a href="/dashboard/<%= user._id %>#drafts">Taslaklar</a>
+            <a href="/dashboard/<%= user._id %>#favorites">Favoriler</a>
+            <a href="/dashboard/<%= user._id %>#messages">Mesajlar</a>
+            <a href="/dashboard/<%= user._id %>#account">Hesap</a>
+            <a href="#" id="logout-link">Çıkış Yap</a>
           </div>
         </div>
         <% } %>
@@ -81,7 +81,7 @@
     </div>
     <% if (typeof breadcrumbs !== 'undefined') { %>
     <div class="breadcrumbs">
-      <a href="/">Home</a> &gt; <span><%= breadcrumbs %></span>
+      <a href="/">Ana Sayfa</a> &gt; <span><%= breadcrumbs %></span>
     </div>
     <% } %>
   </div>

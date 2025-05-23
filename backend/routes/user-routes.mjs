@@ -22,6 +22,10 @@ const register = async (req, res) => {
         lastName: Joi.string().required().label("Last Name"),
         email: Joi.string().email().required().label("Email"),
         password: passwordComplexity().required().label("password"), //these funcs. come from joi
+        termsAccepted: Joi.boolean().valid(true).required().messages({
+          "any.only": "Kullanım Koşullarını ve Gizlilik Politikasını kabul etmelisiniz",
+          "any.required": "Koşulların kabulü gereklidir",
+        }),
       });
       return schema.validate(data);
     };
@@ -35,10 +39,14 @@ const register = async (req, res) => {
     if (user)
       return res
         .status(409)
-        .send({ message: "User with given email already exist" });
+        .send({ message: "Bu e-posta adresi ile kayıtlı bir kullanıcı zaten var" });
 
     const hashedPassword = await hashPassword(req.body.password);
-    user = await new User({ ...req.body, password: hashedPassword }).save();
+    user = await new User({
+      ...req.body,
+      password: hashedPassword,
+      termsAccepted: req.body.termsAccepted,
+    }).save();
     const token = await new Token({
       userId: user._id,
       token: jwt.sign(
@@ -51,14 +59,14 @@ const register = async (req, res) => {
     const url = `${process.env.BASE_URL}/${user.id}/verify/${token.token}`;
 
     //Maybe need to change this html design used in email template later.
-    const subject = " Please Verify Email";
+    const subject = "Lütfen E-posta Adresinizi Doğrulayın";
     const message = `
-      <h3>Hello ${user.firstName} ${user.lastName}</h3>
-      <p>Thanks yor for registering for our services.</p>
-      <p>Click this link <a href="${url}">here</a> to verify your email</p>
+      <h3>Merhaba ${user.firstName} ${user.lastName}</h3>
+      <p>Sitemize kayıt olduğunuz için teşekkür ederiz.</p>
+      <p>E-posta adresinizi doğrulamak için <a href="${url}">buraya</a> tıklayın</p>
     `;
     await sendEmail(user.email, subject, message); //imports sendEmail func.
-    res.status(201).send({ message: "An Email sent to your account please" });
+    res.status(201).send({ message: "Hesabınıza bir e-posta gönderildi" });
   } catch (error) {
     console.log(error);
     res.status(500).send({ message: "Internally Server Error" });
@@ -93,7 +101,7 @@ const login = async (req, res) => {
       return res.status(401).send({ message: "Invalid Email or Password" });
 
     if (!user.verified) {
-      return res.status(403).send({ message: "Verify your Account." });
+      return res.status(403).send({ message: "Hesabınızı doğrulayın." });
     }
     const token = jwt.sign(
       { email: user.email, _id: user._id },
@@ -107,7 +115,7 @@ const login = async (req, res) => {
         maxAge: parseInt(process.env.COOKIE_MAX_AGE),
       })
       .status(200)
-      .send({ data: token, message: "User has successfully logged in" });
+      .send({ data: token, message: "Kullanıcı başarıyla giriş yaptı" });
   } catch (error) {
     res.status(500).send({ message: "Internally Server Error" });
   }
@@ -116,7 +124,7 @@ const login = async (req, res) => {
 const emailLink = async (req, res) => {
   try {
     const user = await User.findOne({ _id: req.params.id });
-    if (!user) return res.status(400).send({ message: "Invalid Link" });
+    if (!user) return res.status(400).send({ message: "Geçersiz Bağlantı" });
 
     const token = await Token.findOne({
       userId: user._id,
@@ -150,7 +158,7 @@ const passwordLink = async (req, res) => {
     if (!user)
       return res
         .status(409)
-        .send({ message: "user with email does not exist" });
+        .send({ message: "Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı" });
 
     let token = await Token.findOne({ userId: user._id });
 
@@ -165,16 +173,16 @@ const passwordLink = async (req, res) => {
       }).save();
     }
     const url = `${process.env.BASE_URL}/reset/${user.id}/${token.token}`;
-    const subject = "Password Reset";
+    const subject = "Şifre Sıfırlama";
     const message = `
-        <p>Here is a link to reset your password</p>
-        <p>Click thi link <a href="${url}">here</a> to reset your password</p>
+        <p>Şifrenizi sıfırlamak için bir bağlantı</p>
+        <p>Şifrenizi sıfırlamak için <a href="${url}">buraya</a> tıklayın</p>
       `;
 
     await sendEmail(user.email, subject, message);
 
     res.status(200).send({
-      message: "Password reset link has been sent to your email account",
+      message: "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi",
     });
   } catch (error) {
     res.status(500).send({ message: "Internal server error" });
@@ -191,7 +199,7 @@ const verifyUrl = async (req, res) => {
       token: req.params.token,
     });
     if (!token) return res.status(400).send({ message: "Invalid Link" });
-    res.status(200).send({ message: "Valid Url" });
+    res.status(200).send({ message: "Geçerli Bağlantı" });
   } catch (error) {
     res.status(500).send({ message: "Internal server error" });
   }
@@ -225,7 +233,7 @@ const resetPassword = async (req, res) => {
     user.password = hashedPassword;
     await user.save();
     await token.deleteOne(); //use deleteOne instead of delete or remove(deprecated)
-    res.status(200).send({ message: "Password has been successfully reset" });
+    res.status(200).send({ message: "Şifreniz başarıyla sıfırlandı" });
   } catch (error) {
     res.status(500).send({ message: "Internal Server Error" });
   }
@@ -248,7 +256,7 @@ const sendEmail = async (email, subject, message) => {
 
     await transporter.sendMail({
       from:
-        process.env.EMAIL_FROM || `"Barter App" <${process.env.EMAIL_USER}>`,
+        process.env.EMAIL_FROM || `"NoBuyZone" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: subject,
       html: message,
@@ -266,10 +274,10 @@ const logout = async (req, res) => {
     res
       .clearCookie("login")
       .status(200)
-      .send({ message: "Logged out successfully" });
+      .send({ message: "Başarıyla çıkış yapıldı" });
   } catch (error) {
     console.error("Error during logout:", error);
-    res.status(500).send({ message: "Internal server error during logout" });
+    res.status(500).send({ message: "Çıkış yaparken sunucu hatası oluştu" });
   }
 };
 
@@ -295,7 +303,7 @@ router.patch("/api/user/username", isAuthenticated, async (req, res) => {
     const { username } = req.body;
 
     if (!username) {
-      return res.status(400).send({ message: "Username is required" });
+      return res.status(400).send({ message: "Kullanıcı adı gereklidir" });
     }
 
     // Check if username is already taken
@@ -304,13 +312,13 @@ router.patch("/api/user/username", isAuthenticated, async (req, res) => {
       existingUser &&
       existingUser._id.toString() !== req.user._id.toString()
     ) {
-      return res.status(409).send({ message: "Username already taken" });
+      return res.status(409).send({ message: "Bu kullanıcı adı zaten alınmış" });
     }
 
     // Update the username
     await User.findByIdAndUpdate(req.user._id, { username });
 
-    res.status(200).send({ message: "Username updated successfully" });
+    res.status(200).send({ message: "Kullanıcı adı başarıyla güncellendi" });
   } catch (error) {
     console.error("Error updating username:", error);
     res.status(500).send({ message: "Internal server error" });
@@ -326,7 +334,7 @@ router.patch("/api/user/profile-picture", isAuthenticated, async (req, res) => {
     if (!url || !publicId) {
       return res.status(400).json({
         success: false,
-        error: "Image URL and publicId are required",
+        error: "Resim URL'si ve publicId gereklidir",
       });
     }
 
@@ -368,13 +376,13 @@ router.patch("/api/user/profile-picture", isAuthenticated, async (req, res) => {
     // Return success response
     return res.status(200).json({
       success: true,
-      message: "Profile picture updated successfully",
+      message: "Profil resmi başarıyla güncellendi",
     });
   } catch (error) {
     console.error("Error updating profile picture:", error);
     return res.status(500).json({
       success: false,
-      error: "Failed to update profile picture: " + error.message,
+      error: "Profil resmi güncellenemedi: " + error.message,
     });
   }
 });
@@ -388,7 +396,7 @@ router.patch("/api/user/privacy", isAuthenticated, async (req, res) => {
     if (typeof showUsername !== "boolean") {
       return res.status(400).json({
         success: false,
-        message: "showUsername must be a boolean value",
+        message: "showUsername bir boolean değeri olmalıdır",
       });
     }
 

@@ -1,6 +1,6 @@
 /**
  * Find Posts Page JavaScript
- * Handles filtering, sorting, and pagination for the barter items listing page
+ * Handles filtering, sorting, and pagination for the nobuyzone items listing page
  */
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -583,11 +583,11 @@ document.addEventListener("DOMContentLoaded", function () {
     cities.sort((a, b) => a.name.localeCompare(b.name)); //a and b are city objects. This compares its names and sorts them in alphabetical order.
 
     //Clear and populate global city select
-    globalCity.innerHTML = '<option value="">Select City</option>';
+    globalCity.innerHTML = '<option value="">Şehir Seçin</option>';
 
     //Clear and populate radius search city select
     const radiusCity = document.getElementById("radius-city");
-    radiusCity.innerHTML = '<option value="">Select City</option>';
+    radiusCity.innerHTML = '<option value="">Şehir Seçin</option>';
 
     //Add cities to both dropdowns
     cities.forEach((city) => {
@@ -623,7 +623,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Clear current options except the first one
-    globalDistrict.innerHTML = '<option value="">Select District</option>';
+    globalDistrict.innerHTML = '<option value="">İlçe Seçin</option>';
 
     // If no city selected, just return
     if (!cityId) return;
@@ -674,7 +674,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const radiusDistrict = document.getElementById("radius-district");
 
     // Clear current options except the first one
-    radiusDistrict.innerHTML = '<option value="">Select District</option>';
+    radiusDistrict.innerHTML = '<option value="">İlçe Seçin</option>';
 
     // If no city selected, just return
     if (!cityId) return;
@@ -1170,12 +1170,12 @@ document.addEventListener("DOMContentLoaded", function () {
       if (currentFilters.useRadius) {
         radiusSearchCard.classList.add("active");
         // Update the search button text to indicate active state
-        searchRadiusBtn.textContent = "Searching with Radius";
+        searchRadiusBtn.textContent = "Yarıçap ile Aranıyor";
         searchRadiusBtn.classList.add("active");
       } else {
         radiusSearchCard.classList.remove("active");
         // Reset button text
-        searchRadiusBtn.textContent = "Search this location";
+        searchRadiusBtn.textContent = "Bu konumu ara";
         searchRadiusBtn.classList.remove("active");
       }
     }
@@ -1542,7 +1542,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function renderPosts(posts) {
     if (!posts || posts.length === 0) {
       postsGrid.innerHTML =
-        '<div class="no-results">No posts found matching your criteria.</div>';
+        '<div class="no-results">Kriterlerinize uygun gönderi bulunamadı.</div>';
       resultsCount.textContent = "0";
       return;
     }
@@ -1566,7 +1566,7 @@ document.addEventListener("DOMContentLoaded", function () {
           ${
             post.images && post.images.length > 0
               ? `<img src="${post.images[0].url}" alt="${post.title}">`
-              : `<img src="https://via.placeholder.com/300x200" alt="No image available">`
+              : `<img src="https://via.placeholder.com/300x200" alt="Resim mevcut değil">`
           }
         </div>
         <div class="post-details">
@@ -1579,7 +1579,7 @@ document.addEventListener("DOMContentLoaded", function () {
               </svg>
               ${post.location.city}, ${post.location.district}
             </span>
-            <span class="post-date">Posted: ${new Date(
+            <span class="post-date">Yayınlanma Tarihi: ${new Date(
               post.createdAt
             ).toLocaleDateString("tr-TR", {
               year: "numeric",

@@ -1,5 +1,5 @@
 /**
- * Chat Module for Barter App
+ * Chat Module for NoBuyZone App
  * Handles client-side chat functionality using Socket.IO
  * Optimized for compatibility with the updated backend implementation
  */
@@ -558,7 +558,7 @@ const Chat = (function () {
       socket.on("connect_error", (error) => {
         console.error("Connection error:", error);
         showNotification(
-          "Failed to connect to chat server. Please refresh the page to try again.",
+          "Sohbet sunucusuna bağlanılamadı. Lütfen tekrar denemek için sayfayı yenileyin.",
           "error"
         );
       });
@@ -601,7 +601,7 @@ const Chat = (function () {
           "Failed to reconnect to the chat server after multiple attempts"
         );
         showNotification(
-          "Connection to chat server lost. Please refresh the page.",
+          "Sohbet sunucusu bağlantısı kesildi. Lütfen sayfayı yenileyin.",
           "error"
         );
       });
@@ -815,7 +815,7 @@ const Chat = (function () {
 
     socket.on("error", (error) => {
       console.error("Socket error:", error);
-      showNotification(error.message || "An error occurred", "error");
+      showNotification(error.message || "Bir hata oluştu", "error");
     });
   }
 
@@ -993,7 +993,7 @@ const Chat = (function () {
       // Final check if connection was established
       if (!socket || !socket.connected) {
         showNotification(
-          "Could not connect to chat server. Please try again later.",
+          "Sohbet sunucusuna bağlanılamadı. Lütfen daha sonra tekrar deneyin.",
           "error"
         );
         return;
@@ -1162,7 +1162,7 @@ const Chat = (function () {
           postId,
           userId,
         });
-        showNotification("Could not load chat: missing parameters", "error");
+        showNotification("Sohbet yüklenemedi: eksik parametreler", "error");
         return;
       }
 
@@ -1235,7 +1235,7 @@ const Chat = (function () {
       console.error("Error loading chat history:", error);
       showEmptyState();
       showNotification(
-        `Failed to load chat history: ${error.message}`,
+        `Sohbet geçmişi yüklenemedi: ${error.message}`,
         "error"
       );
     }
@@ -1498,7 +1498,7 @@ const Chat = (function () {
       window.lastMessageTimeout = messageTimeout;
     } catch (error) {
       console.error("Error sending message:", error);
-      showNotification("Failed to send message. Please try again.", "error");
+      showNotification("Mesaj gönderilemedi. Lütfen tekrar deneyin.", "error");
     } finally {
       // Re-enable input and keep button disabled until new input is entered
       chatInput.disabled = false;

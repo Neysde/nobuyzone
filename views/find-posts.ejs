@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Find Posts | Barter</title>
+    <title>İlan Arama | NoBuyZone</title>
     <meta
       name="description"
-      content="Search and find items to barter on our platform"
+      content="Platformumuzda takas edilecek eşyaları arayın ve bulun"
     />
     <link rel="stylesheet" href="/css/header.css" />
     <link rel="stylesheet" href="/css/footer.css" />
@@ -41,7 +41,7 @@
             <input
               type="text"
               id="global-search-input"
-              placeholder="What are you looking for?"
+              placeholder="Ne arıyorsunuz?"
               class="search-input"
             />
           </div>
@@ -49,10 +49,36 @@
           <!-- Categories dropdown -->
           <div class="categories-field">
             <select id="global-categories" class="field-select">
-              <option value="all">All Categories</option>
+              <option value="all">Tüm Kategoriler</option>
               <% Object.keys(categories).forEach(category => { %>
               <option value="<%= category %>">
-                <%= category.charAt(0).toUpperCase() + category.slice(1) %>
+                <% 
+                let categoryDisplay = "";
+                switch(category) {
+                  case "elektronik": categoryDisplay = "Elektronik"; break;
+                  case "ev-dekorasyonu": categoryDisplay = "Ev Dekorasyonu"; break;
+                  case "evcil-hayvan-urunleri": categoryDisplay = "Evcil Hayvan Ürünleri"; break;
+                  case "gida": categoryDisplay = "Gıda"; break;
+                  case "giyim": categoryDisplay = "Giyim"; break;
+                  case "hediyelik-esya": categoryDisplay = "Hediyelik Eşya"; break;
+                  case "kitap-kirtasiye": categoryDisplay = "Kitap & Kırtasiye"; break;
+                  case "kozmetik-kisisel-bakim": categoryDisplay = "Kozmetik & Kişisel Bakım"; break;
+                  case "mobilya": categoryDisplay = "Mobilya"; break;
+                  case "oto-aksesuar-yedek-parca": categoryDisplay = "Oto Aksesuar & Yedek Parça"; break;
+                  case "saglik-medikal": categoryDisplay = "Sağlık & Medikal"; break;
+                  case "spor-outdoor": categoryDisplay = "Spor & Outdoor"; break;
+                  case "teknoloji": categoryDisplay = "Teknoloji"; break;
+                  case "diger": categoryDisplay = "Diğer"; break;
+                  // Fallback for old categories
+                  case "furniture": categoryDisplay = "Mobilya"; break;
+                  case "electronics": categoryDisplay = "Elektronik"; break;
+                  case "clothing": categoryDisplay = "Giyim"; break;
+                  case "books": categoryDisplay = "Kitap & Kırtasiye"; break;
+                  case "other": categoryDisplay = "Diğer"; break;
+                  default: categoryDisplay = category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' '); break;
+                }
+                %>
+                <%= categoryDisplay %>
               </option>
               <% }); %>
             </select>
@@ -62,18 +88,18 @@
           <div class="location-field">
             <div class="location-select-wrapper">
               <select id="global-city" class="location-select">
-                <option value="">Select City</option>
+                <option value="">Şehir Seçin</option>
               </select>
             </div>
             <div class="location-select-wrapper hidden" id="district-wrapper">
               <select id="global-district" class="location-select" disabled>
-                <option value="">Select District</option>
+                <option value="">İlçe Seçin</option>
               </select>
             </div>
           </div>
 
           <!-- Search button -->
-          <button id="global-search-button" class="search-button">Find</button>
+          <button id="global-search-button" class="search-button">Bul</button>
         </div>
       </div>
 
@@ -84,7 +110,7 @@
           <div class="sidebar">
             <!-- Radius Search Card -->
             <div class="card radius-search-card">
-              <h3>Radius Search</h3>
+              <h3>Yarıçap Araması</h3>
               <div class="map-container">
                 <div id="radius-map" class="map">
                   <!-- Circle overlay will appear here -->
@@ -104,7 +130,7 @@
                         d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"
                       />
                     </svg>
-                    Fullscreen
+                    Tam Ekran
                   </button>
                 </div>
 
@@ -118,7 +144,7 @@
                         size="1"
                         style="position: relative"
                       >
-                        <option value="">Select City</option>
+                        <option value="">Şehir Seçin</option>
                       </select>
                     </div>
                     <div
@@ -132,7 +158,7 @@
                         size="1"
                         style="position: relative"
                       >
-                        <option value="">Select District</option>
+                        <option value="">İlçe Seçin</option>
                       </select>
                     </div>
                   </div>
@@ -154,11 +180,13 @@
                       <circle cx="12" cy="12" r="3" />
                       <path d="M12 2v2m0 16v2M2 12h2m16 0h2" />
                     </svg>
-                    Use My Location
+                    Konumumu Kullan
                   </button>
                 </div>
                 <div class="radius-info">
-                  <span id="location-display">Drag to set location</span>
+                  <span id="location-display"
+                    >Konum belirlemek için sürükleyin</span
+                  >
                 </div>
 
                 <!-- Centered search button -->
@@ -167,7 +195,7 @@
                     id="search-radius-button"
                     class="button button-primary"
                   >
-                    Search with Radius
+                    Yarıçap ile Ara
                   </button>
                 </div>
               </div>
@@ -175,11 +203,11 @@
 
             <!-- Categories Section -->
             <div class="card categories-card">
-              <h3>Categories</h3>
+              <h3>Kategoriler</h3>
               <div class="categories-list">
                 <button class="category-button active">
                   <span class="category-count"><%= totalCount %></span>
-                  <span class="category-name">All Categories</span>
+                  <span class="category-name">Tüm Kategoriler</span>
                 </button>
 
                 <% Object.keys(categories).forEach(category => { %>
@@ -187,10 +215,35 @@
                   <span class="category-count"
                     ><%= categories[category] %></span
                   >
-                  <span class="category-name"
-                    ><%= category.charAt(0).toUpperCase() + category.slice(1)
-                    %></span
-                  >
+                  <span class="category-name">
+                    <% 
+                    let categoryDisplay = "";
+                    switch(category) {
+                      case "elektronik": categoryDisplay = "Elektronik"; break;
+                      case "ev-dekorasyonu": categoryDisplay = "Ev Dekorasyonu"; break;
+                      case "evcil-hayvan-urunleri": categoryDisplay = "Evcil Hayvan Ürünleri"; break;
+                      case "gida": categoryDisplay = "Gıda"; break;
+                      case "giyim": categoryDisplay = "Giyim"; break;
+                      case "hediyelik-esya": categoryDisplay = "Hediyelik Eşya"; break;
+                      case "kitap-kirtasiye": categoryDisplay = "Kitap & Kırtasiye"; break;
+                      case "kozmetik-kisisel-bakim": categoryDisplay = "Kozmetik & Kişisel Bakım"; break;
+                      case "mobilya": categoryDisplay = "Mobilya"; break;
+                      case "oto-aksesuar-yedek-parca": categoryDisplay = "Oto Aksesuar & Yedek Parça"; break;
+                      case "saglik-medikal": categoryDisplay = "Sağlık & Medikal"; break;
+                      case "spor-outdoor": categoryDisplay = "Spor & Outdoor"; break;
+                      case "teknoloji": categoryDisplay = "Teknoloji"; break;
+                      case "diger": categoryDisplay = "Diğer"; break;
+                      // Fallback for old categories
+                      case "furniture": categoryDisplay = "Mobilya"; break;
+                      case "electronics": categoryDisplay = "Elektronik"; break;
+                      case "clothing": categoryDisplay = "Giyim"; break;
+                      case "books": categoryDisplay = "Kitap & Kırtasiye"; break;
+                      case "other": categoryDisplay = "Diğer"; break;
+                      default: categoryDisplay = category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' '); break;
+                    }
+                    %>
+                    <%= categoryDisplay %>
+                  </span>
                 </button>
                 <% }); %>
               </div>
@@ -202,13 +255,13 @@
             <!-- Filter/Sort Controls -->
             <div class="posts-controls card">
               <div class="posts-count">
-                <span id="results-count"><%= posts.length %></span> items found
+                <span id="results-count"><%= posts.length %></span> öğe bulundu
               </div>
               <div class="posts-sorting">
-                <label for="sort-options">Sort by:</label>
+                <label for="sort-options">Sıralama:</label>
                 <select id="sort-options" class="sort-select">
-                  <option value="newest">Newest First</option>
-                  <option value="oldest">Oldest First</option>
+                  <option value="newest">En Yeni</option>
+                  <option value="oldest">En Eski</option>
                   <option value="a-z">A-Z</option>
                   <option value="z-a">Z-A</option>
                 </select>
@@ -232,7 +285,7 @@
                   <% } else { %>
                   <img
                     src="https://via.placeholder.com/300x200"
-                    alt="No image available"
+                    alt="Resim mevcut değil"
                   />
                   <% } %>
                 </div>
@@ -255,20 +308,62 @@
                       <%= post.location.city %>, <%= post.location.district %>
                     </span>
                     <span class="post-date">
-                      Posted: <%= new
-                      Date(post.createdAt).toLocaleDateString('en-US', { year:
+                      Eklenme: <%= new
+                      Date(post.createdAt).toLocaleDateString('tr-TR', { year:
                       'numeric', month: 'short', day: 'numeric' }) %>
                     </span>
                   </div>
                   <div class="post-tags">
-                    <span class="tag"><%= post.category %></span>
-                    <span class="tag"><%= post.condition %></span>
+                    <span class="tag">
+                      <% 
+                      let categoryDisplay = "";
+                      switch(post.category) {
+                        case "elektronik": categoryDisplay = "Elektronik"; break;
+                        case "ev-dekorasyonu": categoryDisplay = "Ev Dekorasyonu"; break;
+                        case "evcil-hayvan-urunleri": categoryDisplay = "Evcil Hayvan Ürünleri"; break;
+                        case "gida": categoryDisplay = "Gıda"; break;
+                        case "giyim": categoryDisplay = "Giyim"; break;
+                        case "hediyelik-esya": categoryDisplay = "Hediyelik Eşya"; break;
+                        case "kitap-kirtasiye": categoryDisplay = "Kitap & Kırtasiye"; break;
+                        case "kozmetik-kisisel-bakim": categoryDisplay = "Kozmetik & Kişisel Bakım"; break;
+                        case "mobilya": categoryDisplay = "Mobilya"; break;
+                        case "oto-aksesuar-yedek-parca": categoryDisplay = "Oto Aksesuar & Yedek Parça"; break;
+                        case "saglik-medikal": categoryDisplay = "Sağlık & Medikal"; break;
+                        case "spor-outdoor": categoryDisplay = "Spor & Outdoor"; break;
+                        case "teknoloji": categoryDisplay = "Teknoloji"; break;
+                        case "diger": 
+                          categoryDisplay = "Diğer"; 
+                          break;
+                        // Fallback for old categories
+                        case "furniture": categoryDisplay = "Mobilya"; break;
+                        case "electronics": categoryDisplay = "Elektronik"; break;
+                        case "clothing": categoryDisplay = "Giyim"; break;
+                        case "books": categoryDisplay = "Kitap & Kırtasiye"; break;
+                        case "other": categoryDisplay = "Diğer"; break;
+                        default: categoryDisplay = post.category.charAt(0).toUpperCase() + post.category.slice(1).replace(/-/g, ' '); break;
+                      }
+                      %>
+                      <%= categoryDisplay %>
+                    </span>
+                    <span class="tag">
+                      <% 
+                      let conditionDisplay = "";
+                      switch(post.condition) {
+                        case "new": conditionDisplay = "Yeni"; break;
+                        case "like-new": conditionDisplay = "Yeni Gibi"; break;
+                        case "good": conditionDisplay = "İyi"; break;
+                        case "fair": conditionDisplay = "Orta"; break;
+                        default: conditionDisplay = post.condition.charAt(0).toUpperCase() + post.condition.slice(1).replace('-', ' '); break;
+                      }
+                      %>
+                      <%= conditionDisplay %>
+                    </span>
                   </div>
                 </div>
               </div>
               <% }); %> <% } else { %>
               <div class="no-results">
-                <p>No posts found matching your criteria.</p>
+                <p>Kriterlerinize uygun ilan bulunamadı.</p>
               </div>
               <% } %>
             </div>
@@ -288,13 +383,13 @@
               >
                 <polyline points="15 18 9 12 15 6"></polyline>
               </svg>
-              Previous
+              Önceki
             </button>
             <div class="pagination-numbers">
               <!-- Page numbers will be generated dynamically -->
             </div>
             <button class="pagination-button">
-              Next
+              Sonraki
               <svg
                 width="16"
                 height="16"

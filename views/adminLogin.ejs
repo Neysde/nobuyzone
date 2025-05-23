@@ -1,28 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Login</title>
+    <title>Yönetici Girişi</title>
     <link rel="stylesheet" href="/css/admin.css" />
     <!-- Link to the admin-specific CSS -->
   </head>
   <body>
     <div class="admin-login-container">
-      <h1>Admin Login</h1>
+      <h1>Yönetici Girişi</h1>
       <% if (typeof error !== 'undefined' && error) { %>
       <p class="error-message"><%= error %></p>
       <% } %>
       <form action="/admin/login" method="POST" class="admin-login-form">
         <div class="form-group">
-          <label for="username">Username:</label>
+          <label for="username">Kullanıcı Adı:</label>
           <input type="text" id="username" name="username" required />
         </div>
         <div class="form-group">
-          <label for="password">Password:</label>
+          <label for="password">Şifre:</label>
           <input type="password" id="password" name="password" required />
         </div>
-        <button type="submit" class="btn-admin-login">Login</button>
+        <button type="submit" class="btn-admin-login">Giriş Yap</button>
       </form>
     </div>
   </body>

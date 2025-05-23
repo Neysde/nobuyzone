@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       element.setAttribute("role", "button");
-      element.setAttribute("aria-label", "Notifications");
+      element.setAttribute("aria-label", "Bildirimler");
 
       element.addEventListener("click", function (e) {
         // Don't prevent default - we still want to navigate
@@ -110,10 +110,10 @@ document.addEventListener("DOMContentLoaded", function () {
         // Redirect to home page after successful logout
         window.location.href = "/";
       } else {
-        console.error("Logout failed");
+        console.error("Çıkış yapılamadı");
       }
     } catch (error) {
-      console.error("Error during logout:", error);
+      console.error("Çıkış sırasında hata:", error);
     }
   }
 

@@ -34,12 +34,12 @@ function initLoginForm(form) {
 
     //Validate form
     if (!validateEmail(email)) {
-      showError("Please enter a valid email address");
+      showError("Lütfen geçerli bir e-posta adresi girin");
       return; //it returns nothing but it stops the login process if the email is not valid.
     }
 
     if (!password) {
-      showError("Please enter your password");
+      showError("Lütfen şifrenizi girin");
       return;
     }
 
@@ -62,17 +62,17 @@ function initLoginForm(form) {
 
       if (response.ok) {
         //On success, show notification and redirect
-        showNotification("Login successful! Redirecting...", "success");
+        showNotification("Giriş başarılı! Yönlendiriliyorsunuz...", "success");
         setTimeout(() => {
           window.location.href = "/"; //Redirect to homepage or dashboard WILL BE USED TO REDIRECT TO USER DASHBOARD
         }, 1500);
       } else {
         //Show error message
-        showError(data.message || "Login failed. Please try again.");
+        showError(data.message || "Giriş başarısız. Lütfen tekrar deneyin.");
       }
     } catch (error) {
       console.error("Login error:", error);
-      showError("An unexpected error occurred. Please try again later.");
+      showError("Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.");
     } finally {
       //Reset button state
       setLoading(submitBtn, false, originalBtnText);
@@ -94,20 +94,21 @@ function initRegisterForm(form) {
     const lastName = form.querySelector("#lastName").value.trim();
     const email = form.querySelector("#email").value.trim();
     const password = form.querySelector("#password").value;
+    const termsAccepted = form.querySelector("#termsAccepted").checked;
 
     // Validate form
     if (!username || username.length < 3) {
-      showError("Username must be at least 3 characters");
+      showError("Kullanıcı adı en az 3 karakter olmalıdır");
       return;
     }
 
     if (!firstName) {
-      showError("Please enter your first name");
+      showError("Lütfen adınızı girin");
       return;
     }
 
     if (!lastName) {
-      showError("Please enter your last name");
+      showError("Lütfen soyadınızı girin");
       return;
     }
 
@@ -119,6 +120,13 @@ function initRegisterForm(form) {
     if (!validatePassword(password)) {
       showError(
         "Password must be at least 8 characters and include uppercase, lowercase, number, and special character"
+      );
+      return;
+    }
+
+    if (!termsAccepted) {
+      showError(
+        "Hesap oluşturmak için Kullanım Koşullarını ve Gizlilik Politikasını kabul etmelisiniz"
       );
       return;
     }
@@ -141,6 +149,7 @@ function initRegisterForm(form) {
           lastName,
           email,
           password,
+          termsAccepted,
         }),
       });
 
@@ -150,14 +159,14 @@ function initRegisterForm(form) {
         //On success, show notification and redirect to verification page
         showNotification(
           data.message ||
-            "Registration successful! Please check your email for verification mail.",
+            "Kayıt başarılı! Doğrulama e-postası için lütfen e-postanızı kontrol edin.",
           "success"
         );
         //Clear the form
         form.reset();
       } else {
         //Show error message
-        showError(data.message || "Registration failed. Please try again.");
+        showError(data.message || "Kayıt başarısız. Lütfen tekrar deneyin.");
       }
     } catch (error) {
       console.error("Register error:", error);
@@ -206,7 +215,7 @@ function initPasswordResetRequestForm(form) {
       if (response.ok) {
         // On success, show notification
         showNotification(
-          data.message || "Password reset link has been sent to your email.",
+          data.message || "Şifre sıfırlama bağlantısı e-postanıza gönderildi.",
           "success"
         );
         // Clear the form
@@ -215,7 +224,7 @@ function initPasswordResetRequestForm(form) {
         // Show error message
         showError(
           data.message ||
-            "Failed to send password reset link. Please try again."
+            "Şifre sıfırlama bağlantısı gönderilemedi. Lütfen tekrar deneyin."
         );
       }
     } catch (error) {
@@ -271,7 +280,7 @@ function initPasswordResetForm(form) {
       if (response.ok) {
         //On success, show notification and redirect to login page
         showNotification(
-          data.message || "Password has been reset successfully!",
+          data.message || "Şifre başarıyla sıfırlandı!",
           "success"
         );
         setTimeout(() => {
@@ -280,12 +289,12 @@ function initPasswordResetForm(form) {
       } else {
         //Show error message
         showError(
-          data.message || "Failed to reset password. Please try again."
+          data.message || "Şifre sıfırlanamadı. Lütfen tekrar deneyin."
         );
       }
     } catch (error) {
       console.error("Password reset error:", error);
-      showError("An unexpected error occurred. Please try again later.");
+      showError("Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.");
     } finally {
       //Reset button state
       setLoading(submitBtn, false, originalBtnText);
@@ -367,10 +376,10 @@ function showNotification(message, type = "error") {
  */
 function setLoading(button, isLoading, originalText = null) {
   if (isLoading) {
-    button.innerHTML = '<span class="loading-spinner"></span>Loading...';
+    button.innerHTML = '<span class="loading-spinner"></span>Yükleniyor...';
     button.disabled = true;
   } else {
-    button.innerHTML = originalText || "Submit";
+    button.innerHTML = originalText || "Gönder";
     button.disabled = false;
   }
 }

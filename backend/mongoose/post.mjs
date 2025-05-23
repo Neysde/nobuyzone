@@ -12,7 +12,7 @@ const postSchema = new mongoose.Schema(
     category: {
       type: String,
       required: [true, "Category is required"],
-      enum: ["furniture", "electronics", "clothing", "books", "other"],
+      enum: ["elektronik", "ev-dekorasyonu", "evcil-hayvan-urunleri", "gida", "giyim", "hediyelik-esya", "kitap-kirtasiye", "kozmetik-kisisel-bakim", "mobilya", "oto-aksesuar-yedek-parca", "saglik-medikal", "spor-outdoor", "teknoloji", "diger"],
     },
     condition: {
       type: String,
