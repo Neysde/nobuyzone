@@ -1588,8 +1588,8 @@ document.addEventListener("DOMContentLoaded", function () {
             })}</span>
           </div>
           <div class="post-tags">
-            <span class="tag">${post.category}</span>
-            <span class="tag">${post.condition}</span>
+            <span class="tag">${translateCategory(post.category)}</span>
+            <span class="tag">${translateCondition(post.condition)}</span>
           </div>
         </div>
       `;
@@ -1667,6 +1667,60 @@ document.addEventListener("DOMContentLoaded", function () {
         updateFilters({ page: currentPage + 1 });
       }
     };
+  }
+
+  /**
+   * Translate category value to user-friendly Turkish display
+   * @param {string} category - The category value from database
+   * @returns {string} - The translated category name
+   */
+  function translateCategory(category) {
+    let categoryDisplay = "";
+    
+    switch(category) {
+      case "elektronik": categoryDisplay = "Elektronik"; break;
+      case "ev-dekorasyonu": categoryDisplay = "Ev Dekorasyonu"; break;
+      case "evcil-hayvan-urunleri": categoryDisplay = "Evcil Hayvan Ürünleri"; break;
+      case "gida": categoryDisplay = "Gıda"; break;
+      case "giyim": categoryDisplay = "Giyim"; break;
+      case "hediyelik-esya": categoryDisplay = "Hediyelik Eşya"; break;
+      case "kitap-kirtasiye": categoryDisplay = "Kitap & Kırtasiye"; break;
+      case "kozmetik-kisisel-bakim": categoryDisplay = "Kozmetik & Kişisel Bakım"; break;
+      case "mobilya": categoryDisplay = "Mobilya"; break;
+      case "oto-aksesuar-yedek-parca": categoryDisplay = "Oto Aksesuar & Yedek Parça"; break;
+      case "saglik-medikal": categoryDisplay = "Sağlık & Medikal"; break;
+      case "spor-outdoor": categoryDisplay = "Spor & Outdoor"; break;
+      case "teknoloji": categoryDisplay = "Teknoloji"; break;
+      case "diger": categoryDisplay = "Diğer"; break;
+      // Fallback for old categories
+      case "furniture": categoryDisplay = "Mobilya"; break;
+      case "electronics": categoryDisplay = "Elektronik"; break;
+      case "clothing": categoryDisplay = "Giyim"; break;
+      case "books": categoryDisplay = "Kitap & Kırtasiye"; break;
+      case "other": categoryDisplay = "Diğer"; break;
+      default: categoryDisplay = category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' '); break;
+    }
+    
+    return categoryDisplay;
+  }
+
+  /**
+   * Translate condition value to user-friendly Turkish display
+   * @param {string} condition - The condition value from database
+   * @returns {string} - The translated condition name
+   */
+  function translateCondition(condition) {
+    let conditionDisplay = "";
+    
+    switch(condition) {
+      case "new": conditionDisplay = "Yeni"; break;
+      case "like-new": conditionDisplay = "Yeni Gibi"; break;
+      case "good": conditionDisplay = "İyi"; break;
+      case "fair": conditionDisplay = "Orta"; break;
+      default: conditionDisplay = condition.charAt(0).toUpperCase() + condition.slice(1).replace(/-/g, ' '); break;
+    }
+    
+    return conditionDisplay;
   }
 
   /**
