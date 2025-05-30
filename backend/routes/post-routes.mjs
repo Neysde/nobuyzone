@@ -54,7 +54,7 @@ const createAccentInsensitiveRegex = (text) => {
  */
 router.post("/api/posts", isAuthenticated, async (req, res) => {
   try {
-    console.log("Post data received:", req.body); // will be removed later
+
 
     // Check if body is empty
     if (!req.body || Object.keys(req.body).length === 0) {
@@ -150,20 +150,14 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
       parsedLng = parseFloat(longitude);
     }
 
-    console.log("Coordinates before offset:", {
-      lat: parsedLat,
-      lng: parsedLng,
-    });
+
 
     // Add random offset only if we have valid coordinates
     if (parsedLat !== 0 || parsedLng !== 0) {
       // Generate random offset between -300m and +300m
       parsedLat += Math.random() * offset * 2 - offset;
       parsedLng += Math.random() * offset * 2 - offset;
-      console.log("Coordinates after offset:", {
-        lat: parsedLat,
-        lng: parsedLng,
-      });
+
     }
 
     // Create new post
@@ -270,14 +264,14 @@ router.post("/api/drafts", isAuthenticated, async (req, res) => {
       let lat = !isNaN(parseFloat(rawLat)) ? parseFloat(rawLat) : 0;
       let lng = !isNaN(parseFloat(rawLng)) ? parseFloat(rawLng) : 0;
 
-      console.log("Draft API - Coordinates before offset:", { lat, lng });
+
 
       // Add random offset only if we have valid coordinates
       if (lat !== 0 || lng !== 0) {
         // Generate random offset between -300m and +300m
         lat += Math.random() * offset * 2 - offset;
         lng += Math.random() * offset * 2 - offset;
-        console.log("Draft API - Coordinates after offset:", { lat, lng });
+
       }
 
       // Update coordinates with offset values
@@ -312,7 +306,7 @@ router.post("/api/drafts", isAuthenticated, async (req, res) => {
 router.get("/api/posts", async (req, res) => {
   try {
     // Log raw request parameters for debugging
-    console.log("[DEBUG] GET /api/posts: Received query params:", req.query);
+
 
     const {
       category,
@@ -323,16 +317,11 @@ router.get("/api/posts", async (req, res) => {
       radius,
       sort,
       page = 1,
-      limit = 10,
+      limit = 9, // Changed from 10 to 9 posts per page
     } = req.query;
 
     // Log raw request parameters for debugging
-    console.log("Search parameters received:", {
-      city,
-      district,
-      neighborhood,
-      search,
-    });
+
 
     // Build filter query
     const filter = { status: "active" };
@@ -349,9 +338,9 @@ router.get("/api/posts", async (req, res) => {
 
     // Location filters
     if (city) {
-      console.log(`[DEBUG] GET /api/posts: Filtering for city: ${city}`);
+
       const normalizedCity = normalizeText(city);
-      console.log(`Searching for city: ${city}, normalized: ${normalizedCity}`);
+
 
       // For Turkish text: handle common letter transformations
       const searchPatterns = [
@@ -373,20 +362,13 @@ router.get("/api/posts", async (req, res) => {
 
       filter.$and = filter.$and || [];
       filter.$and.push({ $or: cityConditions });
-      console.log(
-        "[DEBUG] GET /api/posts: City filter conditions:",
-        JSON.stringify(cityConditions, null, 2)
-      );
+
     }
 
     if (district) {
-      console.log(
-        `[DEBUG] GET /api/posts: Filtering for district: ${district}`
-      );
+
       const normalizedDistrict = normalizeText(district);
-      console.log(
-        `Searching for district: ${district}, normalized: ${normalizedDistrict}`
-      );
+
 
       // For Turkish text: handle common letter transformations
       const searchPatterns = [
@@ -412,9 +394,7 @@ router.get("/api/posts", async (req, res) => {
 
     if (neighborhood) {
       const normalizedNeighborhood = normalizeText(neighborhood);
-      console.log(
-        `Searching for neighborhood: ${neighborhood}, normalized: ${normalizedNeighborhood}`
-      );
+
 
       // For Turkish text: handle common letter transformations
       const searchPatterns = [
@@ -464,7 +444,7 @@ router.get("/api/posts", async (req, res) => {
       // }
 
       // For now, we'll just log that we received a radius parameter
-      console.log(`Searching with radius: ${radius}km`);
+
     }
 
     // Text search filter (title and description)
@@ -499,10 +479,7 @@ router.get("/api/posts", async (req, res) => {
     ];
 
     // Log the generated pipeline for debugging
-    console.log(
-      "[DEBUG] GET /api/posts: Search pipeline:",
-      JSON.stringify(pipeline, null, 2)
-    );
+
 
     // Execute aggregation pipeline
     const posts = await Post.aggregate(pipeline);
@@ -543,7 +520,7 @@ router.get("/api/posts", async (req, res) => {
  */
 router.get("/api/posts/count-by-city", async (req, res) => {
   try {
-    console.log("[DEBUG] /api/posts/count-by-city route started");
+
     // Query only active posts and count by city
     const cityCountsAggregation = await Post.aggregate([
       { $match: { status: "active" } },
@@ -570,16 +547,13 @@ router.get("/api/posts/count-by-city", async (req, res) => {
     ]);
 
     // Log the raw aggregation result for debugging
-    console.log(
-      "[DEBUG] Raw city counts from aggregation:",
-      JSON.stringify(cityCountsAggregation, null, 2)
-    );
+
 
     // Transform to object where keys are JavaScript-normalized city names (tr-TR lowercase, trimmed) and values are counts
     const cityCountsMap = {};
     cityCountsAggregation.forEach((item, index) => {
       // Ensure cityName is a non-empty string before normalization
-      console.log(`[DEBUG] Processing item ${index}:`, JSON.stringify(item));
+
       if (
         item.cityName &&
         typeof item.cityName === "string" &&
@@ -598,7 +572,7 @@ router.get("/api/posts/count-by-city", async (req, res) => {
     });
 
     // Log the final transformed map for debugging
-    console.log("[DEBUG] Transformed city counts map:", cityCountsMap);
+
 
     res.status(200).json({
       success: true,
@@ -766,20 +740,14 @@ router.put("/api/posts/:id", isAuthenticated, async (req, res) => {
           ? post.location.coordinates.longitude
           : 0;
 
-      console.log("Update - Coordinates before offset:", {
-        lat: parsedLat,
-        lng: parsedLng,
-      });
+
 
       // Add random offset only if we have valid coordinates
       if (parsedLat !== 0 || parsedLng !== 0) {
         // Generate random offset between -300m and +300m
         parsedLat += Math.random() * offset * 2 - offset;
         parsedLng += Math.random() * offset * 2 - offset;
-        console.log("Update - Coordinates after offset:", {
-          lat: parsedLat,
-          lng: parsedLng,
-        });
+
       }
 
       // Create location object if it doesn't exist
@@ -802,7 +770,7 @@ router.put("/api/posts/:id", isAuthenticated, async (req, res) => {
     }
 
     // Log the update for debugging
-    console.log("Updating post with data:", updateData);
+
 
     // Update post
     const updatedPost = await Post.findByIdAndUpdate(
@@ -873,7 +841,7 @@ router.delete("/api/posts/:id", isAuthenticated, async (req, res) => {
             });
 
             if (response.ok) {
-              console.log(`Deleted image ${image.publicId} from Cloudinary`);
+
             } else {
               const errorData = await response.json();
               console.error(
@@ -961,7 +929,7 @@ router.delete("/api/drafts/:id", isAuthenticated, async (req, res) => {
             });
 
             if (response.ok) {
-              console.log(`Deleted image ${image.publicId} from Cloudinary`);
+
             } else {
               const errorData = await response.json();
               console.error(
@@ -1051,11 +1019,7 @@ router.post("/api/post-drafts", isAuthenticated, async (req, res) => {
     // Process the draft data
     const draftData = { ...req.body };
 
-    console.log("Received draft data:", JSON.stringify(draftData, null, 2));
-    console.log(
-      "Location data received:",
-      JSON.stringify(draftData.location, null, 2)
-    );
+
 
     // Process images - create proper image objects from URLs and IDs arrays
     if (draftData.imageUrls && draftData.imageIds) {
@@ -1124,14 +1088,14 @@ router.post("/api/post-drafts", isAuthenticated, async (req, res) => {
         let lat = !isNaN(parseFloat(rawLat)) ? parseFloat(rawLat) : 0;
         let lng = !isNaN(parseFloat(rawLng)) ? parseFloat(rawLng) : 0;
 
-        console.log("Draft - Coordinates before offset:", { lat, lng });
+
 
         // Add random offset only if we have valid coordinates
         if (lat !== 0 || lng !== 0) {
           // Generate random offset between -300m and +300m
           lat += Math.random() * offset * 2 - offset;
           lng += Math.random() * offset * 2 - offset;
-          console.log("Draft - Coordinates after offset:", { lat, lng });
+
         }
 
         // Update coordinates with offset values
@@ -1156,7 +1120,7 @@ router.post("/api/post-drafts", isAuthenticated, async (req, res) => {
     delete draftData.contact; // Remove the original field after copying its value
 
     // Log the draft data for debugging
-    console.log("Draft data:", draftData);
+
 
     let result;
     try {

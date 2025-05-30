@@ -98,12 +98,6 @@ const handleError = (res, error, status = 500) => {
 //Upload single image
 export const uploadImage = async (req, res) => {
   try {
-    console.log("Upload request received:", {
-      //!! is a concise way to get a boolean value so you are checking if the file is present or not; (!(not) gives reverse of the boolean value !! gives the correct boolean value)
-      hasFile: !!req.file,
-      hasFiles: !!req.files,
-      filesKeys: req.files ? Object.keys(req.files) : [],
-    });
 
     let fileContent;
 
@@ -127,7 +121,7 @@ export const uploadImage = async (req, res) => {
     // Upload to Cloudinary
     const result = await uploader.upload(fileContent, {
       resource_type: "auto",
-      folder: "nobuyzone/posts",
+      folder: "barter/posts",
       allowed_formats: ["jpg", "png", "webp", "jpeg"],
     });
 

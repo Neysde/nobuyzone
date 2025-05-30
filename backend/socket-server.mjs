@@ -139,9 +139,7 @@ export function initializeSocketServer(httpServer) {
             }
           } else {
             console.warn(
-              `Could not find complete user data for user: ${
-                req.user._id || req.user.id || req.user.email || "unknown"
-              }`
+              `Could not find complete user data for user`
             );
           }
         } catch (dbError) {
@@ -190,18 +188,8 @@ export function initializeSocketServer(httpServer) {
     }
 
     // Log more detailed user information for debugging
-    console.log(
-      `User connected to chat: ${socket.user.name} (ID: ${
-        socket.user._id || socket.user.id || "unknown"
-      })`
-    );
-    console.log(`User object structure:`, {
-      hasFirstName: !!socket.user.firstName,
-      hasLastName: !!socket.user.lastName,
-      name: socket.user.name,
-      id: socket.user._id || socket.user.id,
+
       // Don't log the full user object to avoid exposing sensitive data
-    });
 
     // Get the user ID consistently
     const currentUserId = socket.user._id || socket.user.id;
@@ -215,9 +203,7 @@ export function initializeSocketServer(httpServer) {
 
     // Handle socket disconnection
     socket.on("disconnect", () => {
-      console.log(
-        `User disconnected from chat: ${socket.user.name} (ID: ${currentUserId})`
-      );
+
       // Clean up room tracking on disconnect
       delete userRooms[currentUserId];
     });
@@ -247,7 +233,7 @@ export function initializeSocketServer(httpServer) {
 
       // Check if already in room
       if (userRooms[currentUserId] && userRooms[currentUserId].has(userRoom)) {
-        console.log(`${socket.user.name} already in user room ${userRoom}`);
+
         return;
       }
 
@@ -255,9 +241,7 @@ export function initializeSocketServer(httpServer) {
       socket.join(userRoom);
       userRooms[currentUserId] = userRooms[currentUserId] || new Set();
       userRooms[currentUserId].add(userRoom);
-      console.log(
-        `${socket.user.name} joined personal notification room: ${userRoom}`
-      );
+
 
       // Send initial unread count
       getUnreadMessageCount(currentUserId)
@@ -287,9 +271,7 @@ export function initializeSocketServer(httpServer) {
       // Check if the user is already in this room
       if (userRooms[currentUserId] && userRooms[currentUserId].has(roomId)) {
         // User is already in the room, no need to join again
-        console.log(
-          `${socket.user.name} already in chat room ${roomId}, skipping join`
-        );
+
         return;
       }
 
@@ -297,7 +279,7 @@ export function initializeSocketServer(httpServer) {
       socket.join(roomId);
       userRooms[currentUserId] = userRooms[currentUserId] || new Set();
       userRooms[currentUserId].add(roomId);
-      console.log(`${socket.user.name} joined chat room ${roomId}`);
+
 
       // Mark messages as read when user enters the chat room
       try {
@@ -308,9 +290,7 @@ export function initializeSocketServer(httpServer) {
         });
 
         if (updated) {
-          console.log(
-            `Marked messages as read for user ${currentUserId} in chat with ${userId} for post ${postId}`
-          );
+
           // Notify the sender that their messages were read
           io.to(`user:${userId}`).emit("messages-read", {
             postId,
@@ -373,11 +353,9 @@ export function initializeSocketServer(httpServer) {
         socket.leave(roomId);
         socket.leave(alternativeRoomId); // Attempt to leave both possible room name orders
 
-        console.log(`${socket.user.name} left chat room ${roomId}`);
+
         if (roomId !== alternativeRoomId) {
-          console.log(
-            `Also attempted to leave ${alternativeRoomId} just in case.`
-          );
+
         }
 
         // Update userRooms tracking
@@ -387,15 +365,9 @@ export function initializeSocketServer(httpServer) {
           userRooms[currentUserId].delete(alternativeRoomId);
           const finalSize = userRooms[currentUserId].size;
           if (initialSize > finalSize) {
-            console.log(
-              `Room ${roomId} (or ${alternativeRoomId}) removed from tracking for user ${currentUserId}. New room count: ${finalSize}`
-            );
+
           } else {
-            console.log(
-              `Room ${roomId} (and ${alternativeRoomId}) not found in tracking for user ${currentUserId} for removal. Current rooms: ${Array.from(
-                userRooms[currentUserId]
-              )}`
-            );
+
           }
         } else {
           console.warn(
@@ -569,9 +541,7 @@ export function initializeSocketServer(httpServer) {
           firstName = "Birisi";
         }
 
-        console.log(
-          `Typing indicator: User ${currentUserId} is typing - sending to recipient ${recipientId}`
-        );
+
 
         // Get recipient room
         const recipientRoom = `chat:${postId}:${recipientId}:${currentUserId}`;

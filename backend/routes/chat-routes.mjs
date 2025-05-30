@@ -185,28 +185,14 @@ router.get("/api/chats", isAuthenticated, async (req, res) => {
       // Get post details
       const post = await Post.findById(postId);
 
-      if (!post) {
-        console.log("Post not found");
-        continue; //Skip if post doesn't exist
-      }
 
       //Get the other user's ID
       const otherUserId = conversation.users
         .map((u) => u.user.toString())
         .find((id) => id !== userId.toString());
 
-      if (!otherUserId) {
-        console.log("Other user id not found");
-        continue;
-      }
-
       //Get other user details
       const otherUser = await User.findById(otherUserId);
-
-      if (!otherUser) {
-        console.log("Other user not found");
-        continue; // Skip if other user doesn't exist
-      }
 
       // Get most recent message
       const lastMessage =

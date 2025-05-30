@@ -98,7 +98,6 @@
   function initNotificationSocket() {
     // Skip if we already have a connected socket
     if (notificationSocket && notificationSocket.connected) {
-      console.log("Notification socket already connected");
       return;
     }
 
@@ -119,7 +118,6 @@
 
       // Set up event handlers
       notificationSocket.on("connect", () => {
-        console.log("Notification socket connected");
 
         // Join user's personal notification room
         notificationSocket.emit("join-user-room", {
@@ -132,7 +130,6 @@
 
       // Handle disconnection gracefully
       notificationSocket.on("disconnect", (reason) => {
-        console.log(`Notification socket disconnected: ${reason}`);
 
         // Fall back to fetch API if socket disconnects
         if (reason === "io server disconnect") {
@@ -144,7 +141,6 @@
 
       // Listen for unread count updates
       notificationSocket.on("unread-count", ({ count }) => {
-        console.log("Received real-time unread count update:", count);
         updateUnreadBadge(count);
       });
 
