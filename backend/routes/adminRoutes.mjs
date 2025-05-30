@@ -146,15 +146,6 @@ router.get("/panel", isAdmin, async (req, res) => {
     console.error("Error fetching data for admin panel:", error);
     // Render an error page or redirect with an error message
     res.status(500).send("Error loading admin panel data.");
-    // Or, render the panel with empty data and an error message
-    // res.render('adminPanel', {
-    //   layout: false,
-    //   adminUser: req.session.adminUser,
-    //   users: [],
-    //   posts: [],
-    //   pageTitle: 'Admin Panel',
-    //   error: 'Could not load data.'
-    // });
   }
 });
 

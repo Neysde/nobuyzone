@@ -10,7 +10,6 @@ export const isAuthenticated = (req, res, next) => {
     }
 
     if (!user) {
-      console.log("Authentication failed:", info?.message || "No user found");
       return res.redirect("/api/login");
     }
 

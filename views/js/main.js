@@ -51,7 +51,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const postCounts = postCountsData.data || {};
 
     // Log the post counts for debugging
-    console.log("Client: Received post counts by city from API:", postCounts);
 
     // Then load GeoJSON file
     const response = await fetch("/backend/json/tr-cities.geojson");
@@ -73,19 +72,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           .trim();
 
         const postCount = postCounts[normalizedCityKey] || 0;
-
-        // Log individual city matching for debugging
-        if (
-          !postCounts.hasOwnProperty(normalizedCityKey) &&
-          Object.keys(postCounts).length > 0
-        ) {
-          console.warn(
-            `No match for GeoJSON city: '${cityNameFromGeoJSON}' (normalized: '${normalizedCityKey}'). Available API keys:`,
-            Object.keys(postCounts)
-          );
-        } else if (postCounts.hasOwnProperty(normalizedCityKey)) {
-          // console.log(`Match found for GeoJSON city: '${cityNameFromGeoJSON}' (normalized: '${normalizedCityKey}'), Count: ${postCount}`);
-        }
 
         // Set tooltip
         layer.bindTooltip(

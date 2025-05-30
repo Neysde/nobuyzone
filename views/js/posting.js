@@ -73,18 +73,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Check if we have draft data to populate
   function loadDraftData() {
-    console.log("Checking for draft data...");
     const draftDataElement = document.getElementById("draft-data");
-    console.log("Draft data element exists:", draftDataElement ? "yes" : "no");
 
     if (!draftDataElement) return;
 
     try {
       const textContent = draftDataElement.textContent.trim();
-      console.log("Draft data content:", textContent);
 
       const draftData = JSON.parse(textContent);
-      console.log("Parsed draft data:", draftData);
 
       // Add draftId as a hidden field to the form
       if (draftData._id) {
@@ -100,7 +96,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         // Set the value
         draftIdField.value = draftData._id;
-        console.log("Added draft ID to form:", draftData._id);
       }
 
       // Populate form fields with draft data
@@ -578,7 +573,6 @@ document.addEventListener("DOMContentLoaded", function () {
           if (!deleteResponse.ok) {
             console.error("Failed to delete image from Cloudinary");
           } else {
-            console.log("Successfully deleted image from Cloudinary");
           }
         } catch (error) {
           console.error("Error deleting image from Cloudinary:", error);
@@ -684,12 +678,6 @@ document.addEventListener("DOMContentLoaded", function () {
     street.value = address.road || "";
 
     // Log the values for debugging
-    console.log("Updated address fields from geocoding:", {
-      city: city.value,
-      district: district.value,
-      neighborhood: neighborhood.value,
-      street: street.value,
-    });
 
     // Add visual feedback
     [city, district, neighborhood, street].forEach((field) => {
@@ -1007,7 +995,6 @@ document.addEventListener("DOMContentLoaded", function () {
         form.querySelector("#neighborhood") &&
         form.querySelector("#street");
 
-      console.log("Location fields present in form:", locationFieldsPresent);
 
       // Check the actual IDs and names of the fields in the form
       const cityFieldInForm = form.querySelector("#city");
@@ -1015,70 +1002,15 @@ document.addEventListener("DOMContentLoaded", function () {
       const neighborhoodFieldInForm = form.querySelector("#neighborhood");
       const streetFieldInForm = form.querySelector("#street");
 
-      console.log(
-        "City field:",
-        cityFieldInForm
-          ? {
-              id: cityFieldInForm.id,
-              name: cityFieldInForm.name,
-              value: cityFieldInForm.value,
-            }
-          : "Not found"
-      );
-      console.log(
-        "District field:",
-        districtFieldInForm
-          ? {
-              id: districtFieldInForm.id,
-              name: districtFieldInForm.name,
-              value: districtFieldInForm.value,
-            }
-          : "Not found"
-      );
-      console.log(
-        "Neighborhood field:",
-        neighborhoodFieldInForm
-          ? {
-              id: neighborhoodFieldInForm.id,
-              name: neighborhoodFieldInForm.name,
-              value: neighborhoodFieldInForm.value,
-            }
-          : "Not found"
-      );
-      console.log(
-        "Street field:",
-        streetFieldInForm
-          ? {
-              id: streetFieldInForm.id,
-              name: streetFieldInForm.name,
-              value: streetFieldInForm.value,
-            }
-          : "Not found"
-      );
 
       if (locationFieldsPresent) {
-        console.log("Location field values:", {
-          city: form.querySelector("#city").value,
-          district: form.querySelector("#district").value,
-          neighborhood: form.querySelector("#neighborhood").value,
-          street: form.querySelector("#street").value,
-        });
       } else {
         console.warn("Some location fields are missing from the form");
       }
 
       // Log the raw location data before organizing
-      console.log("Raw form location data:", {
-        city: jsonData.city,
-        district: jsonData.district,
-        neighborhood: jsonData.neighborhood,
-        street: jsonData.street,
-        latitude: jsonData.latitude,
-        longitude: jsonData.longitude,
-      });
 
       // Log the structured location data
-      console.log("Structured location data:", jsonData.location);
 
       // Verify the location object is properly formed
       if (!jsonData.location || typeof jsonData.location !== "object") {
@@ -1275,9 +1207,7 @@ document.addEventListener("DOMContentLoaded", function () {
       formData.append("isDraft", "true");
 
       // Debug: Log form entries before processing
-      console.log("Form fields before processing:");
       for (const [key, value] of formData.entries()) {
-        console.log(`${key}: ${value}`);
       }
 
       // Add image URLs and public IDs to the form data
@@ -1289,11 +1219,6 @@ document.addEventListener("DOMContentLoaded", function () {
         const position = marker.getLatLng();
         formData.append("latitude", position.lat);
         formData.append("longitude", position.lng);
-        console.log(
-          "Added marker coordinates to draft:",
-          position.lat,
-          position.lng
-        );
       } else {
         console.warn(
           "No map marker found for draft - using default coordinates (0,0)"
@@ -1316,7 +1241,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
 
-      console.log("Saving draft data:", formDataObj); //will be removed later
+//will be removed later
 
       // If we're updating an existing draft, set the _id field in the format expected by the backend
       if (formDataObj.draftId) {
@@ -1354,7 +1279,6 @@ document.addEventListener("DOMContentLoaded", function () {
         form.querySelector("#neighborhood") &&
         form.querySelector("#street");
 
-      console.log("Location fields present in form:", locationFieldsPresent);
 
       // Check the actual IDs and names of the fields in the form
       const cityFieldInForm = form.querySelector("#city");
@@ -1362,70 +1286,15 @@ document.addEventListener("DOMContentLoaded", function () {
       const neighborhoodFieldInForm = form.querySelector("#neighborhood");
       const streetFieldInForm = form.querySelector("#street");
 
-      console.log(
-        "City field:",
-        cityFieldInForm
-          ? {
-              id: cityFieldInForm.id,
-              name: cityFieldInForm.name,
-              value: cityFieldInForm.value,
-            }
-          : "Not found"
-      );
-      console.log(
-        "District field:",
-        districtFieldInForm
-          ? {
-              id: districtFieldInForm.id,
-              name: districtFieldInForm.name,
-              value: districtFieldInForm.value,
-            }
-          : "Not found"
-      );
-      console.log(
-        "Neighborhood field:",
-        neighborhoodFieldInForm
-          ? {
-              id: neighborhoodFieldInForm.id,
-              name: neighborhoodFieldInForm.name,
-              value: neighborhoodFieldInForm.value,
-            }
-          : "Not found"
-      );
-      console.log(
-        "Street field:",
-        streetFieldInForm
-          ? {
-              id: streetFieldInForm.id,
-              name: streetFieldInForm.name,
-              value: streetFieldInForm.value,
-            }
-          : "Not found"
-      );
 
       if (locationFieldsPresent) {
-        console.log("Location field values:", {
-          city: form.querySelector("#city").value,
-          district: form.querySelector("#district").value,
-          neighborhood: form.querySelector("#neighborhood").value,
-          street: form.querySelector("#street").value,
-        });
       } else {
         console.warn("Some location fields are missing from the form");
       }
 
       // Log the raw location data before organizing
-      console.log("Raw form location data:", {
-        city: formDataObj.city,
-        district: formDataObj.district,
-        neighborhood: formDataObj.neighborhood,
-        street: formDataObj.street,
-        latitude: formDataObj.latitude,
-        longitude: formDataObj.longitude,
-      });
 
       // Log the structured location data
-      console.log("Structured location data:", formDataObj.location);
 
       // Verify the location object is properly formed
       if (!formDataObj.location || typeof formDataObj.location !== "object") {
@@ -1486,7 +1355,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       showNotification("Draft saved successfully!", "success");
-      console.log("Draft saved successfully:", responseData);
 
       // Redirect to drafts page after a short delay
       setTimeout(() => {

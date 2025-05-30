@@ -416,7 +416,6 @@ function initializeMap() {
 
   // Check if coordinates are valid
   if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
-    console.log("Invalid coordinates, using default location");
     // Use a default location (Istanbul coordinates)
     lat = 41.0082;
     lng = 28.9784;
@@ -659,7 +658,6 @@ function setupContactButton() {
         const data = await response.json();
 
         // Create and dispatch the custom event to open the chat
-        console.log("Raw API data for chat:", JSON.parse(JSON.stringify(data)));
 
         // Helper function to sanitize name fields
         // Converts non-strings, or literal "true"/"false" strings (case-insensitive) to an empty string.
@@ -724,10 +722,6 @@ function setupContactButton() {
           showUsername: actualShowUsername, // This is a definite boolean
         };
 
-        console.log(
-          "Dispatching openChat event with sanitized detail:",
-          JSON.parse(JSON.stringify(eventDetail))
-        );
 
         const chatEvent = new CustomEvent("openChat", {
           detail: eventDetail,

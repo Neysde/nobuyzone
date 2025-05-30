@@ -284,11 +284,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // Set the current center to the map center point (no more separate marker)
     currentCenter = map.getCenter();
 
-    console.log(
-      `Fixed circle radius: ${radiusInPixels}px, Geographic radius: ${currentRadius.toFixed(
-        1
-      )} km`
-    );
 
     // Update location info to show new radius and location
     updateLocationInfo(currentCenter);
@@ -330,9 +325,6 @@ document.addEventListener("DOMContentLoaded", function () {
     circle.setAttribute("r", radiusInPixels);
     borderCircle.setAttribute("r", radiusInPixels);
 
-    console.log(
-      `Updated mask circle for center: ${lat.toFixed(4)}, ${lng.toFixed(4)}`
-    );
   }
 
   // Set up map events
@@ -545,7 +537,6 @@ document.addEventListener("DOMContentLoaded", function () {
   // Load city and district data
   async function loadLocationData() {
     try {
-      console.log("Fetching location data...");
       const [ilResponse, ilceResponse] = await Promise.all([
         fetch("/backend/json/il.json"),
         fetch("/backend/json/ilce.json"),
@@ -617,10 +608,6 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("Error waiting for rate limit:", error);
     }
 
-    console.log("[DEBUG] Populating districts for city ID:", cityId);
-    console.log("[DEBUG] Current filters before population:", {
-      ...currentFilters,
-    });
 
     // Clear current options except the first one
     globalDistrict.innerHTML = '<option value="">İlçe Seçin</option>';
@@ -646,17 +633,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // If we have a stored districtId in currentFilters, restore the selection
     if (currentFilters.districtId) {
-      console.log(
-        "[DEBUG] Attempting to restore district selection:",
-        currentFilters.districtId
-      );
       globalDistrict.value = currentFilters.districtId;
     }
 
-    console.log(
-      "[DEBUG] Districts populated. Current selection:",
-      globalDistrict.value
-    );
   }
 
   /**
@@ -765,7 +744,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // City select - enable/disable district select based on selection
     globalCity.addEventListener("change", async function () {
-      console.log("[DEBUG] City selection changed. Selected ID:", this.value);
 
       const searchBar = document.querySelector(".search-bar");
       const selectedCityId = this.value;
@@ -787,7 +765,6 @@ document.addEventListener("DOMContentLoaded", function () {
         searchBar.classList.remove("city-only");
         searchBar.classList.add("city-district");
 
-        console.log("[DEBUG] Populating districts for new city");
         await populateDistrictsGlobal(selectedCityId);
       } else {
         // No city selected
@@ -810,10 +787,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // District select event listener
     globalDistrict.addEventListener("change", async function () {
       const selectedDistrictId = this.value;
-      console.log(
-        "[DEBUG] District selection changed. Selected ID:",
-        selectedDistrictId
-      );
 
       let districtNameForFilter = "";
       let selectedDistrictObject = null;
@@ -826,17 +799,12 @@ document.addEventListener("DOMContentLoaded", function () {
           ? selectedDistrictObject.name
           : "";
 
-        console.log("[DEBUG] Found district object:", selectedDistrictObject);
       }
 
       // Store both name and ID in currentFilters before calling updateFilters
       currentFilters.district = districtNameForFilter;
       currentFilters.districtId = selectedDistrictId;
 
-      console.log("[DEBUG] Updating filters with district:", {
-        name: districtNameForFilter,
-        id: selectedDistrictId,
-      });
 
       // Update filters: pass both district NAME and ID, reset page, disable radius search
       await updateFilters({
@@ -955,11 +923,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Add debug logs for radius search filters
     if (currentFilters.useRadius) {
-      console.log("Radius search parameters:", {
-        lat: currentFilters.radiusLat,
-        lng: currentFilters.radiusLng,
-        radiusKm: currentFilters.radiusKm,
-      });
     }
 
     // Apply the new filters (which fetches posts)
@@ -1035,10 +998,6 @@ document.addEventListener("DOMContentLoaded", function () {
    * Apply current filters to posts data and update the display
    */
   async function applyFilters() {
-    console.log(
-      "Applying filters with currentFilters state:",
-      JSON.parse(JSON.stringify(currentFilters))
-    );
 
     const apiFilters = { ...currentFilters };
 
@@ -1046,14 +1005,12 @@ document.addEventListener("DOMContentLoaded", function () {
     // currentFilters.city and currentFilters.district should now store the actual names.
     if (apiFilters.city) {
       apiFilters.city = standardizeLocationName(apiFilters.city);
-      console.log("Standardized city name for API:", apiFilters.city);
     } else {
       apiFilters.city = ""; // Ensure it's an empty string if null/undefined for consistency
     }
 
     if (apiFilters.district) {
       apiFilters.district = standardizeLocationName(apiFilters.district);
-      console.log("Standardized district name for API:", apiFilters.district);
     } else {
       apiFilters.district = ""; // Ensure it's an empty string
     }
@@ -1066,10 +1023,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // This would be replaced with actual API call
-    console.log(
-      "Filters being sent to fetchPosts (apiFilters):",
-      JSON.parse(JSON.stringify(apiFilters))
-    );
     fetchPosts(apiFilters);
 
     // After initial filters are applied (which updates currentFilters based on URL params),
@@ -1081,11 +1034,6 @@ document.addEventListener("DOMContentLoaded", function () {
    * Update UI elements to reflect the current filter state
    */
   async function updateFilterUI() {
-    console.log("[DEBUG] updateFilterUI called with currentFilters:", {
-      city: currentFilters.city,
-      district: currentFilters.district,
-      districtId: currentFilters.districtId,
-    });
 
     // Update category buttons
     categoryButtons.forEach((button) => {
@@ -1118,12 +1066,6 @@ document.addEventListener("DOMContentLoaded", function () {
       );
       if (foundCity) {
         globalCity.value = foundCity.id;
-        console.log(
-          "[DEBUG] Found and set city:",
-          foundCity.name,
-          "ID:",
-          foundCity.id
-        );
 
         // Enable district selection
         globalDistrict.disabled = false;
@@ -1134,16 +1076,11 @@ document.addEventListener("DOMContentLoaded", function () {
         // Ensure districts are populated
         const currentDistrictOptions = globalDistrict.options.length;
         if (currentDistrictOptions <= 1) {
-          console.log("[DEBUG] Populating districts in updateFilterUI");
           await populateDistrictsGlobal(foundCity.id);
         }
 
         // Set district value if we have an ID
         if (currentFilters.districtId) {
-          console.log(
-            "[DEBUG] Setting district value to:",
-            currentFilters.districtId
-          );
           globalDistrict.value = currentFilters.districtId;
         }
       } else {
@@ -1197,10 +1134,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // Update URL after UI is synced with filters
     updateURL(currentFilters);
 
-    console.log(
-      "[DEBUG] End of updateFilterUI. District value:",
-      globalDistrict.value
-    );
   }
 
   /**
@@ -1249,7 +1182,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // Only push state if the URL actually changes to avoid duplicate history entries
     if (newUrl !== window.location.href) {
       window.history.pushState({ path: newUrl, filters: filters }, "", newUrl);
-      console.log("URL Updated:", newUrl);
     }
   }
 
@@ -1294,14 +1226,9 @@ document.addEventListener("DOMContentLoaded", function () {
       params.append("limit", "1000"); // Set a high limit to get as many posts as possible
 
       // Log that we're doing a radius search
-      console.log("Performing radius search:", {
-        center: [filters.radiusLat, filters.radiusLng],
-        radiusKm: filters.radiusKm,
-      });
     }
 
     const queryString = params.toString();
-    console.log("API Query string:", queryString);
 
     // Make actual API call with filters (query params)
     fetch("/api/posts?" + queryString)
@@ -1315,9 +1242,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (data.success) {
           // If using radius search, filter posts by distance client-side
           if (isRadiusSearch) {
-            console.log(
-              `Server returned ${data.data.length} posts before radius filtering`
-            );
 
             // Filter posts that are within the radius
             const filteredPosts = filterPostsByDistance(
@@ -1330,8 +1254,8 @@ document.addEventListener("DOMContentLoaded", function () {
             // Update results count
             data.count = filteredPosts.length;
 
-            // Render filtered posts
-            renderPosts(filteredPosts);
+            // Render filtered posts with total count
+            renderPosts(filteredPosts, filteredPosts.length);
 
             // Show notification if no posts are found within radius
             if (data.data.length > 0 && filteredPosts.length === 0) {
@@ -1341,8 +1265,8 @@ document.addEventListener("DOMContentLoaded", function () {
               );
             }
           } else {
-            // Render all posts as usual
-            renderPosts(data.data);
+            // Render all posts as usual with total count from API
+            renderPosts(data.data, data.count);
           }
 
           // Update pagination data if provided
@@ -1352,7 +1276,7 @@ document.addEventListener("DOMContentLoaded", function () {
             // Basic pagination data if not provided by API
             updatePagination({
               currentPage: currentFilters.page,
-              totalPages: Math.max(1, Math.ceil(data.count / 10)),
+              totalPages: Math.max(1, Math.ceil(data.count / 9)), // Changed from 10 to 9 posts per page
               totalItems: data.count,
             });
           }
@@ -1383,16 +1307,9 @@ document.addEventListener("DOMContentLoaded", function () {
    * @returns {Array} - Filtered posts within radius
    */
   function filterPostsByDistance(posts, centerLat, centerLng, radiusKm) {
-    console.log(
-      `Filtering ${posts.length} posts by distance. Center: ${centerLat}, ${centerLng}, Radius: ${radiusKm}km`
-    );
 
     // Log posts structure for debugging
     if (posts.length > 0) {
-      console.log(
-        "First post location structure:",
-        JSON.stringify(posts[0].location)
-      );
     }
 
     // Track how many posts have valid location data
@@ -1402,7 +1319,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const filteredPosts = posts.filter((post) => {
       // Check if post has valid location data
       if (!post.location) {
-        console.log(`Post ${post._id || "unknown"} has no location property`);
         return false;
       }
 
@@ -1447,19 +1363,11 @@ document.addEventListener("DOMContentLoaded", function () {
         lng = post.location.longitude;
       } else if (typeof post.location === "string") {
         // Location might be stored as a string, which we can't use for distance calculation
-        console.log(
-          `Post ${post._id || "unknown"} has location as string: ${
-            post.location
-          }`
-        );
         return false;
       }
 
       // Skip if coordinates are not valid numbers
       if (isNaN(lat) || isNaN(lng) || lat === undefined || lng === undefined) {
-        console.log(
-          `Post has missing or invalid coordinates. Checking city match instead.`
-        );
 
         // Alternative: use city/district matching as fallback when coordinates are not available
         // If the post's city matches the center's city (e.g., both in Istanbul), include it
@@ -1470,9 +1378,6 @@ document.addEventListener("DOMContentLoaded", function () {
           // For demo purposes, just include posts from major cities in the results
           const majorCities = ["Istanbul", "Ankara", "Izmir", "Bursa"];
           if (majorCities.includes(post.location.city)) {
-            console.log(
-              `Including post in ${post.location.city} based on city matching`
-            );
             validLocationCount++;
             postsInRadius++;
             return true;
@@ -1498,10 +1403,6 @@ document.addEventListener("DOMContentLoaded", function () {
       return isInRadius;
     });
 
-    console.log(
-      `Posts with valid locations: ${validLocationCount}/${posts.length}`
-    );
-    console.log(`Posts within ${radiusKm}km radius: ${postsInRadius}`);
 
     return filteredPosts;
   }
@@ -1538,8 +1439,9 @@ document.addEventListener("DOMContentLoaded", function () {
   /**
    * Render posts to the posts grid
    * @param {Array} posts - Array of post objects
+   * @param {Number} totalCount - Total number of posts in the search results (optional)
    */
-  function renderPosts(posts) {
+  function renderPosts(posts, totalCount) {
     if (!posts || posts.length === 0) {
       postsGrid.innerHTML =
         '<div class="no-results">Kriterlerinize uygun gönderi bulunamadı.</div>';
@@ -1547,8 +1449,9 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    //Update results count
-    resultsCount.textContent = posts.length;
+    // Update results count with total count if provided, otherwise use posts.length
+    // This displays the total count of posts in the search results
+    resultsCount.textContent = totalCount || posts.length;
 
     //Clear posts grid
     postsGrid.innerHTML = "";
@@ -1580,7 +1483,7 @@ document.addEventListener("DOMContentLoaded", function () {
               ${post.location.city}, ${post.location.district}
             </span>
             <span class="post-date">Yayınlanma Tarihi: ${new Date(
-              post.createdAt
+              post.updatedAt //Changed from createdAt to updatedAt to display more accurate date because of draft publishes
             ).toLocaleDateString("tr-TR", {
               year: "numeric",
               month: "short",
@@ -1872,7 +1775,6 @@ document.addEventListener("DOMContentLoaded", function () {
       await waitForRateLimit();
       const encodedAddress = encodeURIComponent(address);
       const url = `https://geocode.maps.co/search?q=${encodedAddress}&api_key=${apiKey}`;
-      console.log(`Geocoding address: ${address}`);
 
       const response = await fetch(url);
       if (!response.ok) {
@@ -1943,10 +1845,6 @@ document.addEventListener("DOMContentLoaded", function () {
   async function init() {
     // Load location data first and ensure it's complete
     await loadLocationData();
-    console.log(
-      "[DEBUG] init: loadLocationData complete. Cities loaded:",
-      cities.length > 0
-    );
 
     // Initialize the radius map (can happen before or after city/district setup)
     initRadiusMap();
@@ -1955,7 +1853,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const cityParam = urlParams.get("city");
 
     if (cityParam) {
-      console.log("[DEBUG] init: Found cityParam in URL:", cityParam);
       // Normalize both cityParam and city names from the array to lowercase with Turkish locale and trim for comparison
       const cityParamNormalized = cityParam.toLocaleLowerCase("tr-TR").trim();
 
@@ -1965,12 +1862,6 @@ document.addEventListener("DOMContentLoaded", function () {
       );
 
       if (matchingCity) {
-        console.log(
-          "[DEBUG] init: CityParam matched. Name from il.json:",
-          matchingCity.name,
-          "ID:",
-          matchingCity.id
-        );
         currentFilters.city = matchingCity.name; // Store the canonical name from il.json for filters
         globalCity.value = matchingCity.id; // Directly set the dropdown value
 
@@ -1980,11 +1871,6 @@ document.addEventListener("DOMContentLoaded", function () {
         document.querySelector(".search-bar").classList.remove("city-only");
         document.querySelector(".search-bar").classList.add("city-district");
       } else {
-        console.log(
-          "[DEBUG] init: CityParam (",
-          cityParamNormalized,
-          ") did not match any city in cities array. Using original param as name for filter."
-        );
         currentFilters.city = cityParam; // Use the original param for filtering if no match
         globalCity.value = ""; // Ensure city dropdown is not set
         document.getElementById("district-wrapper").classList.add("hidden"); // Hide district

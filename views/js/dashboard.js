@@ -13,6 +13,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Initialize privacy settings
   initPrivacySettings();
+  
+  // Initialize account deletion functionality
+  initAccountDeletion();
 });
 
 /**
@@ -736,4 +739,82 @@ function initPrivacySettings() {
       }
     });
   }
+}
+
+/**
+ * Initialize account deletion functionality
+ */
+function initAccountDeletion() {
+  // Elements
+  const deleteAccountBtn = document.getElementById("delete-account-btn");
+  const deleteAccountModal = document.getElementById("delete-account-modal");
+  const closeDeleteModalBtn = document.getElementById("close-delete-modal");
+  const cancelDeleteBtn = document.getElementById("cancel-delete-account");
+  const confirmDeleteBtn = document.getElementById("confirm-delete-account");
+  const confirmationInput = document.getElementById("delete-confirmation-input");
+
+  if (!deleteAccountBtn || !deleteAccountModal) return;
+
+  // Open the delete account modal
+  deleteAccountBtn.addEventListener("click", function () {
+    deleteAccountModal.classList.add("active");
+    document.body.classList.add("modal-open");
+    confirmationInput.value = ""; // Clear any previous input
+    confirmDeleteBtn.disabled = true; // Disable confirm button initially
+  });
+
+  // Close the delete account modal
+  function closeDeleteModal() {
+    deleteAccountModal.classList.remove("active");
+    document.body.classList.remove("modal-open");
+  }
+
+  // Close modal event listeners
+  closeDeleteModalBtn.addEventListener("click", closeDeleteModal);
+  cancelDeleteBtn.addEventListener("click", closeDeleteModal);
+
+  // Validate confirmation input
+  confirmationInput.addEventListener("input", function () {
+    // Enable the confirm button only if the input matches exactly "hesabı sil"
+    confirmDeleteBtn.disabled = this.value.toLowerCase() !== "hesabı sil";
+  });
+
+  // Handle account deletion
+  confirmDeleteBtn.addEventListener("click", async function () {
+    if (confirmationInput.value.toLowerCase() !== "hesabı sil") {
+      showNotification("Lütfen 'hesabı sil' yazarak onaylayın", "error");
+      return;
+    }
+
+    try {
+      showLoadingState();
+
+      const response = await fetch("/api/user/delete-account", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Hesap silinemedi");
+      }
+
+      // On successful deletion, redirect to home page
+      showNotification("Hesabınız başarıyla silindi", "success");
+      
+      // Wait a moment to show the success message before redirecting
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1500);
+      
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      showNotification(error.message || "Hesap silinemedi", "error");
+      closeDeleteModal();
+    } finally {
+      hideLoadingState();
+    }
+  });
 }

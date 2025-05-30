@@ -118,6 +118,21 @@ body {
   color: var(--primary);
 }
 
+.button-danger {
+  background-color: #f56565;
+  color: white;
+}
+
+.button-danger:hover {
+  background-color: #e53e3e;
+}
+
+.button-danger:disabled {
+  background-color: #fc8181;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 .full-width {
   width: 100%;
 }
@@ -468,6 +483,58 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+}
+
+/* Account Deletion Styles */
+.account-deletion-container {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+}
+
+.deletion-warning {
+  color: #e53e3e;
+  line-height: 1.5;
+  flex: 1;
+  text-align: left;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+#delete-account-btn {
+  margin-left: var(--space-md);
+  flex-shrink: 0;
+}
+
+.delete-account-warning {
+  color: #e53e3e;
+  font-weight: 500;
+  margin-bottom: var(--space-md);
+}
+
+.delete-account-consequences {
+  margin-bottom: var(--space-md);
+  padding-left: var(--space-lg);
+}
+
+.delete-account-consequences li {
+  margin-bottom: var(--space-xs);
+}
+
+.confirmation-input-container {
+  width: 100%;
+  margin-top: var(--space-md);
+}
+
+.confirmation-input-container input {
+  width: 100%;
+  padding: var(--space-sm);
+  border: 1px solid var(--neutral-400);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-md);
 }
 
 .account-field {

@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import User from "../mongoose/user.mjs";
 import Token from "../mongoose/email-token.mjs";
 import Joi from "joi";
@@ -68,7 +69,6 @@ const register = async (req, res) => {
     await sendEmail(user.email, subject, message); //imports sendEmail func.
     res.status(201).send({ message: "Hesabınıza bir e-posta gönderildi" });
   } catch (error) {
-    console.log(error);
     res.status(500).send({ message: "Internally Server Error" });
   }
 };
@@ -261,10 +261,7 @@ const sendEmail = async (email, subject, message) => {
       subject: subject,
       html: message,
     });
-    console.log("Email sent Successfully");
   } catch (error) {
-    console.log("Email not sent");
-    console.log(error);
     return error;
   }
 };
@@ -352,11 +349,7 @@ router.patch("/api/user/profile-picture", isAuthenticated, async (req, res) => {
           method: "DELETE",
         });
 
-        if (deleteResponse.ok) {
-          console.log(
-            `Deleted old profile picture: ${user.profilePicture.publicId}`
-          );
-        } else {
+       if (!deleteResponse.ok) {
           console.error("Failed to delete old profile picture");
         }
       } catch (deleteError) {
@@ -451,6 +444,94 @@ router.get("/api/check-auth", (req, res) => {
     return res.status(401).json({
       authenticated: false,
       message: "Not authenticated",
+    });
+  }
+});
+
+// Delete account route
+router.delete("/api/user/delete-account", isAuthenticated, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const protocol = req.protocol; // 'http' or 'https'
+    const host = req.get("host");
+    const cookies = req.headers.cookie || "";
+
+    // 1. Delete all posts and drafts created by the user using the API routes
+    // First, get all user's posts
+    const posts = await Post.find({
+      createdBy: userId,
+      status: "active"
+    }).select("_id");
+
+    // Get all user's drafts
+    const drafts = await Post.find({
+      createdBy: userId,
+      status: "draft"
+    }).select("_id");
+
+    // Delete each post using the post delete API to ensure Cloudinary images are deleted
+    for (const post of posts) {
+      try {
+        const deleteUrl = `${protocol}://${host}/api/posts/${post._id}`;
+        await fetch(deleteUrl, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Cookie: cookies
+          },
+          credentials: "same-origin"
+        });
+      } catch (postError) {
+        console.error(`Error deleting post ${post._id}:`, postError);
+        // Continue with other deletions even if one fails
+      }
+    }
+
+    // Delete each draft using the draft delete API
+    for (const draft of drafts) {
+      try {
+        const deleteUrl = `${protocol}://${host}/api/drafts/${draft._id}`;
+        await fetch(deleteUrl, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Cookie: cookies
+          },
+          credentials: "same-origin"
+        });
+      } catch (draftError) {
+        console.error(`Error deleting draft ${draft._id}:`, draftError);
+        // Continue with other deletions even if one fails
+      }
+    }
+
+    // 2. Find all messages where this user is a participant
+    const Message = mongoose.model('Message');
+    await Message.deleteMany({
+      "users.user": userId
+    });
+
+    // 3. Remove user from other users' favorites
+    await User.updateMany(
+      { favorites: { $in: [userId] } },
+      { $pull: { favorites: userId } }
+    );
+
+    // 4. Finally, delete the user account
+    await User.findByIdAndDelete(userId);
+
+    // 5. Clear the login cookie
+    res.clearCookie("login");
+
+    return res.status(200).json({
+      success: true,
+      message: "Hesabınız ve ilgili tüm verileriniz başarıyla silindi"
+    });
+  } catch (error) {
+    console.error("Error deleting account:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Hesap silinirken bir hata oluştu: " + error.message
     });
   }
 });

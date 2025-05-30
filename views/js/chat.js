@@ -50,14 +50,8 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
     detailString = detailString.replace(/, $/, "") + "}";
-    console.log(
-      "Chat.js DOM Listener: Received currentEventDetail (stringified props):",
-      detailString
-    );
-    console.log(
-      "Chat.js DOM Listener: Actual currentEventDetail object for inspection:",
-      currentEventDetail
-    );
+
+
 
     // Destructure ALL expected fields directly from the 'currentEventDetail' object.
     const {
@@ -73,17 +67,6 @@ document.addEventListener("DOMContentLoaded", function () {
     } = currentEventDetail;
 
     // Log the destructured values immediately.
-    console.log("Chat.js DOM Listener: Destructured values (type and value):", {
-      dest_postId: { value: postId, type: typeof postId },
-      dest_recipientId: { value: recipientId, type: typeof recipientId },
-      dest_recipientName: { value: recipientName, type: typeof recipientName },
-      dest_avatar: { value: avatar, type: typeof avatar },
-      dest_postTitle: { value: postTitle, type: typeof postTitle },
-      dest_username: { value: username, type: typeof username },
-      dest_firstName: { value: firstName, type: typeof firstName },
-      dest_lastName: { value: lastName, type: typeof lastName },
-      dest_showUsername: { value: showUsername, type: typeof showUsername },
-    });
 
     // Create final copies of variables to ensure closure safety for the .then() callback
     const finalPostId = postId;
@@ -100,9 +83,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const chatIdentifier = `${finalPostId}:${finalRecipientId}`;
 
     if (isProcessingOpenChat && currentProcessingChatId === chatIdentifier) {
-      console.log(
-        "Chat.js: DOMContentLoaded - Already processing this chat, ignoring duplicate event"
-      );
+
       return;
     }
 
@@ -110,9 +91,7 @@ document.addEventListener("DOMContentLoaded", function () {
       Chat.isCurrentChat &&
       Chat.isCurrentChat(finalPostId, finalRecipientId)
     ) {
-      console.log(
-        "Chat.js: DOMContentLoaded - This chat is already open, just focusing it"
-      );
+
       Chat.focusChat && Chat.focusChat();
       return;
     }
@@ -120,9 +99,7 @@ document.addEventListener("DOMContentLoaded", function () {
     isProcessingOpenChat = true;
     currentProcessingChatId = chatIdentifier;
 
-    console.log(
-      `Chat.js: DOMContentLoaded - Processing chat open request: ${chatIdentifier}`
-    );
+
 
     Chat.loadChatComponent()
       .then(() => {
@@ -133,43 +110,6 @@ document.addEventListener("DOMContentLoaded", function () {
         const parsedShowUsername =
           finalShowUsername === true ||
           String(finalShowUsername).toLowerCase() === "true";
-
-        // Log values being PASSED to Chat.openChat
-        console.log(
-          "Chat.js DOM Listener .then(): Calling Chat.openChat with (type and value):",
-          {
-            call_postId: { value: finalPostId, type: typeof finalPostId },
-            call_recipientId: {
-              value: finalRecipientId,
-              type: typeof finalRecipientId,
-            },
-            call_recipientName: {
-              value: finalRecipientName,
-              type: typeof finalRecipientName,
-            },
-            call_avatar: { value: finalAvatar, type: typeof finalAvatar },
-            call_postTitle: {
-              value: finalPostTitle,
-              type: typeof finalPostTitle,
-            },
-            call_p_username: {
-              value: finalUsername,
-              type: typeof finalUsername,
-            },
-            call_p_firstName: {
-              value: finalFirstName,
-              type: typeof finalFirstName,
-            },
-            call_p_lastName: {
-              value: finalLastName,
-              type: typeof finalLastName,
-            },
-            call_p_showUsername: {
-              value: parsedShowUsername,
-              type: typeof parsedShowUsername,
-            },
-          }
-        );
 
         Chat.openChat(
           finalPostId,
@@ -298,7 +238,6 @@ const Chat = (function () {
 
     // If chat isn't available or not on a page with chat, return early
     if (!chatContainer) {
-      console.log("Chat container not found, skipping chat initialization");
       return;
     }
 
@@ -492,13 +431,13 @@ const Chat = (function () {
     try {
       // If socket exists and is connected, no need to reinitialize
       if (socket && socket.connected) {
-        console.log("Socket already connected, skipping initialization");
+
         return true;
       }
 
       // Clean up any previous socket instance
       if (socket) {
-        console.log("Cleaning up previous socket connection");
+
         try {
           socket.disconnect();
         } catch (e) {
@@ -506,7 +445,7 @@ const Chat = (function () {
         }
       }
 
-      console.log("Initializing new socket connection");
+
 
       // Initialize socket connection with proper options
       socket = io({
@@ -526,7 +465,7 @@ const Chat = (function () {
 
       // Basic connection event listeners
       socket.on("connect", () => {
-        console.log("Connected to chat server");
+
 
         // Clear any previous error notifications
         const errorNotification = document.querySelector(".notification.error");
@@ -539,7 +478,6 @@ const Chat = (function () {
 
         // Join current chat room if we have one open
         if (currentPostId && currentRecipientId) {
-          console.log("Rejoining chat room after reconnect");
           socket.emit("join-chat", {
             postId: currentPostId,
             userId: currentRecipientId,
@@ -564,7 +502,7 @@ const Chat = (function () {
       });
 
       socket.on("disconnect", (reason) => {
-        console.log(`Disconnected from chat server: ${reason}`);
+
 
         // If the disconnection was initiated by the server, try to reconnect
         if (reason === "io server disconnect") {
@@ -577,15 +515,13 @@ const Chat = (function () {
       });
 
       socket.on("reconnect_attempt", (attemptNumber) => {
-        console.log(`Attempting to reconnect: attempt ${attemptNumber}`);
+
       });
 
       socket.on("reconnect", (attemptNumber) => {
-        console.log(`Successfully reconnected after ${attemptNumber} attempts`);
 
         // Rejoin chat room if there's an active chat
         if (currentPostId && currentRecipientId) {
-          console.log("Rejoining chat room after reconnect");
           socket.emit("join-chat", {
             postId: currentPostId,
             userId: currentRecipientId,
@@ -650,7 +586,6 @@ const Chat = (function () {
         isCurrentUser: true,
       };
 
-      console.log("Adding sent message to chat UI");
 
       addMessageToChat(sentMessage);
 
@@ -660,7 +595,6 @@ const Chat = (function () {
 
     //NEW HANDLER: Dedicated handler for receiving new messages
     socket.on("receive-message", (message) => {
-      console.log("Received message via dedicated channel");
 
       // Extract post ID and sender ID from the message, ensuring all possible formats
       const messagePostId = message.postId;
@@ -686,7 +620,6 @@ const Chat = (function () {
           isCurrentUser: false,
         };
 
-        console.log("Adding received message to chat UI");
 
         // Add message to chat UI
         addMessageToChat(formattedMessage);
@@ -716,7 +649,6 @@ const Chat = (function () {
 
     // Legacy handler for backward compatibility
     socket.on("new-message", (message) => {
-      console.log("Received message via legacy channel");
 
       // Extract post ID and sender ID from the message, with fallbacks
       const messagePostId = message.postId || "";
@@ -772,21 +704,6 @@ const Chat = (function () {
     socket.on(
       "user-typing",
       ({ userId, postId, firstName, lastName, username, showUsername }) => {
-        // Log received typing indicator data for debugging
-        console.log("Received typing indicator from another user:", {
-          userId, // ID of the OTHER person who is typing
-          postId,
-          firstName, // First name of the OTHER person who is typing
-          lastName, // Last name of the OTHER person who is typing
-          username, // Username of the OTHER person who is typing
-          showUsername, // Whether to show only username
-          fullName:
-            !showUsername && firstName && lastName
-              ? `${firstName} ${lastName}`
-              : showUsername && username
-              ? `${username}`
-              : firstName || "Someone",
-        });
 
         // Only show typing indicator if it's from the current chat partner we're talking with
         if (userId === currentRecipientId && postId === currentPostId) {
@@ -827,7 +744,6 @@ const Chat = (function () {
     if (!socket || !socket.connected || !currentPostId || !currentRecipientId)
       return;
 
-    console.log("Requesting any missed messages");
 
     // Request messages since the last message timestamp we have
     const lastMessageTime = getLastMessageTimestamp();
@@ -916,25 +832,6 @@ const Chat = (function () {
       }
     }
 
-    // Log incoming parameters for debugging
-    console.log(
-      "Chat.openChat: RAW PARAMS RECEIVED:",
-      JSON.parse(
-        JSON.stringify({
-          postId,
-          recipientId,
-          recipientName,
-          avatar,
-          postTitle,
-          username: p_username, // param username
-          firstName: p_firstName, // param firstName
-          lastName: p_lastName, // param lastName
-          showUsername: p_showUsername, // param showUsername
-          showUsernameType: typeof p_showUsername,
-        })
-      )
-    );
-
     // Helper to sanitize name fields passed as parameters.
     // Converts boolean true/false to "", and string "true"/"false" (case-insensitive) to "".
     // Ensures other defined, non-null values are strings, or "" if undefined/null.
@@ -974,7 +871,6 @@ const Chat = (function () {
 
     // Ensure socket connection is established when opening a chat
     if (!socket || !socket.connected) {
-      console.log("Initializing socket connection for chat");
       initializeSocketConnection();
 
       // Wait for socket connection to be established
@@ -982,9 +878,6 @@ const Chat = (function () {
         // Try to wait for connection
         let connectionAttempts = 0;
         while ((!socket || !socket.connected) && connectionAttempts < 3) {
-          console.log(
-            `Waiting for socket connection... Attempt ${connectionAttempts + 1}`
-          );
           await new Promise((resolve) => setTimeout(resolve, 300));
           connectionAttempts++;
         }
@@ -1000,13 +893,10 @@ const Chat = (function () {
       }
     }
 
-    console.log("Opening chat:", { postId, recipientId, recipientName });
-
     // Check if we're already in this chat
     const isSameChat =
       currentPostId === postId && currentRecipientId === recipientId;
     if (isSameChat) {
-      console.log("Already in this chat, just focusing it");
       // Just focus the chat window
       chatContainer.classList.add("open");
       chatContainer.style.display = "flex";
@@ -1022,9 +912,6 @@ const Chat = (function () {
     clearChat();
 
     // Join the chat room for this conversation
-    console.log(
-      `Chat.js: openChat - Joining chat room for post ${postId} with user ${recipientId}`
-    );
     socket.emit("join-chat", { postId, userId: recipientId });
 
     // Track the room ID for debugging
@@ -1043,17 +930,10 @@ const Chat = (function () {
       finalFirstName = sanFirstName; // Use sanitized p_firstName if p_firstName was provided
       finalLastName = sanLastName; // Use sanitized p_lastName if p_lastName was provided
       // If one was undefined, its sanitized version will be "", which is correct.
-      console.log(
-        "Chat.openChat: Using provided p_firstName/p_lastName (post-sanitization).",
-        { finalFirstName, finalLastName }
-      );
     } else {
       // BOTH p_firstName AND p_lastName were undefined in the call.
       // This indicates an "old call pattern" or a situation where only recipientName is available.
       // Now, try to parse from recipientName if appropriate.
-      console.log(
-        "Chat.openChat: p_firstName & p_lastName were undefined. Attempting to parse recipientName."
-      );
       finalFirstName = ""; // Default before parsing
       finalLastName = ""; // Default before parsing
 
@@ -1072,11 +952,8 @@ const Chat = (function () {
         if (nameParts.length > 1) {
           finalLastName = sanitizeNameParameter(nameParts.slice(1).join(" "));
         }
-        console.log(
-          `Chat.openChat: Parsed recipientName. finalFirstName="${finalFirstName}", finalLastName="${finalLastName}"`
-        );
       } else {
-        console.log(
+        console.error(
           "Chat.openChat: Did not parse recipientName (e.g., showUsername true, or recipientName unsuitable)."
         );
       }
@@ -1093,10 +970,6 @@ const Chat = (function () {
       showUsername: parsedShowUsername, // Use the reliably parsed boolean
     };
 
-    console.log(
-      "Chat.js: openChat - Prepared userData for updateChatHeader:",
-      JSON.parse(JSON.stringify(userData)) // Log a deep copy
-    );
 
     const postData = {
       title: postTitle || "Post", // Default post title
@@ -1135,7 +1008,6 @@ const Chat = (function () {
         if (socket && socket.connected && currentPostId && currentRecipientId) {
           // We don't need to check every 30 seconds, as the server will now track room membership
           // Just ensure we're in the room every 2 minutes
-          console.log("Periodic chat room check - ensuring membership");
           socket.emit("join-chat", {
             postId: currentPostId,
             userId: currentRecipientId,
@@ -1187,11 +1059,6 @@ const Chat = (function () {
       }
 
       const data = await response.json();
-      console.log("Received chat data:", {
-        messageCount: data.messages?.length || 0,
-        hasUserData: !!data.otherUser,
-        hasPostData: !!data.post,
-      });
 
       // Add messages to the chat
       if (data.messages && data.messages.length > 0) {
@@ -1228,7 +1095,6 @@ const Chat = (function () {
         // Scroll to the bottom
         scrollToBottom();
       } else {
-        console.log("No messages found in conversation");
         showEmptyState();
       }
     } catch (error) {
@@ -1269,12 +1135,6 @@ const Chat = (function () {
       post = { title: "Post" }; // Default post title
     }
 
-    // Debugging the user object passed to this function
-    console.log(
-      "Chat.js: updateChatHeader - User data received:",
-      JSON.parse(JSON.stringify(user)) // Deep copy for logging
-    );
-    console.log("Chat.js: updateChatHeader - Post data received:", post);
 
     // Set the avatar image source and alt text
     if (chatAvatar) {
@@ -1306,49 +1166,26 @@ const Chat = (function () {
       if (user.showUsername && uUsername) {
         // If showUsername is true and username is available, display username
         displayName = uUsername;
-        console.log(
-          "Chat.js: updateChatHeader - Displaying username:",
-          uUsername
-        );
       } else if (user.showUsername === false) {
         // Explicitly check for false
         // If showUsername is false, prioritize FirstName LastName
         if (uFirstName && uLastName) {
           displayName = `${uFirstName} ${uLastName}`;
-          console.log(
-            "Chat.js: updateChatHeader - Displaying full name:",
-            displayName
-          );
         } else if (uFirstName) {
           displayName = uFirstName;
-          console.log(
-            "Chat.js: updateChatHeader - Displaying first name (fallback firstName only):",
-            displayName
-          );
         } else if (uLastName) {
           // Added case for only last name
           displayName = uLastName;
-          console.log(
-            "Chat.js: updateChatHeader - Displaying last name (fallback lastName only):",
-            displayName
-          );
         } else if (uUsername) {
           // If no first/last name, but username exists (even if showUsername is false), use username as next fallback
           displayName = uUsername;
-          console.log(
-            "Chat.js: updateChatHeader - Displaying username (fallback as full name missing):",
-            uUsername
-          );
         }
         // If displayName is still "User" here, it means uFirstName, uLastName, and uUsername were all empty.
       } else if (uUsername) {
         // Fallback for cases where showUsername might not be explicitly false (e.g. undefined from an old call pattern)
         // but username is available. This is a weaker condition than user.showUsername === true.
         displayName = uUsername;
-        console.log(
-          "Chat.js: updateChatHeader - Displaying username (showUsername not strictly false, fallback to username):",
-          uUsername
-        );
+
       }
 
       // Final cleanup: if displayName ended up empty, or just "@" (from an empty username being prefixed), default to "User".
@@ -1359,9 +1196,6 @@ const Chat = (function () {
 
       chatRecipientName.textContent = displayName;
       if (displayName === "User") {
-        console.log(
-          "Chat.js: updateChatHeader - Using ultimate fallback name: User (due to all parts being empty or invalid)"
-        );
       }
     }
 
@@ -1392,10 +1226,6 @@ const Chat = (function () {
         `[data-message-id="${message._id}"]`
       );
       if (existingMessage) {
-        console.log(
-          "Message already exists in chat, not adding duplicate:",
-          message._id
-        );
         return;
       }
     }
@@ -1446,11 +1276,6 @@ const Chat = (function () {
       return;
     }
 
-    console.log("Sending message:", {
-      postId: currentPostId,
-      recipientId: currentRecipientId,
-      content: message,
-    });
 
     // Disable input and button while sending
     chatInput.disabled = true;
@@ -1481,9 +1306,6 @@ const Chat = (function () {
         );
 
         if (!messageExists) {
-          console.log(
-            "Message-sent event not received, displaying message locally"
-          );
           const localMessage = {
             _id: `local-${Date.now()}`,
             content: messageContent,
@@ -1541,33 +1363,25 @@ const Chat = (function () {
     // Convert showUsername to boolean to handle string values from data attributes
     const shouldShowUsername = showUsername === true || showUsername === "true";
 
-    // Debugging to diagnose issues
-    console.log("FIXED VERSION - showTypingIndicator received data:", {
-      firstName,
-      lastName,
-      username,
-      showUsername,
-      shouldShowUsername,
-    });
 
     if (shouldShowUsername && username) {
       // Show only the username if the privacy setting is enabled
       fullName = username;
-      console.log("Typing indicator showing username:", username);
+
     } else if (firstName && lastName) {
       // Both first and last name available - format as "FirstName LastName"
       fullName = `${firstName} ${lastName}`.trim();
-      console.log("Typing indicator showing full name:", fullName);
+
     } else if (firstName) {
       // Only first name available
       fullName = firstName.trim();
-      console.log("Typing indicator showing first name:", firstName);
+
     } else if (lastName) {
       // Only last name available (unlikely but handled for completeness)
       fullName = lastName.trim();
-      console.log("Typing indicator showing last name:", lastName);
+
     } else {
-      console.log("Typing indicator using fallback name: Someone");
+      console.error("Typing indicator using fallback name: Someone");
     }
 
     // Set the full name directly
@@ -1657,17 +1471,11 @@ const Chat = (function () {
 
     // Emit an event to the server to leave the chat room
     if (socket && socket.connected && oldPostId && oldRecipientId) {
-      console.log(
-        `Chat.js: closeChat - Emitting leave-chat for post ${oldPostId} with user ${oldRecipientId}`
-      );
       socket.emit("leave-chat", {
         postId: oldPostId,
         recipientId: oldRecipientId, // This is the ID of the other user in the chat
       });
     }
-
-    // Log for debugging
-    console.log("Chat closed and state reset");
 
     // Clear current chat room tracking
     if (socket && socket.currentChatRoom) {
@@ -1706,8 +1514,6 @@ const Chat = (function () {
     if (typeof window.showNotification === "function") {
       window.showNotification(message, type);
     } else {
-      // Fallback notification if the global function is not available
-      console.log(`${type.toUpperCase()}: ${message}`);
 
       // Create notification element
       const notification = document.createElement("div");
@@ -1822,22 +1628,14 @@ const Chat = (function () {
 
     // If chat is active, don't set a timer
     if (isChatActive) {
-      console.log("Chat is active, not setting inactivity timer");
       return;
     }
 
-    // Set a new timeout
-    console.log(
-      `Setting socket inactivity timer for ${
-        socketInactivityDuration / 1000
-      } seconds`
-    );
     socketInactivityTimeout = setTimeout(() => {
       // If socket exists and is connected
       if (socket && socket.connected) {
         // Only disconnect if not in a chat
         if (!isChatActive && !currentPostId && !currentRecipientId) {
-          console.log("Disconnecting socket due to inactivity");
           // Disconnect the socket
           socket.disconnect();
           socket = null;

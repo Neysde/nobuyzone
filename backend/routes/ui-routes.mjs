@@ -29,9 +29,6 @@ router.get("/find-posts", (req, res, next) => {
       // Check if city parameter exists from map click
       const { city } = req.query;
 
-      // Debug log to check the city parameter
-      console.log("City parameter received:", city);
-
       if (city) {
         // If city is provided, filter posts by city - using regex for case-insensitive search
         baseFilter["location.city"] = { $regex: new RegExp(city, "i") };
@@ -40,9 +37,6 @@ router.get("/find-posts", (req, res, next) => {
       const posts = await Post.find(baseFilter).sort({
         createdAt: -1,
       });
-
-      // Debug log to show how many posts were found
-      console.log(`Found ${posts.length} posts with filter:`, baseFilter);
 
       //Count posts by category for sidebar display THIS will be used later for other purposes!!!
       const categoryCounts = await Post.aggregate([
