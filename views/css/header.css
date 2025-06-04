@@ -323,6 +323,22 @@
     font-weight: 500;
   }
 
+  /* Primary button in mobile - specific styling for the '+' icon button */
+  .header .mobile-actions > a.button.button-primary.create-post-button-mobile {
+    height: 32px !important;  /* Match other mobile icon buttons */
+    width: 32px !important;   /* Match other mobile icon buttons */
+    min-height: 32px !important; /* Match other mobile icon buttons */
+    padding-bottom: 6px !important;    /* Keep for centering */
+    font-size: 1.6rem;        /* Adjust font size for better fit in 32px */
+    line-height: 1;           /* For flex centering */
+    text-align: center;       /* Horizontal centering */
+    display: flex !important;
+    align-items: center !important; /* Vertical centering for flex item */
+    justify-content: center !important; /* Horizontal centering for flex item */
+    font-weight: bold;        /* Make '+' bolder */
+    /* position: relative; /* Removed as it's not used to shift the button */
+  }
+
   /* User button in mobile */
   .mobile-actions .user-button {
     padding: 0 var(--space-xs);

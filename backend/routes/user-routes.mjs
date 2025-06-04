@@ -62,9 +62,119 @@ const register = async (req, res) => {
     //Maybe need to change this html design used in email template later.
     const subject = "Lütfen E-posta Adresinizi Doğrulayın";
     const message = `
-      <h3>Merhaba ${user.firstName} ${user.lastName}</h3>
-      <p>Sitemize kayıt olduğunuz için teşekkür ederiz.</p>
-      <p>E-posta adresinizi doğrulamak için <a href="${url}">buraya</a> tıklayın</p>
+      <!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-posta Doğrulama</title>
+<style>
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f7f7f7; /* --neutral-200 */
+    color: #404040; /* --neutral-700 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .email-container {
+    max-width: 600px;
+    margin: 40px auto;
+    background-color: #ffffff; /* --neutral-100 */
+    border: 1px solid #e5e5e5; /* --neutral-300 */
+    border-radius: 0.5rem; /* --radius-lg, for example */
+    overflow: hidden;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* --shadow-sm */
+  }
+  .email-body {
+    padding: 30px 35px; /* Consider mapping to spacing variables */
+    line-height: 1.6;
+    text-align: left;
+  }
+  .email-body h2 {
+    font-size: 20px; /* Consider --font-size-lg or similar */
+    color: #404040; /* --neutral-700 */
+    margin-top: 0;
+    margin-bottom: 20px; /* --space-md or --space-lg */
+  }
+  .email-body p {
+    margin-bottom: 15px; /* --space-md */
+    font-size: 1rem; /* --font-size-md */
+  }
+  .email-button-container {
+    text-align: center;
+    margin: 30px 0; /* --space-lg or --space-xl */
+  }
+  .email-button {
+    background-color: #60a5fa; /* --primary */
+    color: #ffffff !important; /* --neutral-100, !important for link override */
+    padding: 15px 30px; /* Consider mapping to spacing variables */
+    text-decoration: none;
+    border-radius: 0.375rem; /* --radius-md */
+    font-size: 1rem; /* --font-size-md */
+    font-weight: bold;
+    display: inline-block;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  .email-button:hover {
+    background-color: #3b82f6; /* --primary-dark */
+  }
+  .email-footer {
+    text-align: center;
+    padding: 20px; /* --space-md or --space-lg */
+    font-size: 0.875rem; /* --font-size-sm */
+    color: #737373; /* --neutral-600 */
+    border-top: 1px solid #e5e5e5; /* --neutral-300 */
+  }
+  .email-footer p {
+    margin: 0;
+  }
+
+  /* Mobil uyumluluk için bazı eklemeler */
+  @media screen and (max-width: 600px) {
+    .email-container {
+      width: 100% !important;
+      margin: 10px 0;
+      border-radius: 0; /* No radius on full width */
+      border-left: none;
+      border-right: none;
+      box-shadow: none; /* Optional: remove shadow on mobile if it causes issues */
+    }
+    .email-body {
+      padding: 20px 25px;
+    }
+    .email-header {
+      padding: 25px;
+    }
+    .email-button {
+      padding: 12px 25px;
+      font-size: 0.875rem; /* --font-size-sm or 15px */
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="email-body">
+      <h2>Merhaba ${user.firstName} ${user.lastName},</h2>
+      <p>Sitemize gerçekleştirdiğiniz kayıt işlemi için teşekkür ederiz.</p>
+      <p>Hesabınızı aktif hale getirmek ve e-posta adresinizi doğrulamak için lütfen aşağıdaki butona tıklayın:</p>
+      <div class="email-button-container">
+        <a href="${url}" class="email-button" target="_blank">E-postayı Doğrula</a>
+      </div>
+      <p>Eğer yukarıdaki buton çalışmıyorsa, aşağıdaki bağlantıyı kopyalayıp tarayıcınızın adres çubuğuna yapıştırabilirsiniz:</p>
+      <p><a href="${url}" target="_blank" style="color: #60a5fa; text-decoration: underline;">${url}</a></p> <p>Bu isteği siz yapmadıysanız, lütfen bu e-postayı dikkate almayınız.</p>
+    </div>
+    <div class="email-footer">
+      <p>&copy; ${new Date().getFullYear()} NoBuyZone. Tüm hakları saklıdır.</p>
+      <p>Bu bir doğrulama e-postasıdır, lütfen yanıtlamayınız.</p>
+    </div>
+  </div>
+</body>
+</html>
     `;
     await sendEmail(user.email, subject, message); //imports sendEmail func.
     res.status(201).send({ message: "Hesabınıza bir e-posta gönderildi" });
@@ -175,9 +285,117 @@ const passwordLink = async (req, res) => {
     const url = `${process.env.BASE_URL}/reset/${user.id}/${token.token}`;
     const subject = "Şifre Sıfırlama";
     const message = `
-        <p>Şifrenizi sıfırlamak için bir bağlantı</p>
-        <p>Şifrenizi sıfırlamak için <a href="${url}">buraya</a> tıklayın</p>
-      `;
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Şifre Sıfırlama</title>
+<style>
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f7f7f7; /* --neutral-200 */
+    color: #404040; /* --neutral-700 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .email-container {
+    max-width: 600px;
+    margin: 40px auto;
+    background-color: #ffffff; /* --neutral-100 */
+    border: 1px solid #e5e5e5; /* --neutral-300 */
+    border-radius: 0.5rem; /* --radius-lg */
+    overflow: hidden;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* --shadow-sm */
+  }
+  .email-body {
+    padding: 30px 35px;
+    line-height: 1.6;
+    text-align: left;
+  }
+  .email-body h2 { /* Optional: if you want a greeting with user name */
+    font-size: 20px;
+    color: #404040; /* --neutral-700 */
+    margin-top: 0;
+    margin-bottom: 20px;
+  }
+  .email-body p {
+    margin-bottom: 15px;
+    font-size: 1rem; /* --font-size-md */
+  }
+  .email-button-container {
+    text-align: center;
+    margin: 30px 0;
+  }
+  .email-button {
+    background-color: #60a5fa; /* --primary */
+    color: #ffffff !important; /* --neutral-100, !important for link override */
+    padding: 15px 30px;
+    text-decoration: none;
+    border-radius: 0.375rem; /* --radius-md */
+    font-size: 1rem; /* --font-size-md */
+    font-weight: bold;
+    display: inline-block;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  .email-button:hover {
+    background-color: #3b82f6; /* --primary-dark */
+  }
+  .email-footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 0.875rem; /* --font-size-sm */
+    color: #737373; /* --neutral-600 */
+    border-top: 1px solid #e5e5e5; /* --neutral-300 */
+  }
+  .email-footer p {
+    margin: 0;
+  }
+
+  /* Mobil uyumluluk */
+  @media screen and (max-width: 600px) {
+    .email-container {
+      width: 100% !important;
+      margin: 10px 0;
+      border-radius: 0;
+      border-left: none;
+      border-right: none;
+      box-shadow: none;
+    }
+    .email-body {
+      padding: 20px 25px;
+    }
+    .email-button {
+      padding: 12px 25px;
+      font-size: 0.875rem; /* --font-size-sm */
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="email-body">
+      <p>Merhaba,</p>
+      <p>Hesabınız için bir şifre sıfırlama talebi aldık. Şifrenizi değiştirmek istemediyseniz bu e-postayı görmezden gelebilirsiniz.</p>
+      <p>Şifrenizi sıfırlamak için lütfen aşağıdaki butona tıklayın. Bu bağlantı 24 saat süreyle geçerlidir:</p>
+      <div class="email-button-container">
+        <a href="${url}" class="email-button" target="_blank">Şifreyi Sıfırla</a>
+      </div>
+      <p>Eğer yukarıdaki buton çalışmıyorsa, aşağıdaki bağlantıyı kopyalayıp tarayıcınızın adres çubuğuna yapıştırabilirsiniz:</p>
+      <p><a href="${url}" target="_blank" style="color: #60a5fa; text-decoration: underline; word-break: break-all;">${url}</a></p> <p>Bu şifre sıfırlama talebini siz yapmadıysanız, bu e-postayı dikkate almayınız.</p>
+    </div>
+    <div class="email-footer">
+      <p>&copy; ${new Date().getFullYear()} NoBuyZone. Tüm hakları saklıdır.</p>
+      <p>Bu bir doğrulama e-postasıdır, lütfen yanıtlamayınız.</p>
+    </div>
+  </div>
+</body>
+</html>
+`;
 
     await sendEmail(user.email, subject, message);
 
@@ -242,15 +460,12 @@ const resetPassword = async (req, res) => {
 const sendEmail = async (email, subject, message) => {
   try {
     const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587, //TLS port
-      secureConnection: false, //TLS requires secureConnection to be false
+      host: "mail.nobuyzone.com",
+      port: 465, //465 is for SSL/TLS port
+      secureConnection: true, //TLS requires secureConnection to be false for port 465(ssl/tls) it should be true
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.APP_PASSWORD,
-      },
-      tls: {
-        ciphers: "SSLv3",
       },
     });
 
@@ -318,64 +533,144 @@ router.patch("/api/user/username", isAuthenticated, async (req, res) => {
     res.status(200).send({ message: "Kullanıcı adı başarıyla güncellendi" });
   } catch (error) {
     console.error("Error updating username:", error);
-    res.status(500).send({ message: "Internal server error" });
+    res.status(500).json({ success: false, error: "Kullanıcı adı güncellenirken bir hata oluştu." });
   }
 });
-
 // Update profile picture
 router.patch("/api/user/profile-picture", isAuthenticated, async (req, res) => {
   try {
-    const { url, publicId } = req.body;
+    const { url, publicId } = req.body; // New picture details from request body
+    const userId = req.user._id;
 
-    // Validate required fields
+    // Validate required fields for the new picture
     if (!url || !publicId) {
       return res.status(400).json({
         success: false,
-        error: "Resim URL'si ve publicId gereklidir",
+        error: "Yeni resim URL'si ve publicId gereklidir.",
       });
     }
 
-    // Find the current user to get the old profile picture
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "Kullanıcı bulunamadı.",
+      });
+    }
 
-    // Delete the old profile picture from Cloudinary if it exists
-    if (user && user.profilePicture && user.profilePicture.publicId) {
+    // If there's an old profile picture, attempt to delete it from Cloudinary
+    if (user.profilePicture && user.profilePicture.publicId) {
+      const oldPublicId = user.profilePicture.publicId;
       try {
-        // Use the existing delete endpoint via direct API call
-        const deleteUrl = `${req.protocol}://${req.get("host")}/api/delete/${
-          user.profilePicture.publicId
-        }`;
-        const deleteResponse = await fetch(deleteUrl, {
+        const fullDeleteUrl = `${req.protocol}://${req.get("host")}/api/delete/${oldPublicId}`;
+        const deleteResponse = await fetch(fullDeleteUrl, {
           method: "DELETE",
+          headers: {
+            Cookie: req.headers.cookie || "", // Pass cookie for authentication to /api/delete
+          },
         });
 
-       if (!deleteResponse.ok) {
-          console.error("Failed to delete old profile picture");
+        if (!deleteResponse.ok) {
+          let errorData = { error: deleteResponse.statusText };
+          try {
+            errorData = await deleteResponse.json();
+          } catch (e) { /* Ignore parsing error if not JSON */ }
+          console.warn(
+            `Eski profil resmi Cloudinary'den silinemedi (publicId: ${oldPublicId}): ${errorData.error || deleteResponse.statusText}. Güncelleme devam ediyor.`
+          );
         }
       } catch (deleteError) {
-        console.error("Error deleting old profile picture:", deleteError);
-        // Continue with the update even if deletion fails
+        console.warn(
+          `Eski profil resmi Cloudinary'den silinirken bir hata oluştu (publicId: ${oldPublicId}): ${deleteError.message}. Güncelleme devam ediyor.`
+        );
       }
     }
 
-    // Update user profile with new picture information
-    await User.findByIdAndUpdate(req.user._id, {
+    // Update user's profile picture in the database with the new one
+    await User.findByIdAndUpdate(userId, {
       profilePicture: {
         url,
         publicId,
       },
     });
 
-    // Return success response
     return res.status(200).json({
       success: true,
-      message: "Profil resmi başarıyla güncellendi",
+      message: "Profil resmi başarıyla güncellendi.",
+      newProfilePicture: { url, publicId },
     });
   } catch (error) {
-    console.error("Error updating profile picture:", error);
+    console.error("Profil resmi güncellenirken hata oluştu:", error);
     return res.status(500).json({
       success: false,
-      error: "Profil resmi güncellenemedi: " + error.message,
+      error: "Profil resmi güncellenirken bir sunucu hatası oluştu: " + error.message,
+    });
+  }
+});
+
+// Delete profile picture
+router.delete("/api/user/profile-picture", isAuthenticated, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "Kullanıcı bulunamadı.",
+      });
+    }
+
+    if (!user.profilePicture || !user.profilePicture.publicId) {
+      return res.status(400).json({
+        success: false,
+        error: "Silinecek aktif bir profil resmi bulunmuyor.",
+      });
+    }
+
+    const publicIdToDelete = user.profilePicture.publicId;
+
+    // Attempt to delete the image from Cloudinary
+    try {
+      const fullDeleteUrl = `${req.protocol}://${req.get("host")}/api/delete/${publicIdToDelete}`;
+      const deleteResponse = await fetch(fullDeleteUrl, {
+        method: "DELETE",
+        headers: {
+          Cookie: req.headers.cookie || "", // Pass cookie for authentication
+        },
+      });
+
+      if (!deleteResponse.ok) {
+        let errorData = { error: deleteResponse.statusText };
+        try {
+          errorData = await deleteResponse.json();
+        } catch (e) { /* Ignore parsing error */ }
+        console.error(
+          `Profil resmi Cloudinary'den silinemedi (publicId: ${publicIdToDelete}): ${errorData.error || deleteResponse.statusText}. Veritabanından yine de kaldırılacak.`
+        );
+        // Even if Cloudinary deletion fails, proceed to remove from DB
+      }
+    } catch (deleteError) {
+      console.error(
+        `Profil resmi Cloudinary'den silinirken bir hata oluştu (publicId: ${publicIdToDelete}): ${deleteError.message}. Veritabanından yine de kaldırılacak.`
+      );
+      // Even if Cloudinary deletion fails, proceed to remove from DB
+    }
+
+    // Remove profile picture from the database
+    await User.findByIdAndUpdate(userId, {
+      $unset: { profilePicture: "" }, // Removes the profilePicture field from the document
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Profil resmi başarıyla silindi.",
+    });
+  } catch (error) {
+    console.error("Error deleting profile picture:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Profil resmi silinirken bir hata oluştu: " + error.message,
     });
   }
 });

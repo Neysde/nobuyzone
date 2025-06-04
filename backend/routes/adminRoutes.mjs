@@ -2,8 +2,10 @@ import express from "express";
 import Admin from "../mongoose/admin.mjs"; // Admin model
 import User from "../mongoose/user.mjs"; // User model
 import Post from "../mongoose/post.mjs"; // Post model
+import Message from "../mongoose/message.mjs"; // Message model
 import { comparePassword } from "../encryptpass.mjs"; // Password comparison utility
 import { isAdmin } from "../middlewares.mjs"; // isAdmin middleware
+import fetch from 'node-fetch'; // For making internal API calls
 
 const router = express.Router();
 
@@ -152,50 +154,120 @@ router.get("/panel", isAdmin, async (req, res) => {
 // DELETE /admin/users/:userId - Delete a user
 router.delete("/users/:userId", isAdmin, async (req, res) => {
   try {
-    const userId = req.params.userId;
-    const deletedUser = await User.findByIdAndDelete(userId);
+    const userIdToDelete = req.params.userId;
+    const user = await User.findById(userIdToDelete);
 
-    if (!deletedUser) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found." });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
     }
 
-    // Optional: Add logic here to handle user's posts (e.g., delete them, reassign them, or mark as anonymous)
-    // For now, we are just deleting the user.
+    const userPosts = await Post.find({ createdBy: user._id });
+    let imageDeletionErrors = [];
 
-    res.json({ success: true, message: "User deleted successfully." });
+    for (const post of userPosts) {
+      if (post.images && post.images.length > 0) {
+        for (const image of post.images) {
+          if (image.publicId) {
+            try {
+              const deleteUrl = `${req.protocol}://${req.get('host')}/api/delete/${image.publicId}`;
+              const response = await fetch(deleteUrl, {
+                method: 'DELETE',
+                headers: {
+                  // Forward admin session cookie
+                  'Cookie': req.headers.cookie || '' 
+                }
+              });
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: response.statusText }));
+                const errMsg = `Admin: Failed to delete image ${image.publicId} for post ${post._id} via API call to ${deleteUrl}. Status: ${response.status}, Message: ${errorData.message}`;
+                console.error(errMsg);
+                imageDeletionErrors.push(errMsg);
+              }
+            } catch (fetchError) {
+              const errMsg = `Admin: Error calling delete API for image ${image.publicId} (post ${post._id}) to ${deleteUrl}: ${fetchError.message}`;
+              console.error(errMsg, fetchError);
+              imageDeletionErrors.push(errMsg);
+            }
+          }
+        }
+      }
+      await Message.deleteMany({ postId: post._id });
+      await Post.findByIdAndDelete(post._id);
+    }
+
+    await Message.deleteMany({ "users.user": user._id });
+    await User.findByIdAndDelete(userIdToDelete);
+
+    if (imageDeletionErrors.length > 0) {
+      return res.status(207).json({
+        success: true,
+        message: "User and their posts/messages deleted, but some Cloudinary images may not have been fully cleaned up via API calls. Check server logs.",
+        errors: imageDeletionErrors
+      });
+    }
+
+    res.json({ success: true, message: "User and all associated data deleted successfully by admin." });
+
   } catch (error) {
-    console.error("Error deleting user:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Server error while deleting user." });
+    console.error("Error in admin deleting user:", error);
+    res.status(500).json({ success: false, message: "Server error while admin deleting user." });
   }
 });
+
 
 // DELETE /admin/posts/:postId - Delete a post
 router.delete("/posts/:postId", isAdmin, async (req, res) => {
   try {
     const postId = req.params.postId;
-    const deletedPost = await Post.findByIdAndDelete(postId);
+    const post = await Post.findById(postId);
 
-    if (!deletedPost) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Post not found." });
+    if (!post) {
+      return res.status(404).json({ success: false, message: "Post not found." });
     }
 
-    // IMPORTANT: In a production environment, you would also need to:
-    // 1. Delete associated images from Cloudinary using deletedPost.images[].publicId
-    // 2. Remove this postId from any User.favorites or User.flaggedPosts arrays
-    // For this exercise, we are only deleting the post document from the database.
+    let imageDeletionErrors = [];
+    if (post.images && post.images.length > 0) {
+      for (const image of post.images) {
+        if (image.publicId) {
+          try {
+            const deleteUrl = `${req.protocol}://${req.get('host')}/api/delete/${image.publicId}`;
+            const response = await fetch(deleteUrl, {
+              method: 'DELETE',
+              headers: {
+                'Cookie': req.headers.cookie || ''
+              }
+            });
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({ message: response.statusText }));
+              const errMsg = `Admin: Failed to delete image ${image.publicId} for post ${postId} via API call to ${deleteUrl}. Status: ${response.status}, Message: ${errorData.message}`;
+              console.error(errMsg);
+              imageDeletionErrors.push(errMsg);
+            }
+          } catch (fetchError) {
+            const errMsg = `Admin: Error calling delete API for image ${image.publicId} (post ${postId}) to ${deleteUrl}: ${fetchError.message}`;
+            console.error(errMsg, fetchError);
+            imageDeletionErrors.push(errMsg);
+          }
+        }
+      }
+    }
 
-    res.json({ success: true, message: "Post deleted successfully." });
+    await Message.deleteMany({ postId: postId });
+    await Post.findByIdAndDelete(postId);
+
+    if (imageDeletionErrors.length > 0) {
+      return res.status(207).json({
+        success: true,
+        message: "Post and messages deleted, but some Cloudinary images may not have been fully cleaned up via API calls. Check server logs.",
+        errors: imageDeletionErrors
+      });
+    }
+
+    res.json({ success: true, message: "Post and all associated data deleted successfully by admin." });
+
   } catch (error) {
-    console.error("Error deleting post:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Server error while deleting post." });
+    console.error("Error in admin deleting post:", error);
+    res.status(500).json({ success: false, message: "Server error while admin deleting post." });
   }
 });
 

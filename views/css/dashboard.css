@@ -1185,3 +1185,28 @@ body.modal-open {
     display: none;
   }
 }
+
+/* Profile Picture Action Buttons Styling */
+.profile-avatar-container {
+  display: flex;
+  flex-direction: column; /* Stack buttons vertically */
+  align-items: center; /* Center items horizontally */
+  gap: 8px; /* Adds space between the buttons if both are visible */
+}
+
+.profile-action-button {
+  width: 180px; /* Fixed width for consistency - adjust as needed */
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex; /* Use flex to center content within the button */
+  align-items: center;
+  justify-content: center; /* Center SVG and text */
+  padding: 8px 12px; /* Consistent padding, adjust if needed */
+}
+
+.profile-action-button svg {
+  margin-right: 8px; /* Space between icon and text */
+  flex-shrink: 0; /* Prevent SVG from shrinking */
+}

@@ -205,15 +205,15 @@ router.get("/api/chats", isAuthenticated, async (req, res) => {
 
       //Format post image if available
       const postImage =
-        post.images && post.images.length > 0 ? post.images[0].url : null;
+        post && post.images && post.images.length > 0 ? post.images[0].url : null;
 
       // Determine if the last message was sent by the current user
       const lastMessageSentByCurrentUser =
         lastMessage.sentBy.toString() === userId.toString();
 
       chatSummaries.push({
-        postId: post._id,
-        postTitle: post.title,
+        postId: post ? post._id : postId, // Use original postId from conversation if post is null
+        postTitle: post ? post.title : "İlan Artık Mevcut Değil", // Default title if post is null
         postImage: postImage,
         user: {
           _id: otherUser._id,

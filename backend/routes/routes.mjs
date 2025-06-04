@@ -29,37 +29,6 @@ router.post("/api/posts/upload-image", singleImageUpload, uploadImage);
 //Delete image route
 router.delete("/api/delete/:public_id", deleteImage);
 
-// Proxy endpoint for neighborhoods to avoid CORS issues
-router.get("/api/mahalleler", async (req, res) => {
-  try {
-    const { iladi, ilce } = req.query;
-    if (!iladi || !ilce) {
-      return res
-        .status(400)
-        .json({ error: "City and district parameters are required" });
-    }
-
-    // Make request to external API
-    const response = await fetch(
-      `https://tradres.com.tr/api/mahalleler?iladi=${encodeURIComponent(
-        iladi
-      )}&ilce=${encodeURIComponent(ilce)}`
-    );
-
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: `Failed to fetch neighborhoods: ${response.statusText}`,
-      });
-    }
-
-    const data = await response.json();
-    return res.json(data);
-  } catch (error) {
-    console.error("Error fetching neighborhoods:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
-
 // Redirect /chat to /messages for consistency
 router.get("/chat", (req, res) => {
   res.redirect("/messages");

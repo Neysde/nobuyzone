@@ -3,6 +3,7 @@ import Post from "../mongoose/post.mjs";
 import { isAuthenticated } from "../middlewares.mjs";
 import http from "http";
 import User from "../mongoose/user.mjs";
+import Message from "../mongoose/message.mjs";
 
 const router = express.Router();
 
@@ -808,12 +809,12 @@ router.delete("/api/posts/:id", isAuthenticated, async (req, res) => {
     }
 
     // Check if user is the owner of the post
-    if (post.createdBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: "Not authorized to delete this post",
-      });
-    }
+    if (!req.user || !req.user._id || post.createdBy.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: "Not authorized to delete this post",
+        });
+      }
 
     // Delete images from Cloudinary using the existing /api/delete/:public_id endpoint
     if (post.images && post.images.length > 0) {
@@ -862,7 +863,12 @@ router.delete("/api/posts/:id", isAuthenticated, async (req, res) => {
     }
 
     // Delete post
-    await Post.findByIdAndDelete(req.params.id);
+    const deletedPost = await Post.findByIdAndDelete(req.params.id);
+
+    if (deletedPost) {
+      // Delete associated messages
+      await Message.deleteMany({ postId: req.params.id });
+    }
 
     res.status(200).json({
       success: true,
@@ -896,7 +902,7 @@ router.delete("/api/drafts/:id", isAuthenticated, async (req, res) => {
     }
 
     // Check if user is the owner of the draft
-    if (draft.createdBy.toString() !== req.user._id.toString()) {
+    if (!req.user || !req.user._id || draft.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: "Not authorized to delete this draft",
@@ -950,7 +956,12 @@ router.delete("/api/drafts/:id", isAuthenticated, async (req, res) => {
     }
 
     // Delete draft
-    await Post.findByIdAndDelete(req.params.id);
+    const deletedDraft = await Post.findByIdAndDelete(req.params.id);
+
+    if (deletedDraft) {
+      // Delete associated messages (if any, drafts might not have messages yet but good practice)
+      await Message.deleteMany({ postId: req.params.id });
+    }
 
     res.status(200).json({
       success: true,
