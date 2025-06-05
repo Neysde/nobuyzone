@@ -191,8 +191,33 @@ table tr:hover {
 }
 
 /* Action Buttons */
+.btn-admin-action {
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  margin-right: 5px; /* Space between buttons */
+  transition: background-color 0.3s ease;
+}
+
+.btn-admin-action:last-child {
+  margin-right: 0;
+}
+
+.btn-publish-waiting-post {
+  background-color: #2ecc71; /* Green for publish */
+}
+
+.btn-publish-waiting-post:hover {
+  background-color: #27ae60; /* Darker green */
+}
+
+.btn-danger, /* Generic danger button style */
 .btn-delete-user,
-.btn-delete-post {
+.btn-delete-post,
+.btn-delete-waiting-post /* Ensure this inherits danger style */ {
   background-color: #e74c3c; /* Red for delete */
   color: white;
   padding: 8px 15px;
@@ -203,8 +228,10 @@ table tr:hover {
   transition: background-color 0.3s ease;
 }
 
+.btn-danger:hover,
 .btn-delete-user:hover,
-.btn-delete-post:hover {
+.btn-delete-post:hover,
+.btn-delete-waiting-post:hover {
   background-color: #c0392b; /* Darker red */
 }
 
@@ -236,6 +263,58 @@ table tr:hover {
 /* Example: img[alt="Default profile pic"] { content: url("/assets/images/default-profile.png"); } */
 
 /* Basic Responsive Considerations */
+
+/* Styles for Waiting Posts Table Actions */
+#waiting-posts-table .btn-publish-waiting-post,
+#waiting-posts-table .btn-delete-waiting-post {
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  margin-right: 5px;
+  transition: background-color 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+  line-height: normal;
+  vertical-align: middle;
+}
+
+#waiting-posts-table .btn-publish-waiting-post:last-child,
+#waiting-posts-table .btn-delete-waiting-post:last-child {
+  margin-right: 0;
+}
+
+#waiting-posts-table .btn-publish-waiting-post {
+  background-color: #2ecc71; /* Green */
+}
+#waiting-posts-table .btn-publish-waiting-post:hover {
+  background-color: #27ae60; /* Darker green */
+}
+
+/* .btn-danger is added by JS to the delete button in waiting posts table.
+   This style will apply to it. Ensure it doesn't conflict with other .btn-danger uses if any. */
+.btn-danger {
+  background-color: #e74c3c; /* Red */
+  color: white !important; /* Ensure text is white */
+}
+.btn-danger:hover {
+  background-color: #c0392b; /* Darker red */
+}
+
+/* Cell specific styles for waiting posts table */
+#waiting-posts-table td:nth-child(7) { /* Description Column (Images, Title, Cat, Loc, Submit, Author, DESC, Contact, Actions) */
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap; /* As set by JS, for single line snippet */
+}
+
+#waiting-posts-table td:nth-child(8) { /* Contact Column */
+  white-space: pre-wrap; /* As set by JS, to respect newlines */
+}
+
 @media (max-width: 768px) {
   .admin-header {
     flex-direction: column;

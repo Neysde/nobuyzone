@@ -341,7 +341,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Create and add image count display
     const imageCountDisplay = document.createElement("div");
     imageCountDisplay.className = "image-count";
-    imageCountDisplay.textContent = "0/5 images";
+    imageCountDisplay.textContent = "0/5 fotoğraf (ilk fotoğraf kapak fotoğrafı olarak kullanılır)";
     imageUpload.parentNode.insertBefore(
       imageCountDisplay,
       imageUpload.nextSibling
@@ -803,6 +803,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Form submission with enhanced validation and feedback
   form.addEventListener("submit", async (e) => {
+    console.log('Form submit event listener triggered.');
     e.preventDefault();
 
     // Validate form before submission
@@ -843,6 +844,27 @@ document.addEventListener("DOMContentLoaded", function () {
         formData.append("longitude", position.lng);
       }
 
+      // Fetch user's registered email if email preference is selected
+      let userRegisteredEmail = null;
+      const emailPreferenceCheckboxSubmit = document.getElementById('email-checkbox');
+      if (emailPreferenceCheckboxSubmit && emailPreferenceCheckboxSubmit.checked) {
+          try {
+              const userResponse = await fetch('/api/user/current');
+              if (userResponse.ok) {
+                  const userData = await userResponse.json();
+                  if (userData.success && userData.user && userData.user.email) {
+                      userRegisteredEmail = userData.user.email;
+                  } 
+              } else {
+                   console.warn('Failed to fetch current user data from /api/user/current for email preference (submit).');
+                   showNotification('Kullanıcı bilgileri alınamadı (e-posta).', 'warning');
+              }
+          } catch (error) {
+              console.error('Error fetching user email for contact preference (submit):', error);
+              //showNotification('E-posta alınırken bir hata oluştu.', 'error');
+          }
+      }
+
       // Convert FormData to JSON object for the API
       const jsonData = {
         title: formData.get("title"),
@@ -857,6 +879,7 @@ document.addEventListener("DOMContentLoaded", function () {
           (checkbox) => checkbox.value
         ),
         phoneNumber: formData.get("phoneNumber"),
+        email: userRegisteredEmail, // Use fetched registered email
       };
 
       // Process and upload images if available
@@ -964,6 +987,9 @@ document.addEventListener("DOMContentLoaded", function () {
         jsonData._id = draftId;
       }
 
+      // DEBUG: Log jsonData before sending
+      console.log("Submitting jsonData for publish:", JSON.stringify(jsonData, null, 2));
+
       // Organize location data properly - get values directly from form elements to avoid issues
       const cityField = form.querySelector("#city");
       const districtField = form.querySelector("#district");
@@ -1059,7 +1085,7 @@ document.addEventListener("DOMContentLoaded", function () {
         throw new Error(errorMessage);
       }
 
-      showNotification("Post created successfully!", "success");
+      showNotification("İlanınız kontrol edilecek, yayınlanmak için gerekli şartları karşılıyorsa bir süre sonra yayına alınacaktır. Şuan için bir şey yapmanıza gerek yok.", "success");
 
       // Redirect after a short delay to show the success message
       setTimeout(() => {
@@ -1069,10 +1095,16 @@ document.addEventListener("DOMContentLoaded", function () {
       }, 1500);
     } catch (error) {
       console.error("Error:", error);
-      showNotification("There was a problem creating your post", "error");
+      showNotification("İlan oluşturulurken bir hata oluştu", "error");
 
       // Make sure loader exists before trying to modify it
       if (loader) {
+        hideLoadingState(loader);
+      }
+    } finally {
+      // Ensure loader is always hidden, even if an error occurs outside the try-catch
+      // or if an error occurs within the catch block itself before hideLoadingState is called.
+      if (loader) { 
         hideLoadingState(loader);
       }
     }
@@ -1085,295 +1117,170 @@ document.addEventListener("DOMContentLoaded", function () {
   saveAsDraftBtn.addEventListener("click", async (e) => {
     e.preventDefault();
 
-    // Basic validation - title is required even for drafts
-    if (!titleInput.value.trim()) {
-      titleInput.classList.add("error");
-      showNotification("Please add a title for your draft", "error");
-      titleInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!form.elements.title.value.trim()) {
+      markFieldAsError(form.elements.title);
+      showNotification("Lütfen taslağınız için bir başlık girin.", "error");
+      form.elements.title.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
+    } else {
+      clearFieldError(form.elements.title);
     }
 
     const originalText = saveAsDraftBtn.innerHTML;
     saveAsDraftBtn.disabled = true;
-    saveAsDraftBtn.innerHTML =
-      '<span class="loading-spinner"></span> Saving...';
+    let loader; // For more granular loading messages
 
     try {
-      // First, upload any images
+      loader = showLoadingState("Resimler işleniyor...");
       const imageUrls = [];
       const imageIds = [];
-
-      // Get image files from the preview items
       const imageItems = document.querySelectorAll(".preview-item img");
 
-      // If we have images, process them
       if (imageItems.length > 0) {
-        saveAsDraftBtn.innerHTML =
-          '<span class="loading-spinner"></span> Processing images...';
-
-        // Process each image
         for (let i = 0; i < imageItems.length; i++) {
+          hideLoadingState(loader);
+          loader = showLoadingState(`Resim işleniyor (${i + 1}/${imageItems.length})...`);
           const imgElement = imageItems[i];
-
-          // Get image data URL or source
           const dataUrl = imgElement.src;
 
-          // If this is an already uploaded image (not a data URL), add it directly to our arrays
-          if (!dataUrl.startsWith("data:")) {
-            // Extract the necessary information from the existing image URL
-            try {
-              const url = dataUrl;
+          if (!dataUrl.startsWith("data:") && imgElement.dataset.publicId) { // Already uploaded
+            imageUrls.push(dataUrl);
+            imageIds.push(imgElement.dataset.publicId);
+          } else if (dataUrl.startsWith("data:")) { // New image
+            const blob = await fetch(dataUrl).then((r) => r.blob());
+            const imageFormData = new FormData();
+            // Use a more unique name for the blob, though backend might rename
+            imageFormData.append("image", blob, `draft_image_${Date.now()}_${i}.jpg`);
+            
+            hideLoadingState(loader);
+            loader = showLoadingState(`Resim yükleniyor (${i + 1}/${imageItems.length})...`);
 
-              // Try to find publicId from data attribute if available
-              let publicId = imgElement.dataset.publicId;
-
-              // If no public ID in data attribute, try to extract from URL
-              if (!publicId) {
-                // Extract the public ID from the URL path
-                const urlParts = url.split("/");
-                publicId = urlParts[urlParts.length - 1].split(".")[0]; // Get last part without extension
-                if (urlParts[urlParts.length - 2]) {
-                  publicId = urlParts[urlParts.length - 2] + "/" + publicId; // Include folder
-                }
-              }
-
-              // Add to our lists
-              imageUrls.push(url);
-              imageIds.push(publicId);
-
-              continue; // Skip to next image
-            } catch (error) {
-              console.error("Error processing existing image:", error);
+            const uploadResponse = await fetch("/api/posts/upload-image", {
+              method: "POST",
+              body: imageFormData,
+            });
+            if (!uploadResponse.ok) {
+              const errorData = await uploadResponse.json();
+              throw new Error(errorData.error || `Resim ${i + 1} yüklenemedi`);
+            }
+            const imageResult = await uploadResponse.json();
+            if (imageResult.success) {
+              imageUrls.push(imageResult.data.url);
+              imageIds.push(imageResult.data.public_id);
+            } else {
+              throw new Error(imageResult.error || `Resim ${i + 1} işlenemedi`);
             }
           }
+        }
+      }
+      hideLoadingState(loader);
+      loader = showLoadingState("Taslak verileri hazırlanıyor...");
 
-          // For new images (those starting with data:), upload them
-          if (dataUrl.startsWith("data:")) {
-            // Update progress message
-            saveAsDraftBtn.innerHTML = `<span class="loading-spinner"></span> Uploading image ${
-              i + 1
-            }/${imageItems.length}...`;
-
-            try {
-              // Convert data URL to blob
-              const blob = await fetch(dataUrl).then((r) => r.blob());
-
-              // Create form data for this image
-              const imageFormData = new FormData();
-              imageFormData.append("image", blob, "image.jpg");
-
-              // Upload image using the dedicated endpoint
-              const uploadResponse = await fetch("/api/posts/upload-image", {
-                method: "POST",
-                body: imageFormData,
-              });
-
-              if (!uploadResponse.ok) {
-                const errorData = await uploadResponse.json();
-                console.error("Image upload error:", errorData);
-                throw new Error(errorData.error || "Failed to upload image");
-              }
-
-              const imageResult = await uploadResponse.json();
-
-              if (imageResult.success) {
-                imageUrls.push(imageResult.data.url);
-                imageIds.push(imageResult.data.public_id);
+      // Fetch user's registered email if email preference is selected
+      let userRegisteredEmailDraft = null;
+      const emailPreferenceCheckboxDraft = document.getElementById('email-checkbox');
+      if (emailPreferenceCheckboxDraft && emailPreferenceCheckboxDraft.checked) {
+          try {
+              const userResponse = await fetch('/api/user/current');
+              if (userResponse.ok) {
+                  const userData = await userResponse.json();
+                  if (userData.success && userData.user && userData.user.email) {
+                      userRegisteredEmailDraft = userData.user.email;
+                  } else {
+                      console.warn('Could not retrieve user email for contact preference from /api/user/current (draft).');
+                      //showNotification('E-posta tercihiniz için kayıtlı e-postanız alınamadı.', 'warning');
+                  }
               } else {
-                console.error(
-                  "Image upload response not successful:",
-                  imageResult
-                );
-                throw new Error(
-                  "Failed to upload image: " +
-                    (imageResult.error || "Unknown error")
-                );
+                   console.warn('Failed to fetch current user data from /api/user/current for email preference (draft).');
+                   showNotification('Kullanıcı bilgileri alınamadı (e-posta).', 'warning');
               }
-            } catch (error) {
-              console.error("Error processing image:", error);
-              showNotification(
-                "Error uploading image: " + error.message,
-                "error"
-              );
-            }
+          } catch (error) {
+              console.error('Error fetching user email for contact preference (draft):', error);
+              //showNotification('E-posta alınırken bir hata oluştu.', 'error');
           }
-        }
-
-        saveAsDraftBtn.innerHTML =
-          '<span class="loading-spinner"></span> Saving draft...';
       }
 
-      const formData = new FormData(form);
-      formData.append("isDraft", "true");
-
-      // Debug: Log form entries before processing
-      for (const [key, value] of formData.entries()) {
-      }
-
-      // Add image URLs and public IDs to the form data
-      imageUrls.forEach((url) => formData.append("imageUrls", url));
-      imageIds.forEach((id) => formData.append("imageIds", id));
-
-      // Add coordinates if marker exists
-      if (marker) {
-        const position = marker.getLatLng();
-        formData.append("latitude", position.lat);
-        formData.append("longitude", position.lng);
-      } else {
-        console.warn(
-          "No map marker found for draft - using default coordinates (0,0)"
-        );
-        formData.append("latitude", 0);
-        formData.append("longitude", 0);
-      }
-
-      // Convert FormData to JSON for better compatibility
-      const formDataObj = {};
-      for (const [key, value] of formData.entries()) {
-        // Handle multiple values for the same key (arrays like imageUrls and imageIds)
-        if (key === "imageUrls" || key === "imageIds") {
-          if (!formDataObj[key]) {
-            formDataObj[key] = [];
-          }
-          formDataObj[key].push(value);
-        } else {
-          formDataObj[key] = value; //will look like this {title: "example"} etc.
-        }
-      }
-
-//will be removed later
-
-      // If we're updating an existing draft, set the _id field in the format expected by the backend
-      if (formDataObj.draftId) {
-        formDataObj._id = formDataObj.draftId;
-      }
-
-      // Organize location data properly - get values directly from form elements to avoid issues
-      const cityField = form.querySelector("#city");
-      const districtField = form.querySelector("#district");
-      const neighborhoodField = form.querySelector("#neighborhood");
-      const streetField = form.querySelector("#street");
-
-      // Get values directly from the form fields
-      formDataObj.location = {
-        city: cityField ? cityField.value : "",
-        district: districtField ? districtField.value : "",
-        neighborhood: neighborhoodField ? neighborhoodField.value : "",
-        street: streetField ? streetField.value : "",
-        coordinates: {
-          latitude:
-            formDataObj.latitude && !isNaN(parseFloat(formDataObj.latitude))
-              ? parseFloat(formDataObj.latitude)
-              : 0,
-          longitude:
-            formDataObj.longitude && !isNaN(parseFloat(formDataObj.longitude))
-              ? parseFloat(formDataObj.longitude)
-              : 0,
+      // Build jsonData
+      const jsonData = {
+        title: form.elements.title.value.trim(),
+        category: form.elements.category.value,
+        condition: form.elements.condition.value,
+        description: form.elements.description.value.trim(),
+        location: {
+          city: form.elements.city.value.trim(),
+          district: form.elements.district.value.trim(),
+          neighborhood: form.elements.neighborhood.value.trim(),
+          street: form.elements.street.value.trim(),
+          coordinates: { latitude: 0, longitude: 0 },
         },
+        contactPreferences: [],
+        phoneNumber: form.elements.phoneNumber ? form.elements.phoneNumber.value.trim() : "",
+        email: userRegisteredEmailDraft, // Use fetched registered email
+        imageUrls: imageUrls,
+        imageIds: imageIds,
+        isDraft: true,
       };
 
-      // Check if the location fields are actually present and contain values
-      const locationFieldsPresent =
-        form.querySelector("#city") &&
-        form.querySelector("#district") &&
-        form.querySelector("#neighborhood") &&
-        form.querySelector("#street");
-
-
-      // Check the actual IDs and names of the fields in the form
-      const cityFieldInForm = form.querySelector("#city");
-      const districtFieldInForm = form.querySelector("#district");
-      const neighborhoodFieldInForm = form.querySelector("#neighborhood");
-      const streetFieldInForm = form.querySelector("#street");
-
-
-      if (locationFieldsPresent) {
-      } else {
-        console.warn("Some location fields are missing from the form");
+      if (marker) {
+        const position = marker.getLatLng();
+        jsonData.location.coordinates.latitude = position.lat;
+        jsonData.location.coordinates.longitude = position.lng;
       }
+      
+      const checkedPreferences = document.querySelectorAll('input[name="contactPreferences"]:checked');
+      jsonData.contactPreferences = Array.from(checkedPreferences).map(cb => cb.value);
+      // No explicit default to ['in-app'] here; backend should handle if empty or rely on form validation
 
-      // Log the raw location data before organizing
-
-      // Log the structured location data
-
-      // Verify the location object is properly formed
-      if (!formDataObj.location || typeof formDataObj.location !== "object") {
-        console.error("Location object is not properly formed!");
-        formDataObj.location = {
-          city: "",
-          district: "",
-          neighborhood: "",
-          street: "",
-          coordinates: { latitude: 0, longitude: 0 },
-        };
+      const draftIdField = form.elements.draftId;
+      if (draftIdField && draftIdField.value) {
+        jsonData.draftId = draftIdField.value; 
       }
+      
+      console.log("Submitting jsonData for draft:", JSON.stringify(jsonData, null, 2));
+      
+      hideLoadingState(loader);
+      loader = showLoadingState("Taslak kaydediliyor...");
 
-      // Ensure coordinates exist within location
-      if (!formDataObj.location.coordinates) {
-        formDataObj.location.coordinates = { latitude: 0, longitude: 0 };
-      }
+      let apiUrl = "/api/posts";
+      let method = "POST";
 
-      // Remove the individual location fields since they're now in the location object
-      delete formDataObj.city;
-      delete formDataObj.district;
-      delete formDataObj.neighborhood;
-      delete formDataObj.street;
-      delete formDataObj.latitude;
-      delete formDataObj.longitude;
-
-      // Determine if this is a new draft or updating an existing one
-      const draftId = formDataObj.draftId;
-      // Use the new dedicated endpoint for drafts
-      const apiUrl = "/api/post-drafts";
-      const method = "POST";
-
-      // Always set isDraft to true when saving as draft
-      formDataObj.isDraft = "true";
-
-      // If we're updating an existing draft, set the _id field in the format expected by the backend
-      if (draftId) {
-        formDataObj._id = draftId;
+      if (jsonData.draftId) {
+        apiUrl = `/api/posts/${jsonData.draftId}`;
+        method = "PUT";
       }
 
       const response = await fetch(apiUrl, {
         method: method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formDataObj),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(jsonData),
       });
 
       const responseData = await response.json();
 
-      if (!response.ok) {
-        const errorMessage =
-          responseData.error ||
-          responseData.message ||
-          "Network response was not ok";
-        console.error("Server error response:", responseData);
-        throw new Error(errorMessage);
+      if (!response.ok || !responseData.success) {
+        throw new Error(responseData.message || responseData.error || "Taslak kaydedilemedi.");
       }
 
-      showNotification("Draft saved successfully!", "success");
-
-      // Redirect to drafts page after a short delay
+      hideLoadingState(loader);
+      showNotification("Taslak başarıyla kaydedildi!", "success");
       setTimeout(() => {
         redirectWithUserId("dashboard", "#drafts");
       }, 1500);
-    } catch (error) {
-      console.error("Error:", error);
-      showNotification("There was a problem saving your draft", "error");
 
-      // Make sure saveAsDraftBtn exists before trying to modify it
-      if (saveAsDraftBtn) {
-        saveAsDraftBtn.disabled = false;
-        saveAsDraftBtn.innerHTML = originalText;
-      }
+    } catch (error) {
+      console.error("Taslak kaydedilirken hata oluştu:", error);
+      hideLoadingState(loader); // Ensure loader is hidden on error
+      showNotification(error.message || "Taslak kaydedilirken bir sorun oluştu.", "error");
+    } finally {
+      saveAsDraftBtn.disabled = false;
+      saveAsDraftBtn.innerHTML = originalText;
+      hideLoadingState(loader); // Ensure loader is hidden in finally too
     }
   });
 
   // Form validation (updated to check contact preferences)
   function validateForm() {
+    console.log('validateForm function called.');
     const requiredFields = form.querySelectorAll("[required]");
     let isValid = true;
 
@@ -1402,7 +1309,7 @@ document.addEventListener("DOMContentLoaded", function () {
     );
 
     if (!isAnyContactSelected) {
-      showNotification("Please select at least one contact method", "error");
+      showNotification("Lütfen en az bir iletişim seçeneğini işaretleyin", "error");
       const contactCard = document.querySelector(".contact-card");
       if (contactCard) {
         contactCard.classList.add("error-container");
@@ -1420,6 +1327,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
 
+    console.log('validateForm returning:', isValid);
     return isValid;
   }
 
@@ -1566,7 +1474,8 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // Update the display text
-    countDisplay.textContent = `${currentCount}/5 images`;
+    countDisplay.textContent = `${currentCount}/5 fotoğraf
+    (ilk fotoğraf kapak fotoğrafı olarak kullanılır)`;
 
     // Visual feedback - change color when approaching limit
     if (currentCount >= 5) {
@@ -1707,7 +1616,7 @@ document.addEventListener("DOMContentLoaded", function () {
           const errorMessage = document.createElement("div");
           errorMessage.className = "contact-error-message";
           errorMessage.textContent =
-            "Please select at least one contact method";
+            "Lütfen en az bir iletişim seçeneğini işaretleyin";
           contactCard.querySelector(".contact-description").after(errorMessage);
         }
       } else {

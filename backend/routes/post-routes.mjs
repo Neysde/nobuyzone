@@ -55,8 +55,6 @@ const createAccentInsensitiveRegex = (text) => {
  */
 router.post("/api/posts", isAuthenticated, async (req, res) => {
   try {
-
-
     // Check if body is empty
     if (!req.body || Object.keys(req.body).length === 0) {
       return res.status(400).json({
@@ -71,8 +69,9 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
       condition,
       description,
       location, // This is the entire location object
-      contactPreferences, // Now using array of preferences
-      phoneNumber, // Added phone number field
+      contactPreferences, // Plural, as sent from frontend
+      phoneNumber,
+      email, // Post-specific email from form
       isDraft,
       imageUrls,
       imageIds,
@@ -102,12 +101,14 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
       });
     }
 
-    // Validate contact preferences - ensure we have at least one preference
-    const preferences = Array.isArray(contactPreferences)
-      ? contactPreferences
-      : contactPreferences
-      ? [contactPreferences]
-      : ["in-app"]; // Default to in-app if nothing is provided
+    // Validate and process contact preferences
+    // 'contactPreferences' (plural) is now destructured from req.body
+    let finalContactPreferences;
+    if (contactPreferences && Array.isArray(contactPreferences) && contactPreferences.length > 0) {
+      finalContactPreferences = contactPreferences;
+    } else {
+      finalContactPreferences = ["in-app"]; // Default if empty, not an array, or not provided
+    }
 
     // Process images from URLs and IDs arrays
     const images = [];
@@ -127,14 +128,16 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
       }
     }
 
-    // Get user's email from the database for contact details
-    const user = await User.findById(req.user._id).select("email");
-
     // Create contact details object
-    const contactDetails = {
-      email: user.email || "",
-      phone: phoneNumber || "",
-    };
+    const contactDetails = {};
+    if (phoneNumber) {
+      contactDetails.phone = phoneNumber.trim();
+    }
+    if (email) { // Prioritize email from form for the post itself
+      contactDetails.email = email.trim();
+    } 
+    // If no post-specific email is provided, and 'email' is a preference, 
+    // we might consider fetching user.email as a fallback, but the current admin panel logic already does this if contactDetails.email is empty.
 
     // Add random offset to coordinates for privacy (0.003 ≈ 300m)
     const offset = 0.003;
@@ -161,6 +164,19 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
 
     }
 
+    // Determine status based on isDraft flag from req.body
+    const postStatus = req.body.isDraft === 'true' || req.body.isDraft === true ? "draft" : "active";
+
+    // If email preference is selected and no email is provided in body (or it's null from frontend), use user's registered email
+    // contactDetails should have been initialized earlier in the function.
+    if (finalContactPreferences.includes("email") && (req.body.email === null || typeof req.body.email === 'undefined' || String(req.body.email).trim() === "")) {
+      if (req.user && req.user.email) {
+        contactDetails.email = req.user.email; // Add/overwrite email in contactDetails
+      } else {
+        console.warn("User (req.user) or user's email (req.user.email) not found for email contact preference.");
+      }
+    }
+
     // Create new post
     const post = new Post({
       title,
@@ -182,9 +198,10 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
         },
       },
       images,
-      contactPreferences: preferences,
+      contactPreferences: finalContactPreferences,
       contactDetails,
-      status: isDraft === "true" ? "draft" : "active",
+      status: postStatus, // Use determined status (draft or active)
+      approved: false, // New posts are not approved by default
       createdBy: req.user._id,
     });
 
@@ -196,8 +213,8 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
       id: post._id,
       message:
         isDraft === "true"
-          ? "Draft saved successfully"
-          : "Post created successfully",
+          ? "Taslak başarıyla kaydedildi"
+          : "İlanınız kontrol edilmeyi bekliyor, yayınlanmak için gerekli şartları karşılıyorsa bir süre sonra yayına alınacaktır. Şuan için bir şey yapmanıza gerek yok.",
     });
   } catch (error) {
     console.error("Error creating post:", error);
@@ -323,9 +340,11 @@ router.get("/api/posts", async (req, res) => {
 
     // Log raw request parameters for debugging
 
-
     // Build filter query
-    const filter = { status: "active" };
+    const filter = {
+      status: "active", // Only fetch active posts
+      approved: true, // Only show approved posts publicly
+    };
 
     // If user is logged in (via req.user being populated by Passport), exclude their own posts
     if (req.user && req.user._id) {
@@ -339,9 +358,7 @@ router.get("/api/posts", async (req, res) => {
 
     // Location filters
     if (city) {
-
       const normalizedCity = normalizeText(city);
-
 
       // For Turkish text: handle common letter transformations
       const searchPatterns = [
@@ -363,13 +380,10 @@ router.get("/api/posts", async (req, res) => {
 
       filter.$and = filter.$and || [];
       filter.$and.push({ $or: cityConditions });
-
     }
 
     if (district) {
-
       const normalizedDistrict = normalizeText(district);
-
 
       // For Turkish text: handle common letter transformations
       const searchPatterns = [
@@ -395,7 +409,6 @@ router.get("/api/posts", async (req, res) => {
 
     if (neighborhood) {
       const normalizedNeighborhood = normalizeText(neighborhood);
-
 
       // For Turkish text: handle common letter transformations
       const searchPatterns = [
@@ -440,12 +453,10 @@ router.get("/api/posts", async (req, res) => {
       // filter['location.coordinates'] = {
       // $geoWithin: {
       // $centerSphere: [[lng, lat], parseInt(radius) / 6371] // radius in km, 6371 is Earth's radius in km
-      // }
       // };
-      // }
+      // };
 
       // For now, we'll just log that we received a radius parameter
-
     }
 
     // Text search filter (title and description)
@@ -480,7 +491,6 @@ router.get("/api/posts", async (req, res) => {
     ];
 
     // Log the generated pipeline for debugging
-
 
     // Execute aggregation pipeline
     const posts = await Post.aggregate(pipeline);
@@ -521,10 +531,9 @@ router.get("/api/posts", async (req, res) => {
  */
 router.get("/api/posts/count-by-city", async (req, res) => {
   try {
-
     // Query only active posts and count by city
     const cityCountsAggregation = await Post.aggregate([
-      { $match: { status: "active" } },
+      { $match: { status: "active", approved: true } }, // Consider only active and approved posts
       // Add a match stage to ensure location.city is a valid, non-empty string
       {
         $match: {
@@ -549,7 +558,6 @@ router.get("/api/posts/count-by-city", async (req, res) => {
 
     // Log the raw aggregation result for debugging
 
-
     // Transform to object where keys are JavaScript-normalized city names (tr-TR lowercase, trimmed) and values are counts
     const cityCountsMap = {};
     cityCountsAggregation.forEach((item, index) => {
@@ -564,16 +572,10 @@ router.get("/api/posts/count-by-city", async (req, res) => {
         // If multiple original city names normalize to the same key (e.g., "istanbul" and "İstanbul"), sum their counts.
         cityCountsMap[normalizedKey] =
           (cityCountsMap[normalizedKey] || 0) + item.count;
-      } else {
-        console.warn(
-          `[DEBUG] Skipping item ${index} due to invalid cityName:`,
-          JSON.stringify(item)
-        );
       }
     });
 
     // Log the final transformed map for debugging
-
 
     res.status(200).json({
       success: true,
@@ -591,11 +593,17 @@ router.get("/api/posts/count-by-city", async (req, res) => {
 });
 
 /**
- * Get a single post by ID
+ * Get a single post by ID (public view)
  */
 router.get("/api/posts/:id", async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
+    const post = await Post.findOne({
+      _id: req.params.id,
+      status: "active",
+      approved: true, // <-- Ensure post is approved for public view
+    })
+      .populate("createdBy", "username firstName lastName profilePicture")
+      .lean();
 
     if (!post) {
       return res.status(404).json({
@@ -622,7 +630,8 @@ router.get("/api/posts/:id", async (req, res) => {
  */
 router.put("/api/posts/:id", isAuthenticated, async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
+    const postId = req.params.id;
+    const post = await Post.findById(postId);
 
     // Check if post exists
     if (!post) {
@@ -643,24 +652,14 @@ router.put("/api/posts/:id", isAuthenticated, async (req, res) => {
     // Prepare the update data
     const updateData = { ...req.body };
 
-    // Process images - create proper image objects from URLs and IDs arrays
+    // Process images if URLs and IDs are provided
     if (updateData.imageUrls && updateData.imageIds) {
-      // Handle both array and string cases
-      const urls = Array.isArray(updateData.imageUrls)
-        ? updateData.imageUrls
-        : [updateData.imageUrls];
-      const ids = Array.isArray(updateData.imageIds)
-        ? updateData.imageIds
-        : [updateData.imageIds];
-
-      // Create new array of image objects
+      const urls = Array.isArray(updateData.imageUrls) ? updateData.imageUrls : [updateData.imageUrls];
+      const ids = Array.isArray(updateData.imageIds) ? updateData.imageIds : [updateData.imageIds];
       const images = [];
       for (let i = 0; i < urls.length; i++) {
         if (urls[i] && ids[i]) {
-          images.push({
-            url: urls[i],
-            publicId: ids[i],
-          });
+          images.push({ url: urls[i], publicId: ids[i] });
         }
       }
 
@@ -670,35 +669,47 @@ router.put("/api/posts/:id", isAuthenticated, async (req, res) => {
       delete updateData.imageIds;
     }
 
-    // Handle draft status
-    // Check if 'isDraft' was actually provided in the request body
-    if (updateData.hasOwnProperty("isDraft")) {
-      // Normalize the isDraft value to a lowercase string to handle both boolean and string inputs consistently
-      // e.g., boolean true -> "true", boolean false -> "false", "True" -> "true"
-      const isDraftValue = String(updateData.isDraft).toLowerCase();
-
-      if (isDraftValue === "true") {
-        // Explicitly set status to draft if isDraft is true (boolean or string "true")
-        updateData.status = "draft";
-      } else if (isDraftValue === "false") {
-        // Explicitly set status to active if isDraft is false (boolean or string "false")
-        // This handles publishing a draft.
-        updateData.status = "active";
+    // Handle contactPreferences (plural array directly from req.body which is updateData)
+    if (updateData.hasOwnProperty('contactPreferences')) { // Check if the key was sent
+      if (Array.isArray(updateData.contactPreferences) && updateData.contactPreferences.length > 0) {
+        // Valid non-empty array, it will be used as is by assigning to post.contactPreferences later.
+        // No specific action needed on updateData.contactPreferences here if it's already correct.
+      } else {
+        // Sent as empty array, null, or not an array: apply default for the update.
+        updateData.contactPreferences = ["in-app"];
       }
-      // If isDraft is present but its stringified, lowercased value isn't "true" or "false"
-      // (e.g., null, an empty string, "on", etc.), updateData.status is not modified by this specific block.
-      // The post's original status would be preserved unless 'status' was also explicitly sent in updateData.
     }
-    // If 'isDraft' was not part of the request (i.e., not in updateData), this entire block is skipped.
-    // In this case, updateData.status is not affected by this isDraft logic,
-    // preserving the post's existing status or allowing 'status' to be updated if sent directly in the request body.
+    // If 'contactPreferences' was not part of updateData, it means client doesn't want to change it,
+    // so post.contactPreferences will remain untouched by the $set operation later.
 
-    // Remove the isDraft field from updateData as its primary purpose (determining status) is now complete.
-    // This prevents it from being directly applied to the Post model if there's no 'isDraft' schema field
-    // or if its presence might cause unintended side effects in Mongoose's update.
-    delete updateData.isDraft;
+    if (updateData.phoneNumber || updateData.email) {
+      updateData.contactDetails = updateData.contactDetails || {}; // Initialize if not exists
+      if (updateData.phoneNumber) {
+        updateData.contactDetails.phone = updateData.phoneNumber.trim();
+        delete updateData.phoneNumber;
+      }
+      if (updateData.email) {
+        updateData.contactDetails.email = updateData.email.trim();
+        delete updateData.email;
+      }
+    }
 
-    // First, check for coordinates either at the top level or in the location object
+    // Handle draft status and approval
+    // If isDraft is explicitly set to 'false' (publishing a draft) or status is set to 'active'
+    // the post should require re-approval.
+    if (updateData.hasOwnProperty('isDraft')) {
+      if (String(updateData.isDraft).toLowerCase() === 'false' && post.status === 'draft') {
+        updateData.status = 'active'; // Explicitly set to active
+        updateData.approved = false;  // Requires re-approval
+      }
+      // If isDraft is true, it's being saved as a draft, approval status doesn't change or is irrelevant
+      delete updateData.isDraft; // Remove isDraft as it's handled
+    } else if (updateData.status === 'active' && post.status !== 'active') {
+      // If status is directly set to 'active' (and it wasn't active before), it also needs re-approval
+      updateData.approved = false;
+    }
+
+    // Location randomization (copied from original create logic, apply if new coordinates are given)
     const hasCoordinatesToUpdate =
       updateData.latitude ||
       updateData.longitude ||
@@ -715,31 +726,13 @@ router.put("/api/posts/:id", isAuthenticated, async (req, res) => {
       let rawLat = updateData.latitude;
       let rawLng = updateData.longitude;
 
-      // If not at top level, try to get from location.coordinates
-      if (
-        (!rawLat || !rawLng) &&
-        updateData.location &&
-        updateData.location.coordinates
-      ) {
+      if ((!rawLat || !rawLng) && updateData.location && updateData.location.coordinates) {
         rawLat = rawLat || updateData.location.coordinates.latitude;
         rawLng = rawLng || updateData.location.coordinates.longitude;
       }
 
-      // Parse latitude, with fallbacks
-      let parsedLat =
-        rawLat && !isNaN(parseFloat(rawLat))
-          ? parseFloat(rawLat)
-          : post.location && post.location.coordinates
-          ? post.location.coordinates.latitude
-          : 0;
-
-      // Parse longitude, with fallbacks
-      let parsedLng =
-        rawLng && !isNaN(parseFloat(rawLng))
-          ? parseFloat(rawLng)
-          : post.location && post.location.coordinates
-          ? post.location.coordinates.longitude
-          : 0;
+      let parsedLat = rawLat && !isNaN(parseFloat(rawLat)) ? parseFloat(rawLat) : (post.location && post.location.coordinates ? post.location.coordinates.latitude : 0);
+      let parsedLng = rawLng && !isNaN(parseFloat(rawLng)) ? parseFloat(rawLng) : (post.location && post.location.coordinates ? post.location.coordinates.longitude : 0);
 
 
 
@@ -748,20 +741,10 @@ router.put("/api/posts/:id", isAuthenticated, async (req, res) => {
         // Generate random offset between -300m and +300m
         parsedLat += Math.random() * offset * 2 - offset;
         parsedLng += Math.random() * offset * 2 - offset;
-
       }
 
-      // Create location object if it doesn't exist
-      if (!updateData.location) {
-        updateData.location = {};
-      }
-
-      // Create coordinates object if it doesn't exist
-      if (!updateData.location.coordinates) {
-        updateData.location.coordinates = {};
-      }
-
-      // Update coordinates with offset values
+      if (!updateData.location) updateData.location = {}; // Ensure location object exists
+      if (!updateData.location.coordinates) updateData.location.coordinates = {}; // Ensure coordinates object exists
       updateData.location.coordinates.latitude = parsedLat;
       updateData.location.coordinates.longitude = parsedLng;
 
@@ -770,25 +753,24 @@ router.put("/api/posts/:id", isAuthenticated, async (req, res) => {
       delete updateData.longitude;
     }
 
-    // Log the update for debugging
+    const updatedPost = await Post.findByIdAndUpdate(postId, updateData, { new: true });
 
-
-    // Update post
-    const updatedPost = await Post.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true }
-    );
+    let message = "Post updated successfully.";
+    if (updatedPost.status === 'active' && updatedPost.approved === false) {
+      message = "İlanınız güncellendi ve onay bekliyor.";
+    }
 
     res.status(200).json({
       success: true,
       data: updatedPost,
+      message: message,
     });
+
   } catch (error) {
     console.error("Error updating post:", error);
     res.status(500).json({
       success: false,
-      error: "Server error updating post",
+      error: "Server error updating post.",
     });
   }
 });
@@ -798,7 +780,8 @@ router.put("/api/posts/:id", isAuthenticated, async (req, res) => {
  */
 router.delete("/api/posts/:id", isAuthenticated, async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
+    const postId = req.params.id;
+    const post = await Post.findById(postId);
 
     // Check if post exists
     if (!post) {
@@ -809,12 +792,12 @@ router.delete("/api/posts/:id", isAuthenticated, async (req, res) => {
     }
 
     // Check if user is the owner of the post
-    if (!req.user || !req.user._id || post.createdBy.toString() !== req.user._id.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "Not authorized to delete this post",
-        });
-      }
+    if (post.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to delete this post",
+      });
+    }
 
     // Delete images from Cloudinary using the existing /api/delete/:public_id endpoint
     if (post.images && post.images.length > 0) {
@@ -829,7 +812,7 @@ router.delete("/api/posts/:id", isAuthenticated, async (req, res) => {
             const deleteUrl = `${protocol}://${host}/api/delete/${encodeURIComponent(
               image.publicId
             )}`;
-
+            
             const response = await fetch(deleteUrl, {
               method: "DELETE",
               headers: {
@@ -855,8 +838,8 @@ router.delete("/api/posts/:id", isAuthenticated, async (req, res) => {
               `Error with delete request for image ${image.publicId}:`,
               error
             );
-          }
-        });
+        }
+      });
 
       // Wait for all image deletion operations to complete
       await Promise.all(deletePromises);
@@ -884,107 +867,16 @@ router.delete("/api/posts/:id", isAuthenticated, async (req, res) => {
 });
 
 /**
- * Delete a draft
- */
-router.delete("/api/drafts/:id", isAuthenticated, async (req, res) => {
-  try {
-    const draft = await Post.findOne({
-      _id: req.params.id,
-      status: "draft",
-    });
-
-    // Check if draft exists
-    if (!draft) {
-      return res.status(404).json({
-        success: false,
-        message: "Draft not found",
-      });
-    }
-
-    // Check if user is the owner of the draft
-    if (!req.user || !req.user._id || draft.createdBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: "Not authorized to delete this draft",
-      });
-    }
-
-    // Delete images from Cloudinary using the delete API endpoint
-    if (draft.images && draft.images.length > 0) {
-      const deletePromises = draft.images
-        .filter((image) => image.publicId) // Only process images with publicId
-        .map(async (image) => {
-          try {
-            // Construct a full URL for the fetch request
-            // Get the protocol (http/https) and host from the request
-            const protocol = req.protocol; // 'http' or 'https'
-            const host = req.get("host");
-            const deleteUrl = `${protocol}://${host}/api/delete/${encodeURIComponent(
-              image.publicId
-            )}`;
-
-            const response = await fetch(deleteUrl, {
-              method: "DELETE",
-              headers: {
-                "Content-Type": "application/json",
-                // Include auth cookies from the original request
-                Cookie: req.headers.cookie || "",
-              },
-              // Include credentials to send cookies with the request
-              credentials: "same-origin",
-            });
-
-            if (response.ok) {
-
-            } else {
-              const errorData = await response.json();
-              console.error(
-                `Error deleting image ${image.publicId}:`,
-                errorData
-              );
-            }
-          } catch (error) {
-            console.error(
-              `Error with delete request for image ${image.publicId}:`,
-              error
-            );
-          }
-        });
-
-      // Wait for all image deletion operations to complete
-      await Promise.all(deletePromises);
-    }
-
-    // Delete draft
-    const deletedDraft = await Post.findByIdAndDelete(req.params.id);
-
-    if (deletedDraft) {
-      // Delete associated messages (if any, drafts might not have messages yet but good practice)
-      await Message.deleteMany({ postId: req.params.id });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Draft deleted successfully",
-    });
-  } catch (error) {
-    console.error("Error deleting draft:", error);
-    res.status(500).json({
-      success: false,
-      error: "Server error deleting draft",
-    });
-  }
-});
-
-/**
- * Get user's posts
+ * Get user's posts (current logged-in user)
  */
 router.get("/api/user/posts", isAuthenticated, async (req, res) => {
   try {
+    // User should see all their posts (active or draft), regardless of approval status
     const posts = await Post.find({
       createdBy: req.user._id,
-      status: "active",
-    }).sort({ updatedAt: -1 });
+    })
+      .sort({ updatedAt: -1 })
+      .lean();
 
     res.status(200).json({
       success: true,
@@ -1018,6 +910,61 @@ router.get("/api/user/drafts", isAuthenticated, async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Server error fetching user drafts",
+    });
+  }
+});
+
+/**
+ * Get all active and approved posts for a specific user (public view)
+ */
+router.get("/api/posts/user/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const posts = await Post.find({
+      createdBy: userId,
+      status: "active",
+      approved: true,
+    })
+      .sort({ createdAt: -1 })
+      .populate("createdBy", "username firstName lastName profilePicture")
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: posts,
+    });
+  } catch (error) {
+    console.error("Error fetching posts for user:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error fetching user's posts.",
+    });
+  }
+});
+
+/**
+ * Get latest active and approved posts (public view)
+ */
+router.get("/api/posts/latest", async (req, res) => {
+  try {
+    const latestPosts = await Post.find({
+      status: "active",
+      approved: true,
+    })
+      .sort({ createdAt: -1 })
+      .limit(10) // Get latest 10 posts
+      .populate("createdBy", "username firstName lastName profilePicture")
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: latestPosts,
+    });
+  } catch (error) {
+    console.error("Error fetching latest posts:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error fetching latest posts.",
     });
   }
 });

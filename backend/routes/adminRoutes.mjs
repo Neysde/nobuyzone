@@ -151,6 +151,65 @@ router.get("/panel", isAdmin, async (req, res) => {
   }
 });
 
+// GET /admin/posts/waiting - Fetch all posts awaiting approval
+router.get("/posts/waiting", isAdmin, async (req, res) => {
+  try {
+    const waitingPosts = await Post.find({ approved: false })
+      .populate("createdBy", "username firstName lastName email") // Populate relevant user details
+      .sort({ createdAt: -1 }) // Show newest first
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: waitingPosts,
+    });
+  } catch (error) {
+    console.error("Error fetching waiting posts:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error fetching posts awaiting approval.",
+    });
+  }
+});
+
+// PATCH /admin/posts/:postId/approve - Approve a post
+router.patch("/posts/:postId/approve", isAdmin, async (req, res) => {
+  try {
+    const postId = req.params.postId;
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found.",
+      });
+    }
+
+    if (post.approved) {
+      return res.status(400).json({
+        success: false,
+        message: "Post is already approved.",
+      });
+    }
+
+    post.approved = true;
+    post.approvedAt = new Date(); // Optionally track approval time
+    await post.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Post approved successfully.",
+      data: post,
+    });
+  } catch (error) {
+    console.error("Error approving post:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error approving post.",
+    });
+  }
+});
+
 // DELETE /admin/users/:userId - Delete a user
 router.delete("/users/:userId", isAdmin, async (req, res) => {
   try {

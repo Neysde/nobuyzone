@@ -51,15 +51,17 @@
         <div class="user-dropdown">
           <a href="/dashboard/<%= user._id %>" class="user-button">
             <div class="user-avatar">
-              <% if (user.profilePicture) { %>
+              <% if (user.profilePicture && user.profilePicture.url) { %>
               <img
                 src="<%= user.profilePicture.url %>"
                 alt="<%= user.firstName %> <%= user.lastName %>"
               />
               <% } else { %>
-              <div class="avatar-placeholder">
-                <%= user.firstName ? user.firstName.charAt(0) : 'K' %>
-              </div>
+              <img
+                src="/img/default-avatar.svg"
+                alt="Default Profile Picture"
+                class="default-avatar-placeholder"
+              />
               <% } %>
             </div>
             <span>

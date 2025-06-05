@@ -255,7 +255,7 @@ async function deleteDraft(draftId) {
   try {
     showLoadingState();
 
-    const response = await fetch(`/api/drafts/${draftId}`, {
+    const response = await fetch(`/api/posts/${draftId}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",

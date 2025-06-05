@@ -181,8 +181,11 @@
                         <%= post.location.city %>, <%= post.location.district %>
                       </td>
                       <td class="post-date">
-                        <%= new Date(post.createdAt).toLocaleDateString("tr-TR")
-                        %>
+                        <% if (post.approved === false) { %>
+                          <span style="font-weight: bold; color: #60a5fa;">Kontrol ediliyor</span>
+                        <% } else { %>
+                          <%= new Date(post.updatedAt).toLocaleDateString("tr-TR") %>
+                        <% } %>
                       </td>
                       <td class="post-actions">
                         <div class="action-button-container">

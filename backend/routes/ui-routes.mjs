@@ -19,7 +19,7 @@ router.get("/find-posts", (req, res, next) => {
 
     try {
       // Base query filter
-      const baseFilter = { status: "active" };
+      const baseFilter = { status: "active", approved: true };
 
       // If user is logged in, add a filter to exclude their own posts
       if (user) {
