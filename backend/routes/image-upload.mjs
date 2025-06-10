@@ -2,6 +2,7 @@ import { config, uploader, v2 as cloudinary } from "cloudinary";
 import multer from "multer";
 import { fileTypeFromBuffer } from "file-type";
 import dotenv from "dotenv";
+import { isAuthenticated } from "../middlewares.mjs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -140,7 +141,7 @@ export const uploadImage = async (req, res) => {
 };
 
 // Delete image by public_id
-export const deleteImage = async (req, res) => {
+export const deleteImage = async (req, res, next) => {
   try {
     const { public_id } = req.params;
 
@@ -148,17 +149,33 @@ export const deleteImage = async (req, res) => {
       return handleError(res, new Error("No public_id provided"), 400);
     }
 
-    const result = await cloudinary.uploader.destroy(public_id);
-
-    if (result.result === "not found") {
-      return handleError(res, new Error("Image not found"), 404);
+    // If admin session exists, proceed directly
+    if (req.session && req.session.adminUser) {
+      const result = await cloudinary.uploader.destroy(public_id);
+      if (result.result === 'ok') {
+        return res.status(200).json({ success: true, message: "Image deleted successfully by admin." });
+      } else if (result.result === 'not found') {
+        return handleError(res, new Error("Image not found on Cloudinary."), 404);
+      } else {
+        return handleError(res, new Error(`Failed to delete image from Cloudinary: ${result.result}`), 500);
+      }
+    } else {
+      // Not an admin, so apply standard JWT authentication
+      isAuthenticated(req, res, async () => { 
+        const result = await cloudinary.uploader.destroy(public_id);
+        if (result.result === 'ok') {
+          return res.status(200).json({ success: true, message: "Image deleted successfully." });
+        } else if (result.result === 'not found') {
+          return handleError(res, new Error("Image not found on Cloudinary."), 404);
+        } else {
+          return handleError(res, new Error(`Failed to delete image from Cloudinary: ${result.result}`), 500);
+        }
+      });
     }
-
-    res.status(200).json({
-      success: true,
-      message: "Image deleted successfully",
-    });
   } catch (error) {
-    handleError(res, error);
+    console.error(`Error in deleteImage for ${req.params.public_id}:`, error);
+    if (!res.headersSent) { 
+        handleError(res, error);
+    }
   }
 };

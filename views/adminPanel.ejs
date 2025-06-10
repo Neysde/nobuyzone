@@ -74,6 +74,35 @@
         </div>
       </section>
 
+      <section id="waiting-posts-management" class="admin-section">
+        <h2>Waiting Posts for Approval</h2>
+        <div class="table-container">
+          <table id="waiting-posts-table">
+            <thead>
+              <tr>
+                <th>Images</th>
+                <th>Status</th> <!-- New Column: Status -->
+                <th>Title</th>
+                <th>Category</th>
+                <th>Condition</th> <!-- New Column: Condition -->
+                <th>Location</th>
+                <th>Submitted</th>
+                <th>Author</th>
+                <th>Description</th>
+                <th>Contact</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Waiting posts will be dynamically inserted here by admin.js -->
+              <tr id="no-waiting-posts-row" style="display: none;">
+                <td colspan="11" style="text-align: center;">No posts currently waiting for approval.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section id="post-management" class="admin-section">
         <div class="section-header-with-controls">
           <h2>Post Management</h2>

@@ -517,7 +517,6 @@
     <script>
       // Fallback if Socket.IO didn't load from CDN
       if (typeof io === "undefined") {
-        console.log("Socket.IO not loaded from CDN, trying server version");
         const fallbackScript = document.createElement("script");
         fallbackScript.src = "/socket.io/socket.io.js";
         fallbackScript.onerror = function () {

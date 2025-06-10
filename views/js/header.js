@@ -122,9 +122,7 @@ document.addEventListener("DOMContentLoaded", function () {
    * Moves buttons to mobile container on smaller screens
    */
   window.handleMobileLayout = function () {
-    const createPostBtn = document.querySelector(
-      ".header-actions .button.button-primary"
-    );
+    const createPostBtn = document.getElementById("create-post-btn-main");
     const headerActions = document.querySelector(".header-actions");
     const mobileActions = document.querySelector(".mobile-actions");
 
@@ -138,6 +136,8 @@ document.addEventListener("DOMContentLoaded", function () {
         // Clone create post button for mobile
         if (createPostBtn) {
           const postBtnClone = createPostBtn.cloneNode(true);
+          postBtnClone.textContent = '+'; // Change text to '+' for mobile
+          postBtnClone.classList.add('create-post-button-mobile'); // Add a class for specific mobile styling
           mobileActions.appendChild(postBtnClone);
         }
 

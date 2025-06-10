@@ -189,6 +189,65 @@ async function deletePost(postId) {
 }
 
 /**
+ * Send request to delete user's profile photo
+ */
+async function deleteProfilePhoto() {
+  const deleteBtn = document.getElementById("delete-profile-photo-btn");
+  try {
+    showLoadingState();
+
+    const response = await fetch("/api/user/profile-picture", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: "Profil fotoğrafı silinemedi" }));
+      throw new Error(errorData.message || "Profil fotoğrafı silinemedi");
+    }
+
+    // Update dashboard profile avatar
+    const profileAvatarContainer = document.querySelector(".profile-avatar");
+    if (profileAvatarContainer) {
+      const userFirstName = document.body.dataset.userFirstname || 'K';
+      const userLastName = document.body.dataset.userLastname || ' ';
+      profileAvatarContainer.innerHTML = `
+        <div class="avatar-placeholder">
+          ${userFirstName.charAt(0).toUpperCase()}${userLastName.charAt(0).toUpperCase().trim()}
+        </div>`;
+    }
+
+    // Update header profile avatar
+    const headerUserAvatarContainer = document.querySelector('.user-button .user-avatar');
+    if (headerUserAvatarContainer) {
+      const userFirstName = document.body.dataset.userFirstname || 'K';
+      const userLastName = document.body.dataset.userLastname || ' ';
+      headerUserAvatarContainer.innerHTML = `
+        <div class="avatar-placeholder">
+          ${userFirstName.charAt(0).toUpperCase()}${userLastName.charAt(0).toUpperCase().trim()}
+        </div>`;
+    }
+
+    // Remove the delete button
+    if (deleteBtn) {
+      deleteBtn.remove();
+    }
+
+    showNotification("Profil fotoğrafı başarıyla silindi", "success");
+
+  } catch (error) {
+    console.error("Error deleting profile photo:", error);
+    showNotification(error.message || "Profil fotoğrafı silinirken bir hata oluştu", "error");
+  } finally {
+    hideLoadingState();
+  }
+}
+
+
+
+/**
  * Send request to delete a draft
  * @param {string} draftId - The ID of the draft to delete
  */
@@ -196,7 +255,7 @@ async function deleteDraft(draftId) {
   try {
     showLoadingState();
 
-    const response = await fetch(`/api/drafts/${draftId}`, {
+    const response = await fetch(`/api/posts/${draftId}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -318,33 +377,44 @@ function initProfilePhoto() {
   let currentImageFile = null;
 
   // Open file dialog when upload button is clicked
-  uploadBtn.addEventListener("click", function () {
-    fileInput.click();
-  });
+  if (uploadBtn) {
+    uploadBtn.addEventListener("click", function () {
+      fileInput.click();
+    });
+  }
 
   // Handle file selection
-  fileInput.addEventListener("change", function (e) {
-    if (e.target.files && e.target.files[0]) {
-      // Check file type
-      const file = e.target.files[0];
-      const fileType = file.type;
-      if (!fileType.startsWith("image/")) {
-        showNotification("Lütfen bir resim dosyası seçin", "error");
-        return;
+  if (fileInput) {
+    fileInput.addEventListener("change", function (e) {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        const fileType = file.type;
+        if (!fileType.startsWith("image/")) {
+          showNotification("Lütfen bir resim dosyası seçin", "error");
+          return;
+        }
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+          showNotification("Resim dosyası boyutu 5MB'den küçük olmalıdır", "error");
+          return;
+        }
+        openImageCropper(file);
       }
+    });
+  }
 
-      // Check file size (max 5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-      if (file.size > maxSize) {
-        showNotification("Resim dosyası boyutu 5MB'den küçük olmalıdır", "error");
-        return;
+  // Event delegation for the delete profile photo button
+  const profileAvatarContainer = document.querySelector(".profile-avatar-container");
+  if (profileAvatarContainer) {
+    profileAvatarContainer.addEventListener("click", function(event) {
+      if (event.target.closest("#delete-profile-photo-btn")) {
+        if (confirm("Profil fotoğrafınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.")) {
+          deleteProfilePhoto();
+        }
       }
+    });
+  }
 
-      openImageCropper(file);
-    }
-  });
-
-  // Function to open the image cropper
   function openImageCropper(file) {
     currentImageFile = file;
 
@@ -419,21 +489,17 @@ function initProfilePhoto() {
   function closeCropper() {
     cropperModal.classList.remove("active");
     document.body.classList.remove("modal-open");
-
     if (cropper) {
       cropper.destroy();
       cropper = null;
     }
-
-    // Reset file input to allow selecting the same file again
-    fileInput.value = "";
+    if (fileInput) fileInput.value = "";
     currentImageFile = null;
   }
 
-  // Set up cropper button events
-  closeCropperBtn.addEventListener("click", closeCropper);
-  cancelCropBtn.addEventListener("click", closeCropper);
-  applyCropBtn.addEventListener("click", applyImageCrop);
+  if (closeCropperBtn) closeCropperBtn.addEventListener("click", closeCropper);
+  if (cancelCropBtn) cancelCropBtn.addEventListener("click", closeCropper);
+  if (applyCropBtn) applyCropBtn.addEventListener("click", applyImageCrop);
 
   // Upload profile photo to the server
   async function uploadProfilePhoto(dataUrl) {
@@ -450,74 +516,96 @@ function initProfilePhoto() {
         method: "POST",
         body: formData,
       });
-
-      if (!uploadResponse.ok) {
-        throw new Error("Profil resmi yüklenemedi");
-      }
-
+      if (!uploadResponse.ok) throw new Error("Profil resmi yüklenemedi (adım 1)");
       const uploadData = await uploadResponse.json();
+      if (!uploadData.success) throw new Error(uploadData.error || "Resim yükleme başarısız (adım 1)");
 
-      if (!uploadData.success) {
-        throw new Error(uploadData.error || "Resim yükleme başarısız");
-      }
-
-      // Step 2: Update the user profile with the new image URL
       const updateResponse = await fetch("/api/user/profile-picture", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url: uploadData.data.url,
-          publicId: uploadData.data.public_id,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: uploadData.data.url, publicId: uploadData.data.public_id }),
       });
+      if (!updateResponse.ok) throw new Error("Profil resmi güncellenemedi (adım 2)");
+      // const userData = await updateResponse.json(); // Not strictly needed for UI update if backend confirms
 
-      if (!updateResponse.ok) {
-        throw new Error("Profil resmi güncellenemedi");
+      // Update dashboard profile avatar
+      const dashboardAvatarImg = document.querySelector(".profile-avatar img");
+      const dashboardAvatarPlaceholder = document.querySelector(".profile-avatar .avatar-placeholder");
+      if (dashboardAvatarImg) {
+        dashboardAvatarImg.src = uploadData.data.url;
+      } else if (dashboardAvatarPlaceholder) {
+        dashboardAvatarPlaceholder.remove();
+        const newImg = document.createElement("img");
+        newImg.src = uploadData.data.url;
+        newImg.alt = "Profil Resmi";
+        document.querySelector(".profile-avatar").appendChild(newImg);
       }
 
-      const data = await updateResponse.json();
-
-      // Update the profile picture on the page
-      const profileAvatar = document.querySelector(".profile-avatar");
-
-      // Create a new image or replace existing one
-      if (profileAvatar.querySelector("img")) {
-        profileAvatar.querySelector("img").src = uploadData.data.url;
-      } else {
-        // Remove placeholder if it exists
-        if (profileAvatar.querySelector(".avatar-placeholder")) {
-          profileAvatar.innerHTML = "";
+      // Update header avatar
+      const headerUserAvatarContainer = document.querySelector(".user-button .user-avatar");
+      if (headerUserAvatarContainer) {
+        let headerImg = headerUserAvatarContainer.querySelector("img");
+        if (headerImg) {
+          headerImg.src = uploadData.data.url;
+        } else {
+          headerUserAvatarContainer.innerHTML = ''; // Clear placeholder (e.g., initials div)
+          headerImg = document.createElement('img');
+          headerImg.src = uploadData.data.url;
+          const userFirstName = document.body.dataset.userFirstname || 'Kullanıcı';
+          headerImg.alt = `${userFirstName} profili`;
+          headerUserAvatarContainer.appendChild(headerImg);
         }
+      }
 
-        const imgElement = document.createElement("img");
-        imgElement.src = uploadData.data.url;
-        imgElement.alt = "Profile picture";
-        profileAvatar.appendChild(imgElement);
+      // Dynamically add or ensure visibility of the delete button
+      const buttonsContainer = document.querySelector(".profile-avatar-container"); // Parent of the buttons
+      if (buttonsContainer) {
+        let deleteBtn = document.getElementById("delete-profile-photo-btn");
+        if (!deleteBtn) {
+          deleteBtn = document.createElement("button");
+          deleteBtn.id = "delete-profile-photo-btn";
+          deleteBtn.className = "button button-small button-danger profile-action-button";
+          deleteBtn.style.marginTop = "8px";
+          deleteBtn.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+            Profil Fotoğrafını Sil
+          `;
+          const uploadPhotoButton = document.getElementById('upload-photo-btn');
+          if (uploadPhotoButton && uploadPhotoButton.parentNode === buttonsContainer) {
+            uploadPhotoButton.after(deleteBtn);
+          } else {
+            buttonsContainer.appendChild(deleteBtn); // Fallback
+          }
+        } else {
+          deleteBtn.style.display = ''; 
+          deleteBtn.className = "button button-small button-danger profile-action-button"; // Ensure styles are correct
+        }
       }
 
       showNotification("Profil resmi başarıyla güncellendi", "success");
+
     } catch (error) {
       console.error("Error uploading profile picture:", error);
-      showNotification("Profil resmi güncellenemedi", "error");
+      showNotification(error.message || "Profil resmi güncellenemedi", "error");
     } finally {
       hideLoadingState();
     }
   }
 
-  // Helper function to convert data URL to Blob
   function dataURLtoBlob(dataURL) {
     const parts = dataURL.split(";base64,");
     const contentType = parts[0].split(":")[1];
     const raw = window.atob(parts[1]);
     const rawLength = raw.length;
     const uInt8Array = new Uint8Array(rawLength);
-
     for (let i = 0; i < rawLength; ++i) {
       uInt8Array[i] = raw.charCodeAt(i);
     }
-
     return new Blob([uInt8Array], { type: contentType });
   }
 }

@@ -3,7 +3,7 @@ import passport from "passport";
 export const isAuthenticated = (req, res, next) => {
   //When you use passport.authenticate, it uses the passport strategy to authenticate requests.
   //During this process, information can flow between your strategy and the authenticate middleware.
-  passport.authenticate("jwt", { session: false }, (err, user, info) => {
+  passport.authenticate("jwt", { session: false }, (err, user) => {
     if (err) {
       console.error("Authentication error:", err);
       return res.redirect("/api/login");

@@ -389,12 +389,24 @@ document.addEventListener("DOMContentLoaded", function () {
   function toggleFullscreen() {
     radiusMap.classList.toggle("fullscreen");
 
+    const iconSVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/></svg>';
+
+    // Update button text and icon
+    if (fullscreenToggleBtn) { // Ensure the button element exists
+      fullscreenToggleBtn.innerHTML = radiusMap.classList.contains("fullscreen")
+        ? `${iconSVG} Tam Ekrandan Çık`
+        : `${iconSVG} Tam Ekran`;
+    }
+
     // Force map to recalculate size when toggling fullscreen
     setTimeout(function () {
-      map.invalidateSize();
-
+      if (map) { // Ensure map object exists
+        map.invalidateSize();
+      }
       // Update fixed circle size after container resize
-      updateFixedCircleSize();
+      if (typeof updateFixedCircleSize === 'function') { // Ensure function exists
+        updateFixedCircleSize();
+      }
     }, 100);
   }
 
@@ -444,7 +456,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         // Update the display with location and radius
-        locationDisplay.textContent = `${locationText}, Radius: ${currentRadius.toFixed(
+        locationDisplay.textContent = `${locationText}, Yarıçap: ${currentRadius.toFixed(
           1
         )} km`;
       })

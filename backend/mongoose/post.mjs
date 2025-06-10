@@ -104,6 +104,12 @@ const postSchema = new mongoose.Schema(
       default: "active",
     },
 
+    //post approve info 
+    approved: {
+      type: Boolean,
+      default: false,
+    },
+
     // Flag count for reporting inappropriate posts
     flagCount: {
       type: Number,

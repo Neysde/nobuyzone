@@ -20,7 +20,7 @@
       </div>
       <div class="header-actions">
         <!-- Create post button always visible -->
-        <a href="/posting" class="button button-primary">İlan Oluştur</a>
+        <a href="/posting" id="create-post-btn-main" class="button button-primary">İlan Oluştur</a>
 
         <% if (typeof user === 'undefined' || !user) { %>
         <!-- Sign in button for non-authenticated users -->
@@ -51,15 +51,17 @@
         <div class="user-dropdown">
           <a href="/dashboard/<%= user._id %>" class="user-button">
             <div class="user-avatar">
-              <% if (user.profilePicture) { %>
+              <% if (user.profilePicture && user.profilePicture.url) { %>
               <img
                 src="<%= user.profilePicture.url %>"
                 alt="<%= user.firstName %> <%= user.lastName %>"
               />
               <% } else { %>
-              <div class="avatar-placeholder">
-                <%= user.firstName ? user.firstName.charAt(0) : 'K' %>
-              </div>
+              <img
+                src="/img/default-avatar.svg"
+                alt="Default Profile Picture"
+                class="default-avatar-placeholder"
+              />
               <% } %>
             </div>
             <span>
