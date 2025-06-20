@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
+import cookie from "cookie"; // Add this line with the other imports
 import User from "./mongoose/user.mjs";
 import Message from "./mongoose/message.mjs";
 import Post from "./mongoose/post.mjs";
@@ -53,7 +54,7 @@ export function initializeSocketServer(httpServer) {
   // Initialize Socket.IO server with CORS configuration
   const io = new Server(httpServer, {
     cors: {
-      origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+      origin: process.env.BASE_URL,
       methods: ["GET", "POST"],
       credentials: true,
     },
@@ -62,100 +63,27 @@ export function initializeSocketServer(httpServer) {
   // Store active user rooms to prevent duplicate joins
   const userRooms = {};
 
-  // Modified Socket.IO middleware for authentication using our existing middleware
+  // The new, correct middleware is here
   io.use(async (socket, next) => {
     try {
-      // Extract token from handshake or cookie
-      const token =
-        socket.handshake.auth.token ||
-        socket.handshake.headers.cookie?.split("login=")[1]?.split(";")[0];
+      const cookieString = socket.handshake.headers.cookie;
+      if (!cookieString)
+        throw new Error("Authentication failed: No cookie provided.");
 
-      if (!token) {
-        return next(new Error("Authentication error: No token provided"));
-      }
+      const cookies = cookie.parse(cookieString);
+      const token = cookies.login;
+      if (!token)
+        throw new Error("Authentication failed: No authentication token.");
 
-      // Create a mock request object for the middleware
-      const req = {
-        cookies: { login: token },
-        user: null, // Will be set by the middleware
-      };
+      const decoded = jwt.verify(token, process.env.SECRETKEY);
+      const user = await User.findById(decoded._id);
+      if (!user) throw new Error("Authentication failed: User not found.");
 
-      // Create mock response and next function
-      const res = {
-        redirect: () => {
-          return next(new Error("Authentication failed"));
-        },
-      };
-
-      // Custom next function to handle middleware result
-      const middlewareNext = async (err) => {
-        if (err) {
-          return next(new Error("Authentication error"));
-        }
-
-        if (!req.user) {
-          return next(new Error("Authentication failed"));
-        }
-
-        try {
-          // Ensure user ID exists - sometimes it's in 'id' instead of '_id'
-          if (!req.user._id && req.user.id) {
-            req.user._id = req.user.id;
-          }
-
-          // Always try to get complete user data to ensure we have all needed fields
-          let completeUser = null;
-          if (req.user._id) {
-            completeUser = await User.findById(req.user._id);
-          } else if (req.user.id) {
-            completeUser = await User.findById(req.user.id);
-          } else if (req.user.email) {
-            completeUser = await User.findOne({ email: req.user.email });
-          }
-
-          if (completeUser) {
-            // Ensure the user has an _id field
-            req.user._id = completeUser._id || req.user._id || req.user.id;
-
-            // Merge the complete user data with the existing user data
-            req.user = {
-              ...req.user,
-              _id: req.user._id, // Maintain existing _id or use the one from completeUser
-              firstName: completeUser.firstName || req.user.firstName,
-              lastName: completeUser.lastName || req.user.lastName,
-              username: completeUser.username || req.user.username,
-              showUsername: completeUser.showUsername || req.user.showUsername,
-            };
-
-            // Ensure the name is set
-            if (!req.user.name) {
-              if (req.user.firstName || req.user.lastName) {
-                req.user.name = `${req.user.firstName || ""} ${
-                  req.user.lastName || ""
-                }`.trim();
-              } else {
-                req.user.name = `User ${req.user._id.toString().substr(-6)}`;
-              }
-            }
-          } else {
-            console.warn(
-              `Could not find complete user data for user`
-            );
-          }
-        } catch (dbError) {
-          console.error("Error getting complete user data:", dbError);
-        }
-
-        // Attach user to socket
-        socket.user = req.user;
-        next();
-      };
-
-      // Use isAuthenticated middleware
-      isAuthenticated(req, res, middlewareNext);
+      socket.user = user;
+      next();
     } catch (error) {
-      console.error("Socket authentication error:", error);
-      next(new Error("Authentication error"));
+      console.error("Socket authentication error:", error.message);
+      next(new Error("Authentication failed"));
     }
   });
 
@@ -189,7 +117,7 @@ export function initializeSocketServer(httpServer) {
 
     // Log more detailed user information for debugging
 
-      // Don't log the full user object to avoid exposing sensitive data
+    // Don't log the full user object to avoid exposing sensitive data
 
     // Get the user ID consistently
     const currentUserId = socket.user._id || socket.user.id;
@@ -203,7 +131,6 @@ export function initializeSocketServer(httpServer) {
 
     // Handle socket disconnection
     socket.on("disconnect", () => {
-
       // Clean up room tracking on disconnect
       delete userRooms[currentUserId];
     });
@@ -233,7 +160,6 @@ export function initializeSocketServer(httpServer) {
 
       // Check if already in room
       if (userRooms[currentUserId] && userRooms[currentUserId].has(userRoom)) {
-
         return;
       }
 
@@ -241,7 +167,6 @@ export function initializeSocketServer(httpServer) {
       socket.join(userRoom);
       userRooms[currentUserId] = userRooms[currentUserId] || new Set();
       userRooms[currentUserId].add(userRoom);
-
 
       // Send initial unread count
       getUnreadMessageCount(currentUserId)
@@ -280,7 +205,6 @@ export function initializeSocketServer(httpServer) {
       userRooms[currentUserId] = userRooms[currentUserId] || new Set();
       userRooms[currentUserId].add(roomId);
 
-
       // Mark messages as read when user enters the chat room
       try {
         const updated = await markMessagesAsRead({
@@ -290,7 +214,6 @@ export function initializeSocketServer(httpServer) {
         });
 
         if (updated) {
-
           // Notify the sender that their messages were read
           io.to(`user:${userId}`).emit("messages-read", {
             postId,
@@ -325,7 +248,8 @@ export function initializeSocketServer(httpServer) {
             "Cannot leave chat room: User has no valid ID (socket.user._id is missing)"
           );
           socket.emit("error", {
-            message: "Kimlik doğrulama hatası: Sohbetten çıkmak için geçersiz kullanıcı kimliği.",
+            message:
+              "Kimlik doğrulama hatası: Sohbetten çıkmak için geçersiz kullanıcı kimliği.",
           });
           return;
         }
@@ -353,9 +277,7 @@ export function initializeSocketServer(httpServer) {
         socket.leave(roomId);
         socket.leave(alternativeRoomId); // Attempt to leave both possible room name orders
 
-
         if (roomId !== alternativeRoomId) {
-
         }
 
         // Update userRooms tracking
@@ -365,9 +287,7 @@ export function initializeSocketServer(httpServer) {
           userRooms[currentUserId].delete(alternativeRoomId);
           const finalSize = userRooms[currentUserId].size;
           if (initialSize > finalSize) {
-
           } else {
-
           }
         } else {
           console.warn(
@@ -540,8 +460,6 @@ export function initializeSocketServer(httpServer) {
         if (!firstName && !lastName) {
           firstName = "Birisi";
         }
-
-
 
         // Get recipient room
         const recipientRoom = `chat:${postId}:${recipientId}:${currentUserId}`;
