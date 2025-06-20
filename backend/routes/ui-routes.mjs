@@ -5,6 +5,7 @@ import { isAuthenticated } from "../middlewares.mjs";
 import passport from "passport";
 import Message from "../mongoose/message.mjs";
 import fetch from "node-fetch";
+import { getChatsForUser } from "../utils/chat-utils.mjs"; // Import the new function
 
 const router = express.Router();
 
@@ -189,22 +190,7 @@ router.get("/dashboard/:id", isAuthenticated, async (req, res) => {
     // Use the /api/chats endpoint to fetch chat data for this user
     const currentUserId = req.user._id;
 
-    // Make a request to the chats API endpoint
-    const response = await fetch(
-      `${req.protocol}://${req.get("host")}/api/chats`,
-      {
-        headers: {
-          Cookie: req.headers.cookie, // Pass the user's cookies for authentication
-        },
-      }
-    );
-
-    let chats = [];
-    if (response.ok) {
-      chats = await response.json();
-    } else {
-      console.error("Error fetching chats from API:", response.status);
-    }
+    const chats = await getChatsForUser(currentUserId.toString());
 
     // Render the dashboard template with all the data
     res.render("dashboard", {

@@ -1,5 +1,6 @@
 import Message from "../mongoose/message.mjs";
 import Post from "../mongoose/post.mjs";
+import User from "../mongoose/user.mjs";
 
 /**
  * Function to handle creating a new conversation or adding a message to an existing one
@@ -126,4 +127,60 @@ export async function markMessagesAsRead({ currentUserId, senderId, postId }) {
     console.error("Error marking messages as read:", error);
     throw error;
   }
+}
+
+/**
+ * Fetches and formats the chat list for a given user.
+ * @param {string} userId - The ID of the user to fetch chats for.
+ * @returns {Promise<Array>} A promise that resolves to an array of formatted chat objects.
+ */
+export async function getChatsForUser(userId) {
+  if (!userId) {
+    return [];
+  }
+
+  const objectId = new mongoose.Types.ObjectId(userId);
+
+  const allMessages = await Message.find({ "users.user": objectId })
+    .populate({
+      path: "users.user",
+      model: "User",
+      select: "username firstName lastName profilePicture showUsername",
+    })
+    .sort({ "lastMessage.timestamp": -1 });
+
+  const chats = allMessages.map((message) => {
+    const otherUser = message.users.find(
+      (u) => u.user._id.toString() !== userId.toString()
+    )?.user;
+
+    // If for some reason the other user is not found, skip this chat
+    if (!otherUser) {
+      return null;
+    }
+
+    const displayName = otherUser.showUsername
+      ? otherUser.username
+      : `${otherUser.firstName} ${otherUser.lastName}`;
+
+    return {
+      chatId: message._id,
+      otherUser: {
+        _id: otherUser._id,
+        name: displayName,
+        profilePicture: otherUser.profilePicture
+          ? otherUser.profilePicture.url
+          : "/img/default-profile.png",
+      },
+      lastMessage: {
+        text: message.lastMessage.text,
+        timestamp: message.lastMessage.timestamp,
+        isRead: message.lastMessage.read,
+        isMine: message.lastMessage.sender.toString() === userId.toString(),
+      },
+    };
+  });
+
+  // Filter out any null chats that may have occurred from corrupted data
+  return chats.filter((chat) => chat !== null);
 }
