@@ -72,7 +72,9 @@ function initLoginForm(form) {
       }
     } catch (error) {
       console.error("Login error:", error);
-      showError("Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.");
+      showError(
+        "Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin."
+      );
     } finally {
       //Reset button state
       setLoading(submitBtn, false, originalBtnText);
@@ -113,7 +115,7 @@ function initRegisterForm(form) {
     }
 
     if (!validateEmail(email)) {
-      showError("Please enter a valid email address");
+      showError("Lütfen geçerli bir mail adresi girin");
       return;
     }
 
@@ -170,7 +172,7 @@ function initRegisterForm(form) {
       }
     } catch (error) {
       console.error("Register error:", error);
-      showError("An unexpected error occurred. Please try again later.");
+      showError("Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.");
     } finally {
       //Reset button state
       setLoading(submitBtn, false, originalBtnText);
@@ -191,7 +193,7 @@ function initPasswordResetRequestForm(form) {
 
     //Validate form
     if (!validateEmail(email)) {
-      showError("Please enter a valid email address");
+      showError("Lütfen geçerli bir mail adresi girin");
       return;
     }
 
@@ -229,7 +231,7 @@ function initPasswordResetRequestForm(form) {
       }
     } catch (error) {
       console.error("Password reset request error:", error);
-      showError("An unexpected error occurred. Please try again later.");
+      showError("Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin");
     } finally {
       // Reset button state
       setLoading(submitBtn, false, originalBtnText);
@@ -294,7 +296,9 @@ function initPasswordResetForm(form) {
       }
     } catch (error) {
       console.error("Password reset error:", error);
-      showError("Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.");
+      showError(
+        "Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin."
+      );
     } finally {
       //Reset button state
       setLoading(submitBtn, false, originalBtnText);

@@ -24,7 +24,8 @@ const register = async (req, res) => {
         email: Joi.string().email().required().label("Email"),
         password: passwordComplexity().required().label("password"), //these funcs. come from joi
         termsAccepted: Joi.boolean().valid(true).required().messages({
-          "any.only": "Kullanım Koşullarını ve Gizlilik Politikasını kabul etmelisiniz",
+          "any.only":
+            "Kullanım Koşullarını ve Gizlilik Politikasını kabul etmelisiniz",
           "any.required": "Koşulların kabulü gereklidir",
         }),
       });
@@ -38,9 +39,9 @@ const register = async (req, res) => {
 
     let user = await User.findOne({ email: req.body.email });
     if (user)
-      return res
-        .status(409)
-        .send({ message: "Bu e-posta adresi ile kayıtlı bir kullanıcı zaten var" });
+      return res.status(409).send({
+        message: "Bu e-posta adresi ile kayıtlı bir kullanıcı zaten var",
+      });
 
     const hashedPassword = await hashPassword(req.body.password);
     user = await new User({
@@ -266,9 +267,9 @@ const passwordLink = async (req, res) => {
       });
     let user = await User.findOne({ email: req.body.email });
     if (!user)
-      return res
-        .status(409)
-        .send({ message: "Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı" });
+      return res.status(409).send({
+        message: "Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı",
+      });
 
     let token = await Token.findOne({ userId: user._id });
 
@@ -460,7 +461,7 @@ const resetPassword = async (req, res) => {
 const sendEmail = async (email, subject, message) => {
   try {
     const transporter = nodemailer.createTransport({
-      host: "mail.nobuyzone.com",
+      host: "smtp.gmail.com",
       port: 465, //465 is for SSL/TLS port
       secureConnection: true, //TLS requires secureConnection to be false for port 465(ssl/tls) it should be true
       auth: {
@@ -470,8 +471,7 @@ const sendEmail = async (email, subject, message) => {
     });
 
     await transporter.sendMail({
-      from:
-        process.env.EMAIL_FROM || `"NoBuyZone" <${process.env.EMAIL_USER}>`,
+      from: process.env.EMAIL_FROM || `"NoBuyZone" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: subject,
       html: message,
@@ -524,7 +524,9 @@ router.patch("/api/user/username", isAuthenticated, async (req, res) => {
       existingUser &&
       existingUser._id.toString() !== req.user._id.toString()
     ) {
-      return res.status(409).send({ message: "Bu kullanıcı adı zaten alınmış" });
+      return res
+        .status(409)
+        .send({ message: "Bu kullanıcı adı zaten alınmış" });
     }
 
     // Update the username
@@ -533,7 +535,10 @@ router.patch("/api/user/username", isAuthenticated, async (req, res) => {
     res.status(200).send({ message: "Kullanıcı adı başarıyla güncellendi" });
   } catch (error) {
     console.error("Error updating username:", error);
-    res.status(500).json({ success: false, error: "Kullanıcı adı güncellenirken bir hata oluştu." });
+    res.status(500).json({
+      success: false,
+      error: "Kullanıcı adı güncellenirken bir hata oluştu.",
+    });
   }
 });
 // Update profile picture
@@ -562,7 +567,9 @@ router.patch("/api/user/profile-picture", isAuthenticated, async (req, res) => {
     if (user.profilePicture && user.profilePicture.publicId) {
       const oldPublicId = user.profilePicture.publicId;
       try {
-        const fullDeleteUrl = `${req.protocol}://${req.get("host")}/api/delete/${oldPublicId}`;
+        const fullDeleteUrl = `${req.protocol}://${req.get(
+          "host"
+        )}/api/delete/${oldPublicId}`;
         const deleteResponse = await fetch(fullDeleteUrl, {
           method: "DELETE",
           headers: {
@@ -574,9 +581,13 @@ router.patch("/api/user/profile-picture", isAuthenticated, async (req, res) => {
           let errorData = { error: deleteResponse.statusText };
           try {
             errorData = await deleteResponse.json();
-          } catch (e) { /* Ignore parsing error if not JSON */ }
+          } catch (e) {
+            /* Ignore parsing error if not JSON */
+          }
           console.warn(
-            `Eski profil resmi Cloudinary'den silinemedi (publicId: ${oldPublicId}): ${errorData.error || deleteResponse.statusText}. Güncelleme devam ediyor.`
+            `Eski profil resmi Cloudinary'den silinemedi (publicId: ${oldPublicId}): ${
+              errorData.error || deleteResponse.statusText
+            }. Güncelleme devam ediyor.`
           );
         }
       } catch (deleteError) {
@@ -603,77 +614,89 @@ router.patch("/api/user/profile-picture", isAuthenticated, async (req, res) => {
     console.error("Profil resmi güncellenirken hata oluştu:", error);
     return res.status(500).json({
       success: false,
-      error: "Profil resmi güncellenirken bir sunucu hatası oluştu: " + error.message,
+      error:
+        "Profil resmi güncellenirken bir sunucu hatası oluştu: " +
+        error.message,
     });
   }
 });
 
 // Delete profile picture
-router.delete("/api/user/profile-picture", isAuthenticated, async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: "Kullanıcı bulunamadı.",
-      });
-    }
-
-    if (!user.profilePicture || !user.profilePicture.publicId) {
-      return res.status(400).json({
-        success: false,
-        error: "Silinecek aktif bir profil resmi bulunmuyor.",
-      });
-    }
-
-    const publicIdToDelete = user.profilePicture.publicId;
-
-    // Attempt to delete the image from Cloudinary
+router.delete(
+  "/api/user/profile-picture",
+  isAuthenticated,
+  async (req, res) => {
     try {
-      const fullDeleteUrl = `${req.protocol}://${req.get("host")}/api/delete/${publicIdToDelete}`;
-      const deleteResponse = await fetch(fullDeleteUrl, {
-        method: "DELETE",
-        headers: {
-          Cookie: req.headers.cookie || "", // Pass cookie for authentication
-        },
-      });
+      const userId = req.user._id;
+      const user = await User.findById(userId);
 
-      if (!deleteResponse.ok) {
-        let errorData = { error: deleteResponse.statusText };
-        try {
-          errorData = await deleteResponse.json();
-        } catch (e) { /* Ignore parsing error */ }
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: "Kullanıcı bulunamadı.",
+        });
+      }
+
+      if (!user.profilePicture || !user.profilePicture.publicId) {
+        return res.status(400).json({
+          success: false,
+          error: "Silinecek aktif bir profil resmi bulunmuyor.",
+        });
+      }
+
+      const publicIdToDelete = user.profilePicture.publicId;
+
+      // Attempt to delete the image from Cloudinary
+      try {
+        const fullDeleteUrl = `${req.protocol}://${req.get(
+          "host"
+        )}/api/delete/${publicIdToDelete}`;
+        const deleteResponse = await fetch(fullDeleteUrl, {
+          method: "DELETE",
+          headers: {
+            Cookie: req.headers.cookie || "", // Pass cookie for authentication
+          },
+        });
+
+        if (!deleteResponse.ok) {
+          let errorData = { error: deleteResponse.statusText };
+          try {
+            errorData = await deleteResponse.json();
+          } catch (e) {
+            /* Ignore parsing error */
+          }
+          console.error(
+            `Profil resmi Cloudinary'den silinemedi (publicId: ${publicIdToDelete}): ${
+              errorData.error || deleteResponse.statusText
+            }. Veritabanından yine de kaldırılacak.`
+          );
+          // Even if Cloudinary deletion fails, proceed to remove from DB
+        }
+      } catch (deleteError) {
         console.error(
-          `Profil resmi Cloudinary'den silinemedi (publicId: ${publicIdToDelete}): ${errorData.error || deleteResponse.statusText}. Veritabanından yine de kaldırılacak.`
+          `Profil resmi Cloudinary'den silinirken bir hata oluştu (publicId: ${publicIdToDelete}): ${deleteError.message}. Veritabanından yine de kaldırılacak.`
         );
         // Even if Cloudinary deletion fails, proceed to remove from DB
       }
-    } catch (deleteError) {
-      console.error(
-        `Profil resmi Cloudinary'den silinirken bir hata oluştu (publicId: ${publicIdToDelete}): ${deleteError.message}. Veritabanından yine de kaldırılacak.`
-      );
-      // Even if Cloudinary deletion fails, proceed to remove from DB
+
+      // Remove profile picture from the database
+      await User.findByIdAndUpdate(userId, {
+        $unset: { profilePicture: "" }, // Removes the profilePicture field from the document
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Profil resmi başarıyla silindi.",
+      });
+    } catch (error) {
+      console.error("Error deleting profile picture:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Profil resmi silinirken bir hata oluştu: " + error.message,
+      });
     }
-
-    // Remove profile picture from the database
-    await User.findByIdAndUpdate(userId, {
-      $unset: { profilePicture: "" }, // Removes the profilePicture field from the document
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Profil resmi başarıyla silindi.",
-    });
-  } catch (error) {
-    console.error("Error deleting profile picture:", error);
-    return res.status(500).json({
-      success: false,
-      error: "Profil resmi silinirken bir hata oluştu: " + error.message,
-    });
   }
-});
+);
 
 // Update privacy settings (showUsername)
 router.patch("/api/user/privacy", isAuthenticated, async (req, res) => {
@@ -755,13 +778,13 @@ router.delete("/api/user/delete-account", isAuthenticated, async (req, res) => {
     // First, get all user's posts
     const posts = await Post.find({
       createdBy: userId,
-      status: "active"
+      status: "active",
     }).select("_id");
 
     // Get all user's drafts
     const drafts = await Post.find({
       createdBy: userId,
-      status: "draft"
+      status: "draft",
     }).select("_id");
 
     // Delete each post using the post delete API to ensure Cloudinary images are deleted
@@ -772,9 +795,9 @@ router.delete("/api/user/delete-account", isAuthenticated, async (req, res) => {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
-            Cookie: cookies
+            Cookie: cookies,
           },
-          credentials: "same-origin"
+          credentials: "same-origin",
         });
       } catch (postError) {
         console.error(`Error deleting post ${post._id}:`, postError);
@@ -790,9 +813,9 @@ router.delete("/api/user/delete-account", isAuthenticated, async (req, res) => {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
-            Cookie: cookies
+            Cookie: cookies,
           },
-          credentials: "same-origin"
+          credentials: "same-origin",
         });
       } catch (draftError) {
         console.error(`Error deleting draft ${draft._id}:`, draftError);
@@ -801,9 +824,9 @@ router.delete("/api/user/delete-account", isAuthenticated, async (req, res) => {
     }
 
     // 2. Find all messages where this user is a participant
-    const Message = mongoose.model('Message');
+    const Message = mongoose.model("Message");
     await Message.deleteMany({
-      "users.user": userId
+      "users.user": userId,
     });
 
     // 3. Remove user from other users' favorites
@@ -820,13 +843,13 @@ router.delete("/api/user/delete-account", isAuthenticated, async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Hesabınız ve ilgili tüm verileriniz başarıyla silindi"
+      message: "Hesabınız ve ilgili tüm verileriniz başarıyla silindi",
     });
   } catch (error) {
     console.error("Error deleting account:", error);
     return res.status(500).json({
       success: false,
-      message: "Hesap silinirken bir hata oluştu: " + error.message
+      message: "Hesap silinirken bir hata oluştu: " + error.message,
     });
   }
 });

@@ -6,6 +6,10 @@
     <title>
       <%= typeof pageTitle !== 'undefined' ? pageTitle : 'Admin Panel' %>
     </title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/css/admin.css" />
     <!-- Link to the admin-specific CSS -->
   </head>
@@ -31,6 +35,7 @@
                 <th>Last Name</th>
                 <th>Email</th>
                 <th>Total Post Flags</th>
+                <th>Messages</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -58,6 +63,10 @@
                 <td><%= user.lastName %></td>
                 <td><%= user.email %></td>
                 <td><%= user.totalFlagCount %></td>
+                <td>
+                  <span class="message-count"><%= user.totalMessageCount %></span>
+                  <button class="btn btn-sm btn-info view-messages-btn" data-user-id="<%= user._id %>" data-user-name="<%= user.firstName %> <%= user.lastName %>">See All Messages</button>
+                </td>
                 <td>
                   <button class="btn-delete-user" data-id="<%= user._id %>">
                     Delete
@@ -182,7 +191,40 @@
       </section>
     </main>
 
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
     <script src="/js/admin.js"></script>
-    <!-- Link to admin-specific JS -->
+
+    <!-- User Messages Modal -->
+    <div class="modal fade" id="userMessagesModal" tabindex="-1" aria-labelledby="userMessagesModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="userMessagesModalLabel">Messages from User</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="table-responsive">
+              <table class="table table-striped table-bordered">
+                <thead>
+                  <tr>
+                    <th>Post Name</th>
+                    <th>Message</th>
+                    <th>Time</th>
+                    <th>Sent By</th>
+                    <th>Sent To</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="userMessagesTableBody">
+                  <!-- Messages will be dynamically inserted here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

@@ -341,7 +341,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // Create and add image count display
     const imageCountDisplay = document.createElement("div");
     imageCountDisplay.className = "image-count";
-    imageCountDisplay.textContent = "0/5 fotoğraf (ilk fotoğraf kapak fotoğrafı olarak kullanılır)";
+    imageCountDisplay.textContent =
+      "0/5 fotoğraf (ilk fotoğraf kapak fotoğrafı olarak kullanılır)";
     imageUpload.parentNode.insertBefore(
       imageCountDisplay,
       imageUpload.nextSibling
@@ -412,7 +413,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     Array.from(files).forEach((file, index) => {
       if (!file.type.startsWith("image/")) {
-        showNotification("Please upload only image files", "error");
+        showNotification("Lütfen sadece fotoğraf yükleyin", "error");
         return;
       }
 
@@ -726,7 +727,10 @@ document.addEventListener("DOMContentLoaded", function () {
   // Handle location button click
   useMyLocationBtn.addEventListener("click", () => {
     if (!navigator.geolocation) {
-      showNotification("Konum belirleme özelliği tarayıcınız tarafından desteklenmiyor", "error");
+      showNotification(
+        "Konum belirleme özelliği tarayıcınız tarafından desteklenmiyor",
+        "error"
+      );
       return;
     }
 
@@ -803,7 +807,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Form submission with enhanced validation and feedback
   form.addEventListener("submit", async (e) => {
-    console.log('Form submit event listener triggered.');
     e.preventDefault();
 
     // Validate form before submission
@@ -846,23 +849,35 @@ document.addEventListener("DOMContentLoaded", function () {
 
       // Fetch user's registered email if email preference is selected
       let userRegisteredEmail = null;
-      const emailPreferenceCheckboxSubmit = document.getElementById('email-checkbox');
-      if (emailPreferenceCheckboxSubmit && emailPreferenceCheckboxSubmit.checked) {
-          try {
-              const userResponse = await fetch('/api/user/current');
-              if (userResponse.ok) {
-                  const userData = await userResponse.json();
-                  if (userData.success && userData.user && userData.user.email) {
-                      userRegisteredEmail = userData.user.email;
-                  } 
-              } else {
-                   console.warn('Failed to fetch current user data from /api/user/current for email preference (submit).');
-                   showNotification('Kullanıcı bilgileri alınamadı (e-posta).', 'warning');
-              }
-          } catch (error) {
-              console.error('Error fetching user email for contact preference (submit):', error);
-              //showNotification('E-posta alınırken bir hata oluştu.', 'error');
+      const emailPreferenceCheckboxSubmit =
+        document.getElementById("email-checkbox");
+      if (
+        emailPreferenceCheckboxSubmit &&
+        emailPreferenceCheckboxSubmit.checked
+      ) {
+        try {
+          const userResponse = await fetch("/api/user/current");
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            if (userData.success && userData.user && userData.user.email) {
+              userRegisteredEmail = userData.user.email;
+            }
+          } else {
+            console.warn(
+              "Failed to fetch current user data from /api/user/current for email preference (submit)."
+            );
+            showNotification(
+              "Kullanıcı bilgileri alınamadı (e-posta).",
+              "warning"
+            );
           }
+        } catch (error) {
+          console.error(
+            "Error fetching user email for contact preference (submit):",
+            error
+          );
+          //showNotification('E-posta alınırken bir hata oluştu.', 'error');
+        }
       }
 
       // Convert FormData to JSON object for the API
@@ -987,9 +1002,6 @@ document.addEventListener("DOMContentLoaded", function () {
         jsonData._id = draftId;
       }
 
-      // DEBUG: Log jsonData before sending
-      console.log("Submitting jsonData for publish:", JSON.stringify(jsonData, null, 2));
-
       // Organize location data properly - get values directly from form elements to avoid issues
       const cityField = form.querySelector("#city");
       const districtField = form.querySelector("#district");
@@ -1021,13 +1033,11 @@ document.addEventListener("DOMContentLoaded", function () {
         form.querySelector("#neighborhood") &&
         form.querySelector("#street");
 
-
       // Check the actual IDs and names of the fields in the form
       const cityFieldInForm = form.querySelector("#city");
       const districtFieldInForm = form.querySelector("#district");
       const neighborhoodFieldInForm = form.querySelector("#neighborhood");
       const streetFieldInForm = form.querySelector("#street");
-
 
       if (locationFieldsPresent) {
       } else {
@@ -1085,7 +1095,10 @@ document.addEventListener("DOMContentLoaded", function () {
         throw new Error(errorMessage);
       }
 
-      showNotification("İlanınız kontrol edilecek, yayınlanmak için gerekli şartları karşılıyorsa bir süre sonra yayına alınacaktır. Şuan için bir şey yapmanıza gerek yok.", "success");
+      showNotification(
+        "İlanınız kontrol edilecek, yayınlanmak için gerekli şartları karşılıyorsa bir süre sonra yayına alınacaktır. Şuan için bir şey yapmanıza gerek yok.",
+        "success"
+      );
 
       // Redirect after a short delay to show the success message
       setTimeout(() => {
@@ -1104,7 +1117,7 @@ document.addEventListener("DOMContentLoaded", function () {
     } finally {
       // Ensure loader is always hidden, even if an error occurs outside the try-catch
       // or if an error occurs within the catch block itself before hideLoadingState is called.
-      if (loader) { 
+      if (loader) {
         hideLoadingState(loader);
       }
     }
@@ -1120,7 +1133,10 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!form.elements.title.value.trim()) {
       markFieldAsError(form.elements.title);
       showNotification("Lütfen taslağınız için bir başlık girin.", "error");
-      form.elements.title.scrollIntoView({ behavior: "smooth", block: "center" });
+      form.elements.title.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
       return;
     } else {
       clearFieldError(form.elements.title);
@@ -1139,21 +1155,31 @@ document.addEventListener("DOMContentLoaded", function () {
       if (imageItems.length > 0) {
         for (let i = 0; i < imageItems.length; i++) {
           hideLoadingState(loader);
-          loader = showLoadingState(`Resim işleniyor (${i + 1}/${imageItems.length})...`);
+          loader = showLoadingState(
+            `Resim işleniyor (${i + 1}/${imageItems.length})...`
+          );
           const imgElement = imageItems[i];
           const dataUrl = imgElement.src;
 
-          if (!dataUrl.startsWith("data:") && imgElement.dataset.publicId) { // Already uploaded
+          if (!dataUrl.startsWith("data:") && imgElement.dataset.publicId) {
+            // Already uploaded
             imageUrls.push(dataUrl);
             imageIds.push(imgElement.dataset.publicId);
-          } else if (dataUrl.startsWith("data:")) { // New image
+          } else if (dataUrl.startsWith("data:")) {
+            // New image
             const blob = await fetch(dataUrl).then((r) => r.blob());
             const imageFormData = new FormData();
             // Use a more unique name for the blob, though backend might rename
-            imageFormData.append("image", blob, `draft_image_${Date.now()}_${i}.jpg`);
-            
+            imageFormData.append(
+              "image",
+              blob,
+              `draft_image_${Date.now()}_${i}.jpg`
+            );
+
             hideLoadingState(loader);
-            loader = showLoadingState(`Resim yükleniyor (${i + 1}/${imageItems.length})...`);
+            loader = showLoadingState(
+              `Resim yükleniyor (${i + 1}/${imageItems.length})...`
+            );
 
             const uploadResponse = await fetch("/api/posts/upload-image", {
               method: "POST",
@@ -1178,26 +1204,40 @@ document.addEventListener("DOMContentLoaded", function () {
 
       // Fetch user's registered email if email preference is selected
       let userRegisteredEmailDraft = null;
-      const emailPreferenceCheckboxDraft = document.getElementById('email-checkbox');
-      if (emailPreferenceCheckboxDraft && emailPreferenceCheckboxDraft.checked) {
-          try {
-              const userResponse = await fetch('/api/user/current');
-              if (userResponse.ok) {
-                  const userData = await userResponse.json();
-                  if (userData.success && userData.user && userData.user.email) {
-                      userRegisteredEmailDraft = userData.user.email;
-                  } else {
-                      console.warn('Could not retrieve user email for contact preference from /api/user/current (draft).');
-                      //showNotification('E-posta tercihiniz için kayıtlı e-postanız alınamadı.', 'warning');
-                  }
-              } else {
-                   console.warn('Failed to fetch current user data from /api/user/current for email preference (draft).');
-                   showNotification('Kullanıcı bilgileri alınamadı (e-posta).', 'warning');
-              }
-          } catch (error) {
-              console.error('Error fetching user email for contact preference (draft):', error);
-              //showNotification('E-posta alınırken bir hata oluştu.', 'error');
+      const emailPreferenceCheckboxDraft =
+        document.getElementById("email-checkbox");
+      if (
+        emailPreferenceCheckboxDraft &&
+        emailPreferenceCheckboxDraft.checked
+      ) {
+        try {
+          const userResponse = await fetch("/api/user/current");
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            if (userData.success && userData.user && userData.user.email) {
+              userRegisteredEmailDraft = userData.user.email;
+            } else {
+              console.warn(
+                "Could not retrieve user email for contact preference from /api/user/current (draft)."
+              );
+              //showNotification('E-posta tercihiniz için kayıtlı e-postanız alınamadı.', 'warning');
+            }
+          } else {
+            console.warn(
+              "Failed to fetch current user data from /api/user/current for email preference (draft)."
+            );
+            showNotification(
+              "Kullanıcı bilgileri alınamadı (e-posta).",
+              "warning"
+            );
           }
+        } catch (error) {
+          console.error(
+            "Error fetching user email for contact preference (draft):",
+            error
+          );
+          //showNotification('E-posta alınırken bir hata oluştu.', 'error');
+        }
       }
 
       // Build jsonData
@@ -1214,7 +1254,9 @@ document.addEventListener("DOMContentLoaded", function () {
           coordinates: { latitude: 0, longitude: 0 },
         },
         contactPreferences: [],
-        phoneNumber: form.elements.phoneNumber ? form.elements.phoneNumber.value.trim() : "",
+        phoneNumber: form.elements.phoneNumber
+          ? form.elements.phoneNumber.value.trim()
+          : "",
         email: userRegisteredEmailDraft, // Use fetched registered email
         imageUrls: imageUrls,
         imageIds: imageIds,
@@ -1226,18 +1268,20 @@ document.addEventListener("DOMContentLoaded", function () {
         jsonData.location.coordinates.latitude = position.lat;
         jsonData.location.coordinates.longitude = position.lng;
       }
-      
-      const checkedPreferences = document.querySelectorAll('input[name="contactPreferences"]:checked');
-      jsonData.contactPreferences = Array.from(checkedPreferences).map(cb => cb.value);
+
+      const checkedPreferences = document.querySelectorAll(
+        'input[name="contactPreferences"]:checked'
+      );
+      jsonData.contactPreferences = Array.from(checkedPreferences).map(
+        (cb) => cb.value
+      );
       // No explicit default to ['in-app'] here; backend should handle if empty or rely on form validation
 
       const draftIdField = form.elements.draftId;
       if (draftIdField && draftIdField.value) {
-        jsonData.draftId = draftIdField.value; 
+        jsonData.draftId = draftIdField.value;
       }
-      
-      console.log("Submitting jsonData for draft:", JSON.stringify(jsonData, null, 2));
-      
+
       hideLoadingState(loader);
       loader = showLoadingState("Taslak kaydediliyor...");
 
@@ -1258,7 +1302,9 @@ document.addEventListener("DOMContentLoaded", function () {
       const responseData = await response.json();
 
       if (!response.ok || !responseData.success) {
-        throw new Error(responseData.message || responseData.error || "Taslak kaydedilemedi.");
+        throw new Error(
+          responseData.message || responseData.error || "Taslak kaydedilemedi."
+        );
       }
 
       hideLoadingState(loader);
@@ -1266,11 +1312,13 @@ document.addEventListener("DOMContentLoaded", function () {
       setTimeout(() => {
         redirectWithUserId("dashboard", "#drafts");
       }, 1500);
-
     } catch (error) {
       console.error("Taslak kaydedilirken hata oluştu:", error);
       hideLoadingState(loader); // Ensure loader is hidden on error
-      showNotification(error.message || "Taslak kaydedilirken bir sorun oluştu.", "error");
+      showNotification(
+        error.message || "Taslak kaydedilirken bir sorun oluştu.",
+        "error"
+      );
     } finally {
       saveAsDraftBtn.disabled = false;
       saveAsDraftBtn.innerHTML = originalText;
@@ -1280,7 +1328,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Form validation (updated to check contact preferences)
   function validateForm() {
-    console.log('validateForm function called.');
     const requiredFields = form.querySelectorAll("[required]");
     let isValid = true;
 
@@ -1296,7 +1343,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Make sure we have coordinates
     if (!marker) {
-      showNotification("Please set a location on the map", "error");
+      showNotification("Lütfen haritada bir konum işaretleyin", "error");
       isValid = false;
     }
 
@@ -1309,7 +1356,10 @@ document.addEventListener("DOMContentLoaded", function () {
     );
 
     if (!isAnyContactSelected) {
-      showNotification("Lütfen en az bir iletişim seçeneğini işaretleyin", "error");
+      showNotification(
+        "Lütfen en az bir iletişim seçeneğini işaretleyin",
+        "error"
+      );
       const contactCard = document.querySelector(".contact-card");
       if (contactCard) {
         contactCard.classList.add("error-container");
@@ -1319,7 +1369,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (!isValid) {
-      showNotification("Please fill in all required fields", "error");
+      showNotification("Lütfen tüm gerekli yerleri doldurunuz", "error");
       // Scroll to first error
       const firstError = form.querySelector(".error");
       if (firstError) {
@@ -1327,7 +1377,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
 
-    console.log('validateForm returning:', isValid);
     return isValid;
   }
 

@@ -136,10 +136,32 @@ router.get("/panel", isAdmin, async (req, res) => {
     }));
     // --- End User Flag Count Calculation --- //
 
+    // --- Calculate Total Message Count for Each User --- //
+    const allConversations = await Message.find({}).lean();
+    const userMessageCounts = {};
+    allConversations.forEach(conversation => {
+        if (conversation.messages) {
+            conversation.messages.forEach(message => {
+                if (message.sentBy) {
+                    const senderId = message.sentBy.toString();
+                    userMessageCounts[senderId] = (userMessageCounts[senderId] || 0) + 1;
+                }
+            });
+        }
+    });
+
+    // Add totalMessageCount to each user object
+    users = users.map((user) => ({
+      ...user,
+      totalFlagCount: userFlagCounts[user._id.toString()] || 0,
+      totalMessageCount: userMessageCounts[user._id.toString()] || 0, // Add message count
+    }));
+    // --- End Message Count Calculation --- //
+
     res.render("adminPanel", {
       layout: false,
       adminUser: req.session.adminUser,
-      users: users, // users array now includes totalFlagCount
+      users: users, // users array now includes totalFlagCount and totalMessageCount
       posts: posts,
       pageTitle: "Admin Panel",
       currentSortPostsBy: sortOption,
@@ -150,6 +172,58 @@ router.get("/panel", isAdmin, async (req, res) => {
     res.status(500).send("Error loading admin panel data.");
   }
 });
+
+// GET /admin/users/:userId/messages - Fetch all messages sent by a specific user
+router.get("/users/:userId/messages", isAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Find all conversations involving the user to get a complete message history
+    const conversations = await Message.find({ "users.user": userId })
+      .populate({ path: "postId", select: "title" }) // Select only the post title
+      .populate({
+        path: "users.user",
+        select: "username firstName lastName", // Select usernames for sender/receiver
+      })
+      .lean();
+
+    let userMessages = [];
+
+    // Process conversations to extract messages sent by the specified user
+    conversations.forEach(convo => {
+      // Defensive check for data integrity
+      if (!convo.messages || !Array.isArray(convo.users)) return;
+
+      convo.messages.forEach(msg => {
+        // We only care about messages sent by the user in question
+        if (msg.sentBy.toString() === userId) {
+          
+          // Find the full user object for the sender and receiver from the populated users array
+          const sender = convo.users.map(u => u.user).find(u => u && u._id.toString() === msg.sentBy.toString());
+          const receiver = convo.users.map(u => u.user).find(u => u && u._id.toString() !== msg.sentBy.toString());
+
+          userMessages.push({
+            messageId: msg._id, // Pass message ID to the frontend
+            postName: convo.postId ? convo.postId.title : "Post Deleted",
+            message: msg.content,
+            timestamp: msg.createdAt,
+            sentBy: sender ? `${sender.firstName} ${sender.lastName}`.trim() : "Unknown Sender",
+            sentTo: receiver ? `${receiver.firstName} ${receiver.lastName}`.trim() : "Unknown Receiver",
+          });
+        }
+      });
+    });
+
+    // Sort messages by timestamp, newest first
+    userMessages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    res.status(200).json({ success: true, messages: userMessages });
+  } catch (error) {
+    console.error(`Error fetching messages for user ${req.params.userId}:`, error);
+    res.status(500).json({ success: false, error: "Server error fetching messages." });
+  }
+});
+
 
 // GET /admin/posts/waiting - Fetch all posts awaiting approval
 router.get("/posts/waiting", isAdmin, async (req, res) => {
@@ -327,6 +401,28 @@ router.delete("/posts/:postId", isAdmin, async (req, res) => {
   } catch (error) {
     console.error("Error in admin deleting post:", error);
     res.status(500).json({ success: false, message: "Server error while admin deleting post." });
+  }
+});
+
+// DELETE /admin/messages/:messageId - Delete a single message from a conversation
+router.delete("/messages/:messageId", isAdmin, async (req, res) => {
+  try {
+    const { messageId } = req.params;
+
+    // Use updateOne with $pull to remove the specific message from the messages array
+    const result = await Message.updateOne(
+      { "messages._id": messageId },
+      { $pull: { messages: { _id: messageId } } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ success: false, message: "Message not found." });
+    }
+
+    res.status(200).json({ success: true, message: "Message deleted successfully." });
+  } catch (error) {
+    console.error(`Error deleting message ${req.params.messageId}:`, error);
+    res.status(500).json({ success: false, error: "Server error deleting message." });
   }
 });
 

@@ -562,7 +562,7 @@ function setupContactButton() {
 
       // If there are multiple methods or no method button was found
       // Show a modal or dropdown to choose contact method
-      showNotification("Please select a specific contact method below", "info");
+      showNotification("Lütfen aşağıdan bir iletişim metodu seçin", "info");
 
       // Highlight the contact methods
       document.querySelectorAll(".contact-method").forEach((method) => {
@@ -596,7 +596,7 @@ function setupContactButton() {
         } catch (error) {
           console.error(`Error handling ${method} contact:`, error);
           showNotification(
-            `Unable to retrieve contact information. Please try again.`,
+            `İletişim bilgisi alınamadı, lütfen tekrar deneyin.`,
             "error"
           );
         }
@@ -722,7 +722,6 @@ function setupContactButton() {
           showUsername: actualShowUsername, // This is a definite boolean
         };
 
-
         const chatEvent = new CustomEvent("openChat", {
           detail: eventDetail,
         });
@@ -755,7 +754,7 @@ function setupContactButton() {
       // Only show notification for errors that are not authentication related
       if (!window.location.href.includes("/api/login")) {
         showNotification(
-          "Could not start chat. Please try again later.",
+          "Uygulama içi sohbet başlatılamadı, lütfen tekrar deneyin.",
           "error"
         );
       }
@@ -1231,10 +1230,10 @@ function initializePostActions() {
           // Update UI based on the response
           if (data.isFlagged) {
             flagBtn.classList.add("active");
-            showNotification("Gönderi işaretlendi", "success");
+            showNotification("Gönderi şikayet edildi", "success");
           } else {
             flagBtn.classList.remove("active");
-            showNotification("Gönderinin işareti kaldırıldı", "success");
+            showNotification("Gönderi şikayeti kaldırıldı", "success");
           }
         } else {
           // Try to parse error response if it's JSON
@@ -1242,7 +1241,9 @@ function initializePostActions() {
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.includes("application/json")) {
               const data = await response.json();
-              throw new Error(data.message || "Gönderi işaretleme durumu güncellenemedi");
+              throw new Error(
+                data.message || "Gönderi işaretleme durumu güncellenemedi"
+              );
             } else {
               throw new Error("Gönderi işaretleme durumu güncellenemedi");
             }

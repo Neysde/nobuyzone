@@ -35,6 +35,96 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // --- User Messages Modal Logic ---
+  const userMessagesModalEl = document.getElementById('userMessagesModal');
+  if (userMessagesModalEl) {
+    const userMessagesModal = new bootstrap.Modal(userMessagesModalEl);
+    const userMessagesTableBody = document.getElementById('userMessagesTableBody');
+    const userMessagesModalLabel = document.getElementById('userMessagesModalLabel');
+
+    document.querySelectorAll('.view-messages-btn').forEach(button => {
+      button.addEventListener('click', async (event) => {
+        const userId = event.currentTarget.dataset.userId;
+        const userName = event.currentTarget.dataset.userName;
+
+        // Update modal title
+        userMessagesModalLabel.textContent = `Messages from ${userName}`;
+
+        try {
+          const response = await fetch(`/admin/users/${userId}/messages`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          const data = await response.json();
+
+          // Clear previous messages
+          userMessagesTableBody.innerHTML = '';
+
+          if (data.success && data.messages.length > 0) {
+            data.messages.forEach(msg => {
+              // Format timestamp: DD/MM/YY HH:MM
+              const d = new Date(msg.timestamp);
+              const formattedDate = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear().toString().slice(-2)}`;
+              const formattedTime = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+              const formattedTimestamp = `${formattedDate} ${formattedTime}`;
+
+              const row = `
+                <tr>
+                  <td>${msg.postName}</td>
+                  <td>${msg.message}</td>
+                  <td>${formattedTimestamp}</td>
+                  <td>${msg.sentBy}</td>
+                  <td>${msg.sentTo}</td>
+                  <td>
+                    <button class="btn btn-danger btn-sm btn-delete-message" data-message-id="${msg.messageId}">Delete</button>
+                  </td>
+                </tr>
+              `;
+              userMessagesTableBody.insertAdjacentHTML('beforeend', row);
+            });
+          } else {
+            const noMessagesRow = `<tr><td colspan="6" class="text-center">No messages found for this user.</td></tr>`;
+            userMessagesTableBody.innerHTML = noMessagesRow;
+          }
+
+          // Show the modal
+          userMessagesModal.show();
+
+          // Add a single event listener to the table body for deleting messages
+          const tableBody = document.getElementById('userMessagesTableBody');
+          if (!tableBody.dataset.listenerAttached) {
+            tableBody.addEventListener('click', async (event) => {
+              if (event.target.classList.contains('btn-delete-message')) {
+                const messageId = event.target.getAttribute('data-message-id');
+                if (confirm('Are you sure you want to delete this message?')) {
+                  try {
+                    const response = await fetch(`/admin/messages/${messageId}`, {
+                      method: 'DELETE',
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                      event.target.closest('tr').remove(); // Remove the row from the table
+                    } else {
+                      alert('Failed to delete message: ' + result.error);
+                    }
+                  } catch (err) {
+                    console.error('Error deleting message:', err);
+                    alert('An error occurred while deleting the message.');
+                  }
+                }
+              }
+            });
+            tableBody.dataset.listenerAttached = 'true';
+          }
+        } catch (error) {
+          console.error('Error fetching user messages:', error);
+          alert('Failed to load user messages. Please check the console for details.');
+        }
+      });
+    });
+  }
+  // --- End User Messages Modal Logic ---
+
   // --- Post Deletion --- //
   const postsTableElement = document.getElementById("posts-table"); // Renamed to avoid conflict
   if (postsTableElement) {

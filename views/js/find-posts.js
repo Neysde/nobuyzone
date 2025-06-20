@@ -284,7 +284,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // Set the current center to the map center point (no more separate marker)
     currentCenter = map.getCenter();
 
-
     // Update location info to show new radius and location
     updateLocationInfo(currentCenter);
 
@@ -324,7 +323,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // Update the radius if needed (useful when zoom changes)
     circle.setAttribute("r", radiusInPixels);
     borderCircle.setAttribute("r", radiusInPixels);
-
   }
 
   // Set up map events
@@ -389,10 +387,12 @@ document.addEventListener("DOMContentLoaded", function () {
   function toggleFullscreen() {
     radiusMap.classList.toggle("fullscreen");
 
-    const iconSVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/></svg>';
+    const iconSVG =
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/></svg>';
 
     // Update button text and icon
-    if (fullscreenToggleBtn) { // Ensure the button element exists
+    if (fullscreenToggleBtn) {
+      // Ensure the button element exists
       fullscreenToggleBtn.innerHTML = radiusMap.classList.contains("fullscreen")
         ? `${iconSVG} Tam Ekrandan Çık`
         : `${iconSVG} Tam Ekran`;
@@ -400,11 +400,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Force map to recalculate size when toggling fullscreen
     setTimeout(function () {
-      if (map) { // Ensure map object exists
+      if (map) {
+        // Ensure map object exists
         map.invalidateSize();
       }
       // Update fixed circle size after container resize
-      if (typeof updateFixedCircleSize === 'function') { // Ensure function exists
+      if (typeof updateFixedCircleSize === "function") {
+        // Ensure function exists
         updateFixedCircleSize();
       }
     }, 100);
@@ -620,7 +622,6 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("Error waiting for rate limit:", error);
     }
 
-
     // Clear current options except the first one
     globalDistrict.innerHTML = '<option value="">İlçe Seçin</option>';
 
@@ -647,7 +648,6 @@ document.addEventListener("DOMContentLoaded", function () {
     if (currentFilters.districtId) {
       globalDistrict.value = currentFilters.districtId;
     }
-
   }
 
   /**
@@ -756,7 +756,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // City select - enable/disable district select based on selection
     globalCity.addEventListener("change", async function () {
-
       const searchBar = document.querySelector(".search-bar");
       const selectedCityId = this.value;
       let cityNameForFilter = "";
@@ -810,13 +809,11 @@ document.addEventListener("DOMContentLoaded", function () {
         districtNameForFilter = selectedDistrictObject
           ? selectedDistrictObject.name
           : "";
-
       }
 
       // Store both name and ID in currentFilters before calling updateFilters
       currentFilters.district = districtNameForFilter;
       currentFilters.districtId = selectedDistrictId;
-
 
       // Update filters: pass both district NAME and ID, reset page, disable radius search
       await updateFilters({
@@ -920,7 +917,7 @@ document.addEventListener("DOMContentLoaded", function () {
           radiusSearchCard.classList.add("active");
         }
       } else {
-        showNotification("Please set a location first", "error");
+        showNotification("Lütfen önce konum seçin", "error");
       }
     });
   }
@@ -1010,7 +1007,6 @@ document.addEventListener("DOMContentLoaded", function () {
    * Apply current filters to posts data and update the display
    */
   async function applyFilters() {
-
     const apiFilters = { ...currentFilters };
 
     // Ensure city and district are names and standardized for the API call.
@@ -1046,7 +1042,6 @@ document.addEventListener("DOMContentLoaded", function () {
    * Update UI elements to reflect the current filter state
    */
   async function updateFilterUI() {
-
     // Update category buttons
     categoryButtons.forEach((button) => {
       const category = button
@@ -1145,7 +1140,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Update URL after UI is synced with filters
     updateURL(currentFilters);
-
   }
 
   /**
@@ -1254,7 +1248,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (data.success) {
           // If using radius search, filter posts by distance client-side
           if (isRadiusSearch) {
-
             // Filter posts that are within the radius
             const filteredPosts = filterPostsByDistance(
               data.data,
@@ -1299,7 +1292,7 @@ document.addEventListener("DOMContentLoaded", function () {
       .catch((error) => {
         console.error("Error fetching posts:", error);
         postsGrid.innerHTML =
-          '<div class="error">Error loading posts. Please try again.</div>';
+          '<div class="error">İlanlar yüklenirken bir hata oluştu. Lütfen tekrar deneyin.</div>';
 
         // Set up empty pagination for error state
         updatePagination({
@@ -1319,7 +1312,6 @@ document.addEventListener("DOMContentLoaded", function () {
    * @returns {Array} - Filtered posts within radius
    */
   function filterPostsByDistance(posts, centerLat, centerLng, radiusKm) {
-
     // Log posts structure for debugging
     if (posts.length > 0) {
     }
@@ -1380,7 +1372,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
       // Skip if coordinates are not valid numbers
       if (isNaN(lat) || isNaN(lng) || lat === undefined || lng === undefined) {
-
         // Alternative: use city/district matching as fallback when coordinates are not available
         // If the post's city matches the center's city (e.g., both in Istanbul), include it
         // This is an approximation and not as accurate as coordinate-based distance
@@ -1414,7 +1405,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       return isInRadius;
     });
-
 
     return filteredPosts;
   }
@@ -1591,31 +1581,73 @@ document.addEventListener("DOMContentLoaded", function () {
    */
   function translateCategory(category) {
     let categoryDisplay = "";
-    
-    switch(category) {
-      case "elektronik": categoryDisplay = "Elektronik"; break;
-      case "ev-dekorasyonu": categoryDisplay = "Ev Dekorasyonu"; break;
-      case "evcil-hayvan-urunleri": categoryDisplay = "Evcil Hayvan Ürünleri"; break;
-      case "gida": categoryDisplay = "Gıda"; break;
-      case "giyim": categoryDisplay = "Giyim"; break;
-      case "hediyelik-esya": categoryDisplay = "Hediyelik Eşya"; break;
-      case "kitap-kirtasiye": categoryDisplay = "Kitap & Kırtasiye"; break;
-      case "kozmetik-kisisel-bakim": categoryDisplay = "Kozmetik & Kişisel Bakım"; break;
-      case "mobilya": categoryDisplay = "Mobilya"; break;
-      case "oto-aksesuar-yedek-parca": categoryDisplay = "Oto Aksesuar & Yedek Parça"; break;
-      case "saglik-medikal": categoryDisplay = "Sağlık & Medikal"; break;
-      case "spor-outdoor": categoryDisplay = "Spor & Outdoor"; break;
-      case "teknoloji": categoryDisplay = "Teknoloji"; break;
-      case "diger": categoryDisplay = "Diğer"; break;
+
+    switch (category) {
+      case "elektronik":
+        categoryDisplay = "Elektronik";
+        break;
+      case "ev-dekorasyonu":
+        categoryDisplay = "Ev Dekorasyonu";
+        break;
+      case "evcil-hayvan-urunleri":
+        categoryDisplay = "Evcil Hayvan Ürünleri";
+        break;
+      case "gida":
+        categoryDisplay = "Gıda";
+        break;
+      case "giyim":
+        categoryDisplay = "Giyim";
+        break;
+      case "hediyelik-esya":
+        categoryDisplay = "Hediyelik Eşya";
+        break;
+      case "kitap-kirtasiye":
+        categoryDisplay = "Kitap & Kırtasiye";
+        break;
+      case "kozmetik-kisisel-bakim":
+        categoryDisplay = "Kozmetik & Kişisel Bakım";
+        break;
+      case "mobilya":
+        categoryDisplay = "Mobilya";
+        break;
+      case "oto-aksesuar-yedek-parca":
+        categoryDisplay = "Oto Aksesuar & Yedek Parça";
+        break;
+      case "saglik-medikal":
+        categoryDisplay = "Sağlık & Medikal";
+        break;
+      case "spor-outdoor":
+        categoryDisplay = "Spor & Outdoor";
+        break;
+      case "teknoloji":
+        categoryDisplay = "Teknoloji";
+        break;
+      case "diger":
+        categoryDisplay = "Diğer";
+        break;
       // Fallback for old categories
-      case "furniture": categoryDisplay = "Mobilya"; break;
-      case "electronics": categoryDisplay = "Elektronik"; break;
-      case "clothing": categoryDisplay = "Giyim"; break;
-      case "books": categoryDisplay = "Kitap & Kırtasiye"; break;
-      case "other": categoryDisplay = "Diğer"; break;
-      default: categoryDisplay = category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' '); break;
+      case "furniture":
+        categoryDisplay = "Mobilya";
+        break;
+      case "electronics":
+        categoryDisplay = "Elektronik";
+        break;
+      case "clothing":
+        categoryDisplay = "Giyim";
+        break;
+      case "books":
+        categoryDisplay = "Kitap & Kırtasiye";
+        break;
+      case "other":
+        categoryDisplay = "Diğer";
+        break;
+      default:
+        categoryDisplay =
+          category.charAt(0).toUpperCase() +
+          category.slice(1).replace(/-/g, " ");
+        break;
     }
-    
+
     return categoryDisplay;
   }
 
@@ -1626,15 +1658,27 @@ document.addEventListener("DOMContentLoaded", function () {
    */
   function translateCondition(condition) {
     let conditionDisplay = "";
-    
-    switch(condition) {
-      case "new": conditionDisplay = "Yeni"; break;
-      case "like-new": conditionDisplay = "Yeni Gibi"; break;
-      case "good": conditionDisplay = "İyi"; break;
-      case "fair": conditionDisplay = "Orta"; break;
-      default: conditionDisplay = condition.charAt(0).toUpperCase() + condition.slice(1).replace(/-/g, ' '); break;
+
+    switch (condition) {
+      case "new":
+        conditionDisplay = "Yeni";
+        break;
+      case "like-new":
+        conditionDisplay = "Yeni Gibi";
+        break;
+      case "good":
+        conditionDisplay = "İyi";
+        break;
+      case "fair":
+        conditionDisplay = "Orta";
+        break;
+      default:
+        conditionDisplay =
+          condition.charAt(0).toUpperCase() +
+          condition.slice(1).replace(/-/g, " ");
+        break;
     }
-    
+
     return conditionDisplay;
   }
 
@@ -1691,7 +1735,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // Show error notification
             showNotification(
-              "Unable to access your location. Please make sure location services are enabled.",
+              "Konumunuza ulaşılamadı. Konum servislerinizin açık olduğuna emin olun.",
               "error"
             );
 
@@ -1772,7 +1816,7 @@ document.addEventListener("DOMContentLoaded", function () {
           radiusSearchCard.classList.add("active");
         }
       } else {
-        showNotification("Please set a location first", "error");
+        showNotification("Lütfen önce bir konum seçin.", "error");
       }
     });
   }
