@@ -731,28 +731,39 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Global Search Bar functionality
     globalSearchButton.addEventListener("click", async function () {
-      // Get the selected city and district text, not just the value (ID)
-      const cityElement = globalCity.options[globalCity.selectedIndex];
-      const districtElement =
+      // --- START OF THE FIX ---
+
+      // Get the selected option element from each dropdown
+      const selectedCityOption = globalCity.options[globalCity.selectedIndex];
+      const selectedDistrictOption =
         globalDistrict.options[globalDistrict.selectedIndex];
 
-      const cityName = cityElement ? cityElement.text : "";
-      const districtName = districtElement ? districtElement.text : "";
+      // Get the TEXT of the selected options. This is "Istanbul" instead of "34".
+      // If nothing is selected, these will be empty strings.
+      const cityName =
+        selectedCityOption && selectedCityOption.value
+          ? selectedCityOption.text
+          : "";
+      const districtName =
+        selectedDistrictOption && selectedDistrictOption.value
+          ? selectedDistrictOption.text
+          : "";
 
-      // Collect all search parameters
+      // Collect all search parameters using the correct names
       const searchParams = {
         search: globalSearchInput.value.trim(),
         category: globalCategories.value,
         page: 1,
-        // Use the text for the URL to match the auto-filter behavior
-        city: cityName === "Şehir Seçin" ? "" : cityName,
-        district: districtName === "İlçe Seçin" ? "" : districtName,
+        city: cityName, // Use the city NAME for the filter
+        district: districtName, // Use the district NAME for the filter
         // Disable radius search when using the search bar
         useRadius: false,
       };
 
+      // This part remains the same
       // Update filters and perform search
       await updateFilters(searchParams);
+      // --- END OF THE FIX ---
     });
 
     // Global search input - search on Enter key
