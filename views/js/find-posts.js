@@ -731,14 +731,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Global Search Bar functionality
     globalSearchButton.addEventListener("click", async function () {
+      // Get the selected city and district text, not just the value (ID)
+      const cityElement = globalCity.options[globalCity.selectedIndex];
+      const districtElement =
+        globalDistrict.options[globalDistrict.selectedIndex];
+
+      const cityName = cityElement ? cityElement.text : "";
+      const districtName = districtElement ? districtElement.text : "";
+
       // Collect all search parameters
       const searchParams = {
         search: globalSearchInput.value.trim(),
         category: globalCategories.value,
         page: 1,
-        // Always explicitly set location parameters, even when empty
-        city: globalCity.value || "",
-        district: globalDistrict.value || "",
+        // Use the text for the URL to match the auto-filter behavior
+        city: cityName === "Şehir Seçin" ? "" : cityName,
+        district: districtName === "İlçe Seçin" ? "" : districtName,
         // Disable radius search when using the search bar
         useRadius: false,
       };

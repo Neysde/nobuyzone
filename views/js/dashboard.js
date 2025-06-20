@@ -1,4 +1,9 @@
 document.addEventListener("DOMContentLoaded", function () {
+  // Manually control scroll restoration to prevent jumping to hash.
+  if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+  }
+
   // Tab navigation functionality
   initTabs();
 
@@ -25,38 +30,63 @@ function initTabs() {
   const tabLinks = document.querySelectorAll(".tab-link");
   const tabPanes = document.querySelectorAll(".tab-pane");
 
-  // Check if URL has a hash and activate that tab
-  const hash = window.location.hash;
-  if (hash) {
-    const activeTab = document.querySelector(`.tab-link[href="${hash}"]`);
-    if (activeTab) {
-      tabLinks.forEach((tab) => tab.classList.remove("active"));
-      tabPanes.forEach((pane) => pane.classList.remove("active"));
+  // Function to activate a tab based on its hash
+  const activateTab = (hash) => {
+    // If no hash, default to the first tab link's href.
+    const targetHash =
+      hash || (tabLinks.length > 0 ? tabLinks[0].getAttribute("href") : "");
+    if (!targetHash) return; // No tabs on the page.
 
-      activeTab.classList.add("active");
-      document.querySelector(hash).classList.add("active");
-    }
-  }
+    const activeTabLink = document.querySelector(
+      `.tab-link[href="${targetHash}"]`
+    );
+    const activeTabPane = document.querySelector(`[data-tab-id="${targetHash.substring(1)}"]`);
 
-  // Add click event listeners to tabs
-  tabLinks.forEach((tab) => {
-    tab.addEventListener("click", function (e) {
-      // Update URL hash without scrolling
-      const targetId = this.getAttribute("href");
-      if (history.pushState) {
-        history.pushState(null, null, targetId);
-      } else {
-        location.hash = targetId;
-      }
-
-      // Activate clicked tab
+    if (activeTabLink && activeTabPane) {
+      // Deactivate all other tabs and panes.
       tabLinks.forEach((t) => t.classList.remove("active"));
       tabPanes.forEach((p) => p.classList.remove("active"));
 
-      this.classList.add("active");
-      document.querySelector(targetId).classList.add("active");
+      // Activate the target tab and pane.
+      activeTabLink.classList.add("active");
+      activeTabPane.classList.add("active");
 
+      // Use requestAnimationFrame to scroll to the top just before the next repaint.
+      // This is the most reliable way to override the browser's default anchor jump.
+      requestAnimationFrame(() => {
+        window.scrollTo(0, 0);
+      });
+    }
+  };
+
+  // Activate tab on initial page load from the URL hash.
+  activateTab(window.location.hash);
+
+  // Listen for hash changes to handle navigation from external links (e.g., header).
+  window.addEventListener("hashchange", () => {
+    activateTab(window.location.hash);
+  });
+
+  // Add click event listeners to the dashboard's own tabs.
+  tabLinks.forEach((tab) => {
+    tab.addEventListener("click", function (e) {
       e.preventDefault();
+      const targetId = this.getAttribute("href");
+
+      // Update the URL hash if it's different.
+      if (window.location.hash !== targetId) {
+        // Use pushState to change the URL without a page reload.
+        if (history.pushState) {
+          history.pushState(null, null, targetId);
+        } else {
+          // Fallback for older browsers.
+          location.hash = targetId;
+        }
+      }
+
+      // Manually activate the tab.
+      // This is necessary because pushState doesn't trigger a 'hashchange' event.
+      activateTab(targetId);
     });
   });
 }
