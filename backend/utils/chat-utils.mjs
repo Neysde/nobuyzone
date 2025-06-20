@@ -53,6 +53,17 @@ export async function createOrUpdateConversation({
       await conversation.save();
     }
 
+    // --- FIX START: Update the lastMessage field ---
+    conversation.lastMessage = {
+      text: content,
+      timestamp: newMessage.createdAt,
+      sender: userId,
+      read: false,
+    };
+    // --- FIX END ---
+
+    await conversation.save();
+
     return conversation;
   } catch (error) {
     console.error("Error in createOrUpdateConversation:", error);
@@ -163,6 +174,27 @@ export async function getChatsForUser(userId) {
     const displayName = otherUser.showUsername
       ? otherUser.username
       : `${otherUser.firstName} ${otherUser.lastName}`;
+
+    // --- FIX START: Add a defensive check for message.lastMessage ---
+    if (!message.lastMessage) {
+      return {
+        chatId: message._id,
+        otherUser: {
+          _id: otherUser._id,
+          name: displayName,
+          profilePicture: otherUser.profilePicture
+            ? otherUser.profilePicture.url
+            : "/img/default-profile.png",
+        },
+        lastMessage: {
+          text: "No messages yet.",
+          timestamp: message.createdAt, // Fallback to conversation creation time
+          isRead: true,
+          isMine: false,
+        },
+      };
+    }
+    // --- FIX END ---
 
     return {
       chatId: message._id,
