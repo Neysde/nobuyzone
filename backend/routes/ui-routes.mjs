@@ -187,10 +187,8 @@ router.get("/dashboard/:id", isAuthenticated, async (req, res) => {
         };
       });
 
-    // Use the /api/chats endpoint to fetch chat data for this user
-    const currentUserId = req.user._id;
-
-    const chats = await getChatsForUser(currentUserId.toString());
+    // This now calls our reliable utility function directly.
+    const chats = await getChatsForUser(req.user._id.toString());
 
     // Render the dashboard template with all the data
     res.render("dashboard", {

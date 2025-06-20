@@ -1,22 +1,15 @@
 import passport from "passport";
 
+// CORRECTED AND SIMPLIFIED MIDDLEWARE
 export const isAuthenticated = (req, res, next) => {
-  //When you use passport.authenticate, it uses the passport strategy to authenticate requests.
-  //During this process, information can flow between your strategy and the authenticate middleware.
-  passport.authenticate("jwt", { session: false }, (err, user) => {
-    if (err) {
-      console.error("Authentication error:", err);
-      return res.redirect("/api/login");
-    }
+  // The global middleware in index.mjs has already tried to attach the user.
+  // We just need to check if req.user exists now.
+  if (req.user) {
+    return next(); // If the user is authenticated, proceed to the route.
+  }
 
-    if (!user) {
-      return res.redirect("/api/login");
-    }
-
-    //Authentication succeeded, set user in req and proceed.
-    req.user = user; //to access the related user information in the login required pages. (Isn't it the whole point of implementing login system?)
-    next();
-  })(req, res, next); //This immediately invokes the authenticate function with with the current request, response, and next
+  // If no user was found, redirect to the login page.
+  return res.redirect("/api/login");
 };
 
 // Middleware to check if the user is an authenticated admin

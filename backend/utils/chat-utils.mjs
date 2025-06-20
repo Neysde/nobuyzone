@@ -1,5 +1,6 @@
 import Message from "../mongoose/message.mjs";
 import Post from "../mongoose/post.mjs";
+import mongoose from "mongoose";
 import User from "../mongoose/user.mjs";
 
 /**
