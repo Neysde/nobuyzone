@@ -222,7 +222,8 @@ const login = async (req, res) => {
     res
       .cookie("login", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV,
+        // This is the corrected line
+        secure: process.env.NODE_ENV === "production",
         maxAge: parseInt(process.env.COOKIE_MAX_AGE),
       })
       .status(200)
