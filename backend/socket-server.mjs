@@ -63,27 +63,37 @@ export function initializeSocketServer(httpServer) {
   // Store active user rooms to prevent duplicate joins
   const userRooms = {};
 
-  // The new, correct middleware is here
+  // This is the new, robust authentication middleware for Socket.IO
   io.use(async (socket, next) => {
     try {
       const cookieString = socket.handshake.headers.cookie;
-      if (!cookieString)
+      if (!cookieString) {
         throw new Error("Authentication failed: No cookie provided.");
+      }
 
       const cookies = cookie.parse(cookieString);
-      const token = cookies.login;
-      if (!token)
+      const token = cookies.login; // Get the token from our 'login' cookie.
+      if (!token) {
         throw new Error("Authentication failed: No authentication token.");
+      }
 
+      // Verify the JWT is valid and not expired.
       const decoded = jwt.verify(token, process.env.SECRETKEY);
-      const user = await User.findById(decoded._id);
-      if (!user) throw new Error("Authentication failed: User not found.");
 
+      // Find the user in the database from the ID in the token.
+      const user = await User.findById(decoded._id);
+      if (!user) {
+        throw new Error("Authentication failed: User not found.");
+      }
+
+      // Attach the complete user object to the socket itself.
       socket.user = user;
-      next();
+
+      next(); // If successful, allow the connection.
     } catch (error) {
+      // If any step fails, reject the connection.
       console.error("Socket authentication error:", error.message);
-      next(new Error("Authentication failed"));
+      next(new Error("Authentication failed")); // This is the error the client receives.
     }
   });
 
