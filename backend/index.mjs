@@ -106,6 +106,20 @@ mongoose
 
 app.set("view engine", "ejs");
 
+// HERE IS WHERE YOU SHOULD ADD THE MIDDLEWARE
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://cdn.jsdelivr.net; " +
+      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; " +
+      "img-src 'self' data: https://res.cloudinary.com; " +
+      "font-src 'self' https://fonts.gstatic.com; " +
+      "connect-src 'self' wss:;"
+  );
+  next();
+});
+
 // Homepage now renders the main page with the map
 app.get("/", (req, res) => {
   res.render("main", { user: req.user });

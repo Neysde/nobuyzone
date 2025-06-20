@@ -153,67 +153,69 @@ export async function getChatsForUser(userId) {
 
   const objectId = new mongoose.Types.ObjectId(userId);
 
-  const allMessages = await Message.find({ "users.user": objectId })
+  // Find all conversations the user is a part of
+  const conversations = await Message.find({ "users.user": objectId })
     .populate({
       path: "users.user",
       model: "User",
       select: "username firstName lastName profilePicture showUsername",
     })
-    .sort({ "lastMessage.timestamp": -1 });
+    .populate({
+      path: "postId",
+      model: "Post",
+      select: "title",
+    })
+    .sort({ "messages.createdAt": -1 }); // Sort by the most recent message activity
 
-  const chats = allMessages.map((message) => {
-    const otherUser = message.users.find(
+  const chats = conversations.map((convo) => {
+    // Find the other user in the conversation
+    const otherUser = convo.users.find(
       (u) => u.user._id.toString() !== userId.toString()
     )?.user;
 
-    // If for some reason the other user is not found, skip this chat
-    if (!otherUser) {
+    // If data is inconsistent, skip this chat to prevent errors
+    if (!otherUser || !convo.postId) {
       return null;
     }
 
-    const displayName = otherUser.showUsername
-      ? otherUser.username
-      : `${otherUser.firstName} ${otherUser.lastName}`;
+    // Calculate unread messages for this specific chat
+    const unreadCount = convo.messages.filter(
+      (msg) => !msg.read && msg.sentBy.toString() !== userId.toString()
+    ).length;
 
-    // --- FIX START: Add a defensive check for message.lastMessage ---
-    if (!message.lastMessage) {
-      return {
-        chatId: message._id,
-        otherUser: {
-          _id: otherUser._id,
-          name: displayName,
-          profilePicture: otherUser.profilePicture
-            ? otherUser.profilePicture.url
-            : "/img/default-profile.png",
-        },
-        lastMessage: {
-          text: "No messages yet.",
-          timestamp: message.createdAt, // Fallback to conversation creation time
-          isRead: true,
-          isMine: false,
-        },
-      };
-    }
-    // --- FIX END ---
+    // Get the last message from the array for display
+    const lastMessage =
+      convo.messages.length > 0
+        ? convo.messages[convo.messages.length - 1]
+        : null;
+
+    // The template expects 'avatar', but the User model provides 'profilePicture'. We alias it here.
+    const userForTemplate = {
+      _id: otherUser._id,
+      showUsername: otherUser.showUsername,
+      username: otherUser.username,
+      firstName: otherUser.firstName,
+      lastName: otherUser.lastName,
+      avatar: otherUser.profilePicture
+        ? otherUser.profilePicture.url
+        : "/img/default-profile.png", // Use fallback
+    };
 
     return {
-      chatId: message._id,
-      otherUser: {
-        _id: otherUser._id,
-        name: displayName,
-        profilePicture: otherUser.profilePicture
-          ? otherUser.profilePicture.url
-          : "/img/default-profile.png",
-      },
-      lastMessage: {
-        text: message.lastMessage.text,
-        timestamp: message.lastMessage.timestamp,
-        isRead: message.lastMessage.read,
-        isMine: message.lastMessage.sender.toString() === userId.toString(),
-      },
+      user: userForTemplate, // The template expects `chat.user`, so we provide it.
+      postId: convo.postId._id.toString(),
+      postTitle: convo.postId.title,
+      unreadCount,
+      lastMessage: lastMessage
+        ? {
+            text: lastMessage.content,
+            timestamp: lastMessage.createdAt,
+            isMine: lastMessage.sentBy.toString() === userId.toString(),
+          }
+        : null,
     };
   });
 
-  // Filter out any null chats that may have occurred from corrupted data
+  // Filter out any null entries that resulted from inconsistent data
   return chats.filter((chat) => chat !== null);
 }
