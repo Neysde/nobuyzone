@@ -702,14 +702,8 @@ document.addEventListener("DOMContentLoaded", function () {
         // Add active class to clicked button
         this.classList.add("active");
 
-        // Extract category name and convert to lowercase for API filtering
-        const categoryName =
-          this.querySelector(".category-name").textContent.trim();
-        // Use 'all' for "All Categories", otherwise use lowercase category name
-        const category =
-          categoryName === "All Categories"
-            ? "all"
-            : categoryName.toLowerCase();
+        // Use the `data-category` attribute which holds the correct value (e.g., 'elektronik')
+        const category = this.dataset.category;
 
         // Update filters with category and reset to page 1
         await updateFilters({
@@ -718,6 +712,15 @@ document.addEventListener("DOMContentLoaded", function () {
           // Always disable radius search when filtering by category
           useRadius: false,
         });
+      });
+    });
+
+    // Category dropdown in search bar
+    globalCategories.addEventListener("change", async function () {
+      await updateFilters({
+        category: this.value,
+        page: 1,
+        useRadius: false,
       });
     });
 
@@ -1061,20 +1064,19 @@ document.addEventListener("DOMContentLoaded", function () {
    * Update UI elements to reflect the current filter state
    */
   async function updateFilterUI() {
-    // Update category buttons
+    // Update category buttons and dropdown
     categoryButtons.forEach((button) => {
-      const category = button
-        .querySelector(".category-name")
-        .textContent.toLowerCase();
-      if (
-        (category === "all categories" && currentFilters.category === "all") ||
-        category === currentFilters.category
-      ) {
+      if (button.dataset.category === currentFilters.category) {
         button.classList.add("active");
       } else {
         button.classList.remove("active");
       }
     });
+
+    // Sync the global category dropdown with the current filter
+    if (globalCategories.value !== currentFilters.category) {
+      globalCategories.value = currentFilters.category;
+    }
 
     // Update global search inputs
     globalSearchInput.value = currentFilters.search || "";
@@ -1168,8 +1170,9 @@ document.addEventListener("DOMContentLoaded", function () {
   function updateURL(filters) {
     const params = new URLSearchParams();
     if (filters.search) params.append("search", filters.search);
-    if (filters.category && filters.category !== "all")
+    if (filters.category && filters.category !== "all") {
       params.append("category", filters.category);
+    }
 
     // For city, use anglicized and then title-cased name for the URL.
     if (filters.city) {
@@ -1225,25 +1228,15 @@ document.addEventListener("DOMContentLoaded", function () {
     const isRadiusSearch =
       filters.useRadius && filters.radiusLat && filters.radiusLng;
 
-    // Add each filter parameter, ensuring proper encoding
-    Object.entries(filters).forEach(([key, value]) => {
-      // For radius search, we'll handle filtering client-side
-      // Skip radius parameters in the API call unless the backend explicitly supports them
-      const skipRadiusParams = [
-        "useRadius",
-        "radiusLat",
-        "radiusLng",
-        "radiusKm",
-      ];
-      if (
-        value !== undefined &&
-        value !== null &&
-        value !== "" &&
-        !skipRadiusParams.includes(key)
-      ) {
-        params.append(key, value);
-      }
-    });
+    // Explicitly append known filters to avoid sending unwanted data like radius params
+    if (filters.search) params.append("search", filters.search);
+    if (filters.category && filters.category !== "all") {
+      params.append("category", filters.category);
+    }
+    if (filters.city) params.append("city", filters.city);
+    if (filters.district) params.append("district", filters.district);
+    if (filters.sort) params.append("sort", filters.sort);
+    if (filters.page) params.append("page", filters.page);
 
     // If doing radius search, we need to fetch all posts to filter client-side
     if (isRadiusSearch) {
@@ -1512,7 +1505,7 @@ document.addEventListener("DOMContentLoaded", function () {
             })}</span>
           </div>
           <div class="post-tags">
-            <span class="tag">${translateCategory(post.category)}</span>
+            <span class="tag">${window.categoryMap[post.category] || post.category}</span>
             <span class="tag">${translateCondition(post.condition)}</span>
           </div>
         </div>
@@ -1591,83 +1584,6 @@ document.addEventListener("DOMContentLoaded", function () {
         updateFilters({ page: currentPage + 1 });
       }
     };
-  }
-
-  /**
-   * Translate category value to user-friendly Turkish display
-   * @param {string} category - The category value from database
-   * @returns {string} - The translated category name
-   */
-  function translateCategory(category) {
-    let categoryDisplay = "";
-
-    switch (category) {
-      case "elektronik":
-        categoryDisplay = "Elektronik";
-        break;
-      case "ev-dekorasyonu":
-        categoryDisplay = "Ev Dekorasyonu";
-        break;
-      case "evcil-hayvan-urunleri":
-        categoryDisplay = "Evcil Hayvan Ürünleri";
-        break;
-      case "gida":
-        categoryDisplay = "Gıda";
-        break;
-      case "giyim":
-        categoryDisplay = "Giyim";
-        break;
-      case "hediyelik-esya":
-        categoryDisplay = "Hediyelik Eşya";
-        break;
-      case "kitap-kirtasiye":
-        categoryDisplay = "Kitap & Kırtasiye";
-        break;
-      case "kozmetik-kisisel-bakim":
-        categoryDisplay = "Kozmetik & Kişisel Bakım";
-        break;
-      case "mobilya":
-        categoryDisplay = "Mobilya";
-        break;
-      case "oto-aksesuar-yedek-parca":
-        categoryDisplay = "Oto Aksesuar & Yedek Parça";
-        break;
-      case "saglik-medikal":
-        categoryDisplay = "Sağlık & Medikal";
-        break;
-      case "spor-outdoor":
-        categoryDisplay = "Spor & Outdoor";
-        break;
-      case "teknoloji":
-        categoryDisplay = "Teknoloji";
-        break;
-      case "diger":
-        categoryDisplay = "Diğer";
-        break;
-      // Fallback for old categories
-      case "furniture":
-        categoryDisplay = "Mobilya";
-        break;
-      case "electronics":
-        categoryDisplay = "Elektronik";
-        break;
-      case "clothing":
-        categoryDisplay = "Giyim";
-        break;
-      case "books":
-        categoryDisplay = "Kitap & Kırtasiye";
-        break;
-      case "other":
-        categoryDisplay = "Diğer";
-        break;
-      default:
-        categoryDisplay =
-          category.charAt(0).toUpperCase() +
-          category.slice(1).replace(/-/g, " ");
-        break;
-    }
-
-    return categoryDisplay;
   }
 
   /**

@@ -414,6 +414,7 @@ body {
   /* Limit to 2 lines with ellipsis */
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -939,8 +940,24 @@ select::-ms-expand {
   background-color: var(--primary-dark);
 }
 
-/* Responsive adjustments */
+/* Responsive Design */
+.mobile-only {
+  display: none;
+}
+
+.desktop-only {
+  display: block;
+}
+
 @media (max-width: 768px) {
+  .desktop-only {
+    display: none;
+  }
+
+  .mobile-only {
+    display: block;
+    margin-top: 1rem; /* Add some space above the mobile categories */
+  }
   .radius-search-card .map {
     height: 200px;
   }

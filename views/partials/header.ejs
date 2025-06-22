@@ -1,18 +1,30 @@
+<style>
+  .cl-logo {
+    height: 40px; /* Default size for smaller screens */
+    margin-right: 3px;
+    border-radius: 8px;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.15); /* Shadow in all directions */
+    transition: height 0.2s ease-in-out;
+  }
+
+  /* Media query for larger screens */
+  @media (min-width: 992px) {
+    .cl-logo {
+      height: 50px; /* A bit bigger on desktop */
+    }
+  }
+</style>
 <header class="header">
   <div class="container">
     <div class="header-top">
       <div class="logo">
         <a href="/">
-          <svg
+          <img
+            src="/img/nobuyzonelogowhite.jpg"
+            alt="NoBuyZone Logo"
             class="cl-logo"
-            width="48"
-            height="48"
-            viewBox="0 0 48 48"
-            fill="none"
-          >
-            <rect width="48" height="48" rx="8" fill="var(--primary)" />
-            <path d="M12 20H36M12 28H36" stroke="white" stroke-width="3" />
-          </svg>
+            
+          />
           <span>NoBuyZone</span>
         </a>
         <!-- Add mobile-actions container for mobile view buttons -->

@@ -1,6 +1,20 @@
 <!DOCTYPE html>
 <html lang="tr">
   <head>
+    <script id="category-map-data" type="application/json">
+      <%- JSON.stringify(categoryMap || {}) %>
+    </script>
+    <script>
+      // Expose category map to client-side script by parsing the JSON data island
+      try {
+        const categoryDataElement = document.getElementById('category-map-data');
+        const categoryJson = categoryDataElement.textContent.trim();
+        window.categoryMap = JSON.parse(categoryJson);
+      } catch (e) {
+        console.error('Failed to parse category map data:', e);
+        window.categoryMap = {}; // Fallback to an empty object
+      }
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>İlan Arama | NoBuyZone</title>
@@ -48,38 +62,10 @@
 
           <!-- Categories dropdown -->
           <div class="categories-field">
-            <select id="global-categories" class="field-select">
+                        <select id="global-categories" class="field-select">
               <option value="all">Tüm Kategoriler</option>
-              <% Object.keys(categories).forEach(category => { %>
-              <option value="<%= category %>">
-                <% 
-                let categoryDisplay = "";
-                switch(category) {
-                  case "elektronik": categoryDisplay = "Elektronik"; break;
-                  case "ev-dekorasyonu": categoryDisplay = "Ev Dekorasyonu"; break;
-                  case "evcil-hayvan-urunleri": categoryDisplay = "Evcil Hayvan Ürünleri"; break;
-                  case "gida": categoryDisplay = "Gıda"; break;
-                  case "giyim": categoryDisplay = "Giyim"; break;
-                  case "hediyelik-esya": categoryDisplay = "Hediyelik Eşya"; break;
-                  case "kitap-kirtasiye": categoryDisplay = "Kitap & Kırtasiye"; break;
-                  case "kozmetik-kisisel-bakim": categoryDisplay = "Kozmetik & Kişisel Bakım"; break;
-                  case "mobilya": categoryDisplay = "Mobilya"; break;
-                  case "oto-aksesuar-yedek-parca": categoryDisplay = "Oto Aksesuar & Yedek Parça"; break;
-                  case "saglik-medikal": categoryDisplay = "Sağlık & Medikal"; break;
-                  case "spor-outdoor": categoryDisplay = "Spor & Outdoor"; break;
-                  case "teknoloji": categoryDisplay = "Teknoloji"; break;
-                  case "diger": categoryDisplay = "Diğer"; break;
-                  // Fallback for old categories
-                  case "furniture": categoryDisplay = "Mobilya"; break;
-                  case "electronics": categoryDisplay = "Elektronik"; break;
-                  case "clothing": categoryDisplay = "Giyim"; break;
-                  case "books": categoryDisplay = "Kitap & Kırtasiye"; break;
-                  case "other": categoryDisplay = "Diğer"; break;
-                  default: categoryDisplay = category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' '); break;
-                }
-                %>
-                <%= categoryDisplay %>
-              </option>
+              <% categories.forEach(category => { %>
+              <option value="<%= category.value %>"><%= category.display %></option>
               <% }); %>
             </select>
           </div>
@@ -201,49 +187,19 @@
               </div>
             </div>
 
-            <!-- Categories Section -->
-            <div class="card categories-card">
+            <!-- Categories Section (Desktop) -->
+            <div class="card categories-card desktop-only">
               <h3>Kategoriler</h3>
-              <div class="categories-list">
-                <button class="category-button active">
+                            <div class="categories-list">
+                <button class="category-button active" data-category="all">
                   <span class="category-count"><%= totalCount %></span>
                   <span class="category-name">Tüm Kategoriler</span>
                 </button>
 
-                <% Object.keys(categories).forEach(category => { %>
-                <button class="category-button">
-                  <span class="category-count"
-                    ><%= categories[category] %></span
-                  >
-                  <span class="category-name">
-                    <% 
-                    let categoryDisplay = "";
-                    switch(category) {
-                      case "elektronik": categoryDisplay = "Elektronik"; break;
-                      case "ev-dekorasyonu": categoryDisplay = "Ev Dekorasyonu"; break;
-                      case "evcil-hayvan-urunleri": categoryDisplay = "Evcil Hayvan Ürünleri"; break;
-                      case "gida": categoryDisplay = "Gıda"; break;
-                      case "giyim": categoryDisplay = "Giyim"; break;
-                      case "hediyelik-esya": categoryDisplay = "Hediyelik Eşya"; break;
-                      case "kitap-kirtasiye": categoryDisplay = "Kitap & Kırtasiye"; break;
-                      case "kozmetik-kisisel-bakim": categoryDisplay = "Kozmetik & Kişisel Bakım"; break;
-                      case "mobilya": categoryDisplay = "Mobilya"; break;
-                      case "oto-aksesuar-yedek-parca": categoryDisplay = "Oto Aksesuar & Yedek Parça"; break;
-                      case "saglik-medikal": categoryDisplay = "Sağlık & Medikal"; break;
-                      case "spor-outdoor": categoryDisplay = "Spor & Outdoor"; break;
-                      case "teknoloji": categoryDisplay = "Teknoloji"; break;
-                      case "diger": categoryDisplay = "Diğer"; break;
-                      // Fallback for old categories
-                      case "furniture": categoryDisplay = "Mobilya"; break;
-                      case "electronics": categoryDisplay = "Elektronik"; break;
-                      case "clothing": categoryDisplay = "Giyim"; break;
-                      case "books": categoryDisplay = "Kitap & Kırtasiye"; break;
-                      case "other": categoryDisplay = "Diğer"; break;
-                      default: categoryDisplay = category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' '); break;
-                    }
-                    %>
-                    <%= categoryDisplay %>
-                  </span>
+                <% categories.forEach(category => { %>
+                <button class="category-button" data-category="<%= category.value %>">
+                  <span class="category-count"><%= category.count %></span>
+                  <span class="category-name"><%= category.display %></span>
                 </button>
                 <% }); %>
               </div>
@@ -314,36 +270,8 @@
                     </span>
                   </div>
                   <div class="post-tags">
-                    <span class="tag">
-                      <% 
-                      let categoryDisplay = "";
-                      switch(post.category) {
-                        case "elektronik": categoryDisplay = "Elektronik"; break;
-                        case "ev-dekorasyonu": categoryDisplay = "Ev Dekorasyonu"; break;
-                        case "evcil-hayvan-urunleri": categoryDisplay = "Evcil Hayvan Ürünleri"; break;
-                        case "gida": categoryDisplay = "Gıda"; break;
-                        case "giyim": categoryDisplay = "Giyim"; break;
-                        case "hediyelik-esya": categoryDisplay = "Hediyelik Eşya"; break;
-                        case "kitap-kirtasiye": categoryDisplay = "Kitap & Kırtasiye"; break;
-                        case "kozmetik-kisisel-bakim": categoryDisplay = "Kozmetik & Kişisel Bakım"; break;
-                        case "mobilya": categoryDisplay = "Mobilya"; break;
-                        case "oto-aksesuar-yedek-parca": categoryDisplay = "Oto Aksesuar & Yedek Parça"; break;
-                        case "saglik-medikal": categoryDisplay = "Sağlık & Medikal"; break;
-                        case "spor-outdoor": categoryDisplay = "Spor & Outdoor"; break;
-                        case "teknoloji": categoryDisplay = "Teknoloji"; break;
-                        case "diger": 
-                          categoryDisplay = "Diğer"; 
-                          break;
-                        // Fallback for old categories
-                        case "furniture": categoryDisplay = "Mobilya"; break;
-                        case "electronics": categoryDisplay = "Elektronik"; break;
-                        case "clothing": categoryDisplay = "Giyim"; break;
-                        case "books": categoryDisplay = "Kitap & Kırtasiye"; break;
-                        case "other": categoryDisplay = "Diğer"; break;
-                        default: categoryDisplay = post.category.charAt(0).toUpperCase() + post.category.slice(1).replace(/-/g, ' '); break;
-                      }
-                      %>
-                      <%= categoryDisplay %>
+                                        <span class="tag">
+                      <%= categoryMap[post.category] || post.category %>
                     </span>
                     <span class="tag">
                       <% 
@@ -400,6 +328,24 @@
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
             </button>
+          </div>
+        </div>
+
+        <!-- Categories Section (Mobile) -->
+        <div class="card categories-card mobile-only">
+          <h3>Kategoriler</h3>
+          <div class="categories-list">
+            <button class="category-button active" data-category="all">
+              <span class="category-count"><%= totalCount %></span>
+              <span class="category-name">Tüm Kategoriler</span>
+            </button>
+
+            <% categories.forEach(category => { %>
+            <button class="category-button" data-category="<%= category.value %>">
+              <span class="category-count"><%= category.count %></span>
+              <span class="category-name"><%= category.display %></span>
+            </button>
+            <% }); %>
           </div>
         </div>
       </div>

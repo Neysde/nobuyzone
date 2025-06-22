@@ -6,6 +6,7 @@ import passport from "passport";
 import Message from "../mongoose/message.mjs";
 import fetch from "node-fetch";
 import { getChatsForUser } from "../utils/chat-utils.mjs"; // Import the new function
+import { allCategories, categoryMap } from "../utils/categories.mjs";
 
 const router = express.Router();
 
@@ -39,17 +40,25 @@ router.get("/find-posts", (req, res, next) => {
         createdAt: -1,
       });
 
-      //Count posts by category for sidebar display THIS will be used later for other purposes!!!
+      // Count posts by category for sidebar display.
+      // This aggregation groups posts by the `category` field, which stores the category value (e.g., "elektronik").
       const categoryCounts = await Post.aggregate([
-        { $match: baseFilter }, // Apply the same filter here
+        { $match: baseFilter },
         { $group: { _id: "$category", count: { $sum: 1 } } },
       ]);
 
-      //Transform category counts into a format easier to use in the template
-      const categories = {};
-      categoryCounts.forEach((cat) => {
-        categories[cat._id] = cat.count;
-      });
+      // Create a map of counts where the key is the category value (e.g., "elektronik") and the value is the count.
+      const countsMap = new Map(
+        categoryCounts.map((item) => [item._id, item.count])
+      );
+
+      // Create the final list of categories to be sent to the template.
+      // It merges the master list of all categories with the actual counts.
+      const categories = allCategories.map((cat) => ({
+        value: cat.value,
+        display: cat.display,
+        count: countsMap.get(cat.value) || 0, // Look up the count using the correct category value.
+      }));
 
       // Total count for "All Categories"
       const totalCount = await Post.countDocuments(baseFilter); // Apply the same filter here
@@ -63,6 +72,7 @@ router.get("/find-posts", (req, res, next) => {
       res.render("find-posts", {
         posts,
         categories,
+        categoryMap,
         totalCount,
         user: userData, // Pass the complete user object to the template
         currentFilters: {

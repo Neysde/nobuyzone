@@ -351,9 +351,9 @@ router.get("/api/posts", async (req, res) => {
       filter.createdBy = { $ne: req.user._id };
     }
 
-    // Category filter
+    // Category filter (case-insensitive)
     if (category && category !== "all") {
-      filter.category = category;
+      filter.category = { $regex: `^${category}$`, $options: "i" };
     }
 
     // Location filters
