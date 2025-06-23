@@ -1,0 +1,85 @@
+body {
+    background-color: #f8f9fa;
+}
+
+.user-agreement .container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 20px;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.7;
+    color: #343a40;
+    text-align: center;
+}
+
+.user-agreement h1 {
+    font-size: 2.5em;
+    font-weight: 600;
+    margin-bottom: 50px;
+    position: relative;
+    display: inline-block;
+    color: #212529;
+}
+
+.user-agreement h1 .underline {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -15px;
+    height: 4px;
+    width: 60%;
+    background-color: #007bff;
+    border-radius: 2px;
+}
+
+.user-agreement h2 {
+    font-size: 1.6em;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #0056b3;
+    text-align: left;
+}
+
+.user-agreement h3 {
+    font-size: 1.3em;
+    font-weight: 600;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.user-agreement h4 {
+    font-size: 1.1em;
+    font-style: italic;
+    margin-top: 15px;
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.user-agreement .content-box {
+    background-color: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    opacity: 0;
+    text-align: left;
+}
+
+.user-agreement p, .user-agreement li {
+    font-size: 1rem;
+    margin-bottom: 15px;
+    text-align: justify;
+    color: #495057;
+}
+
+.user-agreement ul, .user-agreement ol {
+    padding-left: 25px;
+    margin-bottom: 0;
+}
+
+.user-agreement li {
+    margin-bottom: 10px;
+    padding-left: 5px;
+}

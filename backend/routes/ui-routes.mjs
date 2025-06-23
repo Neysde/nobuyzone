@@ -360,6 +360,46 @@ router.get("/terms-of-use", (req, res) => {
   }
 });
 
+//user agreement page
+router.get('/user-agreement', (req, res) => {
+  res.render('user-agreement', {
+      title: 'Kullanıcı Sözleşmesi',
+      description: 'NoBuyZone.com Kullanıcı Sözleşmesi',
+      isAuthenticated: req.isAuthenticated(),
+      currentPage: 'user-agreement'
+  });
+});
+
+//posting rules page
+router.get('/posting-rules', (req, res) => {
+  res.render('posting-rules', {
+      title: 'İlan Verme Kuralları',
+      description: 'NoBuyZone.com İlan Verme Kuralları',
+      isAuthenticated: req.isAuthenticated(),
+      currentPage: 'posting-rules'
+  });
+});
+
+//registration terms page
+router.get('/registration-terms', (req, res) => {
+  res.render('registration-terms', {
+      title: 'Üyelik Koşulları',
+      description: 'NoBuyZone.com Üyelik Koşulları',
+      isAuthenticated: req.isAuthenticated(),
+      currentPage: 'registration-terms'
+  });
+});
+
+//registration terms page
+router.get('/forbidden-products', (req, res) => {
+  res.render('forbidden-products', {
+      title: 'Yasaklı Ürünler',
+      description: 'NoBuyZone.com Üyelik Koşulları',
+      isAuthenticated: req.isAuthenticated(),
+      currentPage: 'forbidden-products'
+  });
+});
+
 // Contact Us page
 router.get("/contact-us", (req, res) => {
   try {
