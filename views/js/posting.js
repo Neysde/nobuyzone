@@ -68,6 +68,20 @@ document.addEventListener("DOMContentLoaded", function () {
   //Flag to track if user is actively editing an address field
   let isEditingAddressField = false;
 
+  // User Agreement Checkbox - controls button accessibility
+  const agreementCheckbox = document.getElementById("user-agreement-checkbox");
+  const submitButton = form.querySelector('button[type="submit"]');
+  const draftButton = form.querySelector('.action-buttons button.button-outline');
+
+  // Handle checkbox state change to enable/disable buttons
+  if (agreementCheckbox && submitButton && draftButton) {
+    agreementCheckbox.addEventListener("change", function () {
+      const isChecked = this.checked;
+      submitButton.disabled = !isChecked;
+      draftButton.disabled = !isChecked;
+    });
+  }
+
   // Setup for handling multiple contact preferences
   setupContactPreferences();
 
@@ -216,6 +230,15 @@ document.addEventListener("DOMContentLoaded", function () {
           }
         });
         updateUploadState();
+      }
+
+      // Restore user agreement checkbox state from draft
+      if (draftData.approveUserAgreementBeforeCreation === true) {
+        if (agreementCheckbox) {
+          agreementCheckbox.checked = true;
+          // Trigger change event to enable buttons
+          agreementCheckbox.dispatchEvent(new Event("change"));
+        }
       }
     } catch (error) {
       console.error("Error loading draft data:", error);
@@ -1073,6 +1096,9 @@ document.addEventListener("DOMContentLoaded", function () {
       delete jsonData.latitude;
       delete jsonData.longitude;
 
+      // Set user agreement approval status
+      jsonData.approveUserAgreementBeforeCreation = agreementCheckbox ? agreementCheckbox.checked : false;
+
       // Set isDraft to false when the post is being submitted
       jsonData.isDraft = "false";
 
@@ -1276,6 +1302,8 @@ document.addEventListener("DOMContentLoaded", function () {
         (cb) => cb.value
       );
       // No explicit default to ['in-app'] here; backend should handle if empty or rely on form validation
+
+      // Do NOT set approveUserAgreementBeforeCreation for drafts - only set when publishing
 
       const draftIdField = form.elements.draftId;
       if (draftIdField && draftIdField.value) {

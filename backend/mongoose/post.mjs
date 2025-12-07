@@ -116,6 +116,12 @@ const postSchema = new mongoose.Schema(
       default: 0,
     },
 
+    // User agreement approval status - tracks if user accepted terms before creating/saving post
+    approveUserAgreementBeforeCreation: {
+      type: Boolean,
+      default: false,
+    },
+
     // References and timestamps
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

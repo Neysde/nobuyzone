@@ -753,7 +753,144 @@ textarea {
 
   .full-width-card button {
     margin: 0;
+    max-width: 300px;
+  }
+}
+
+/* User Agreement Checkbox Styles */
+.agreement-container {
+  width: 100%;
+  margin-bottom: var(--space-lg);
+  display: flex;
+  justify-content: center;
+}
+
+.agreement-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  gap: var(--space-sm);
+  max-width: 100%;
+}
+
+.agreement-text {
+  color: var(--neutral-700);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  flex: 1;
+}
+
+.agreement-text a {
+  color: var(--primary);
+  text-decoration: none;
+  pointer-events: auto;
+}
+
+.agreement-text a:hover {
+  text-decoration: underline;
+}
+
+
+/* Hide default checkbox */
+.agreement-checkbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+/* Custom checkbox */
+.checkbox-custom {
+  position: relative;
+  height: 20px;
+  width: 20px;
+  min-width: 20px;
+  border: 2px solid var(--neutral-400);
+  border-radius: var(--radius-sm);
+  background-color: var(--neutral-100);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hover state for checkbox */
+.agreement-label:hover .checkbox-custom {
+  border-color: var(--primary);
+}
+
+/* Checked state */
+.agreement-checkbox:checked ~ .checkbox-custom {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* Checkmark */
+.agreement-checkbox:checked ~ .checkbox-custom::after {
+  content: "✓";
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* Disabled button styles */
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-drop;
+  pointer-events: none;
+}
+
+.button-primary:disabled {
+  background-color: var(--neutral-400);
+}
+
+.button-outline:disabled {
+  border-color: var(--neutral-300);
+  color: var(--neutral-500);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .posting-page {
+    padding: var(--space-md) 0;
+  }
+
+  .card {
+    padding: var(--space-md);
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .map {
+    height: 200px;
+  }
+
+  .full-width-card {
+    flex-direction: column;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .full-width-card button {
+    margin: 0;
     max-width: 100%;
+  }
+
+  /* Agreement checkbox responsive */
+  .agreement-label {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .agreement-text {
+    font-size: 0.8125rem;
   }
 }
 

@@ -1,0 +1,183 @@
+/* Cookie Notifier Styles */
+/* Uses the same color palette and design tokens as the rest of the project */
+
+.cookie-notifier {
+  /* Positioning - fixed at bottom */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  
+  /* Layout */
+  padding: var(--space-md);
+  background-color: var(--neutral-800);
+  border-top: 2px solid var(--primary);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
+  
+  /* Animation - hidden by default */
+  transform: translateY(100%);
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+              opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+/* Visible state - shown when user hasn't dismissed */
+.cookie-notifier.cookie-notifier-visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Content container */
+.cookie-notifier-content {
+  max-width: 1440px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+}
+
+/* Text styling */
+.cookie-notifier-text {
+  flex: 1;
+  min-width: 250px;
+  color: var(--neutral-100);
+  font-size: var(--font-size-md, 1rem);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Buttons container */
+.cookie-notifier-buttons {
+  display: flex;
+  gap: var(--space-md);
+  flex-shrink: 0;
+}
+
+/* Button base styles */
+.cookie-notifier-btn {
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm, 0.875rem);
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+/* Info button - primary style */
+.cookie-notifier-btn-info {
+  background-color: var(--primary);
+  color: var(--neutral-100);
+  border: 2px solid var(--primary);
+}
+
+.cookie-notifier-btn-info:hover {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.cookie-notifier-btn-info:active {
+  transform: translateY(0);
+}
+
+/* Close button - secondary style */
+.cookie-notifier-btn-close {
+  background-color: transparent;
+  color: var(--neutral-300);
+  border: 2px solid var(--neutral-600);
+}
+
+.cookie-notifier-btn-close:hover {
+  background-color: var(--neutral-700);
+  color: var(--neutral-100);
+  border-color: var(--neutral-500);
+}
+
+.cookie-notifier-btn-close:active {
+  background-color: var(--neutral-600);
+}
+
+/* Responsive design for tablets and below */
+@media (max-width: 768px) {
+  .cookie-notifier {
+    padding: var(--space-md) var(--space-sm);
+  }
+  
+  .cookie-notifier-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-md);
+  }
+  
+  .cookie-notifier-text {
+    text-align: center;
+    font-size: var(--font-size-sm, 0.875rem);
+    min-width: auto;
+  }
+  
+  .cookie-notifier-buttons {
+    flex-direction: row;
+    justify-content: center;
+    gap: var(--space-sm);
+  }
+  
+  .cookie-notifier-btn {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+    padding: var(--space-sm) var(--space-md);
+  }
+}
+
+/* Responsive design for small mobile devices */
+@media (max-width: 480px) {
+  .cookie-notifier {
+    padding: var(--space-sm);
+    /* Ensure it's above other elements */
+    z-index: 10000;
+  }
+  
+  .cookie-notifier-content {
+    gap: var(--space-sm);
+  }
+  
+  .cookie-notifier-text {
+    font-size: 0.8125rem; /* Slightly smaller on very small screens */
+    line-height: 1.4;
+  }
+  
+  .cookie-notifier-buttons {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  
+  .cookie-notifier-btn {
+    width: 100%;
+    min-width: auto;
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.8125rem;
+  }
+}
+
+/* Accessibility - focus states */
+.cookie-notifier-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.cookie-notifier-btn:focus:not(:focus-visible) {
+  box-shadow: none;
+}
+
+.cookie-notifier-btn:focus-visible {
+  box-shadow: 0 0 0 3px var(--primary-light);
+}

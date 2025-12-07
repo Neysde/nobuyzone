@@ -1,0 +1,81 @@
+<!-- Cookie Notifier - appears on first visit -->
+<div id="cookieNotifier" class="cookie-notifier">
+  <div class="cookie-notifier-content">
+    <p class="cookie-notifier-text">
+      Bu sitede yalnızca hizmetin çalışması için zorunlu olan oturum çerezleri kullanılmaktadır.
+    </p>
+    <div class="cookie-notifier-buttons">
+      <a href="/cookie-policy" class="cookie-notifier-btn cookie-notifier-btn-info">
+        Detaylı Bilgi
+      </a>
+      <button id="closeCookieNotifier" class="cookie-notifier-btn cookie-notifier-btn-close">
+        Kapat
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Cookie notifier functionality
+  (function() {
+    const notifier = document.getElementById('cookieNotifier');
+    const closeBtn = document.getElementById('closeCookieNotifier');
+    const STORAGE_KEY = 'cookieNotifierDismissed';
+
+    // Check if user has already dismissed the notifier
+    function hasUserDismissedNotifier() {
+      try {
+        return localStorage.getItem(STORAGE_KEY) === 'true';
+      } catch (e) {
+        // If localStorage is not available, don't show the notifier
+        console.warn('localStorage not available:', e);
+        return true;
+      }
+    }
+
+    // Show the notifier with animation
+    function showNotifier() {
+      if (notifier) {
+        notifier.classList.add('cookie-notifier-visible');
+      }
+    }
+
+    // Hide the notifier with animation
+    function hideNotifier() {
+      if (notifier) {
+        notifier.classList.remove('cookie-notifier-visible');
+        // Store dismissal state
+        try {
+          localStorage.setItem(STORAGE_KEY, 'true');
+        } catch (e) {
+          console.warn('Could not save to localStorage:', e);
+        }
+      }
+    }
+
+    // Initialize on page load
+    if (!hasUserDismissedNotifier()) {
+      // Small delay for better UX
+      setTimeout(showNotifier, 500);
+    }
+
+    // Handle close button click
+    if (closeBtn) {
+      closeBtn.addEventListener('click', hideNotifier);
+    }
+
+    // Handle info button click - dismiss notifier when user clicks "Detaylı Bilgi"
+    const infoBtn = document.querySelector('.cookie-notifier-btn-info');
+    if (infoBtn) {
+      infoBtn.addEventListener('click', function() {
+        // Save dismissal state so notifier doesn't reappear after viewing cookie policy
+        try {
+          localStorage.setItem(STORAGE_KEY, 'true');
+        } catch (e) {
+          console.warn('Could not save to localStorage:', e);
+        }
+        // Let the link navigate normally
+      });
+    }
+  })();
+</script>

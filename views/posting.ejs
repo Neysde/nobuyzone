@@ -311,8 +311,17 @@
 
           <!-- Action Buttons - Full Width -->
           <div class="action-card full-width-card">
+            <!-- User Agreement Checkbox -->
+            <div class="agreement-container">
+              <label class="agreement-label">
+                <input type="checkbox" id="user-agreement-checkbox" class="agreement-checkbox" />
+                <span class="checkbox-custom"></span>
+                <span class="agreement-text"><a href="/forbidden-products" target="_blank"><strong>Yasaklı Ürünler Listesi</strong></a> ve <a href="/user-agreement" target="_blank"><strong>Kullanıcı Sözleşmesi</strong></a>'ni okudum ve kabul ediyorum.</span>
+              </label>
+            </div>
+
             <div class="action-buttons">
-              <button type="submit" class="button button-primary full-width">
+              <button type="submit" class="button button-primary full-width" disabled>
                 <svg
                   width="16"
                   height="16"
@@ -324,7 +333,7 @@
                 </svg>
                 İlanı Yayınla
               </button>
-              <button type="button" class="button button-outline full-width">
+              <button type="button" class="button button-outline full-width" disabled>
                 <svg
                   width="16"
                   height="16"

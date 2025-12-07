@@ -324,41 +324,9 @@ router.get("/about-us", (req, res) => {
   }
 });
 
-// Safety page
-router.get("/safety", (req, res) => {
-  try {
-    res.render("safety", {
-      user: req.user,
-      title: "Güvenlik | NoBuyZone",
-      page: "safety",
-      layout: "layout",
-    });
-  } catch (error) {
-    console.error("Error rendering safety page:", error);
-    res.status(500).render("error", {
-      message: "Error loading safety page",
-      error: { status: 500 },
-    });
-  }
-});
 
-// Terms of Use page
-router.get("/terms-of-use", (req, res) => {
-  try {
-    res.render("terms-of-use", {
-      user: req.user,
-      title: "Kullanım Koşulları | NoBuyZone",
-      page: "terms-of-use",
-      layout: "layout",
-    });
-  } catch (error) {
-    console.error("Error rendering terms-of-use page:", error);
-    res.status(500).render("error", {
-      message: "Error loading terms-of-use page",
-      error: { status: 500 },
-    });
-  }
-});
+
+
 
 //user agreement page
 router.get('/user-agreement', (req, res) => {
@@ -370,25 +338,9 @@ router.get('/user-agreement', (req, res) => {
   });
 });
 
-//posting rules page
-router.get('/posting-rules', (req, res) => {
-  res.render('posting-rules', {
-      title: 'İlan Verme Kuralları',
-      description: 'NoBuyZone.com İlan Verme Kuralları',
-      isAuthenticated: req.isAuthenticated(),
-      currentPage: 'posting-rules'
-  });
-});
 
-//registration terms page
-router.get('/registration-terms', (req, res) => {
-  res.render('registration-terms', {
-      title: 'Üyelik Koşulları',
-      description: 'NoBuyZone.com Üyelik Koşulları',
-      isAuthenticated: req.isAuthenticated(),
-      currentPage: 'registration-terms'
-  });
-});
+
+
 
 //registration terms page
 router.get('/forbidden-products', (req, res) => {
@@ -454,4 +406,23 @@ router.get("/cookie-policy", (req, res) => {
   }
 });
 
+// KVKK Clarification page
+router.get("/kvkk-clarification", (req, res) => {
+  try {
+    res.render("kvkk-clarification", {
+      user: req.user,
+      title: "KVKK Aydınlatma Metni | NoBuyZone",
+      page: "kvkk-clarification",
+      layout: "layout",
+    });
+  } catch (error) {
+    console.error("Error rendering kvkk-clarification page:", error);
+    res.status(500).render("error", {
+      message: "Error loading kvkk-clarification page",
+      error: { status: 500 },
+    });
+  }
+});
+
 export default router;
+

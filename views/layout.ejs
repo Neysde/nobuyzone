@@ -7,13 +7,11 @@
     <link rel="stylesheet" href="/css/header.css" />
     <link rel="stylesheet" href="/css/footer.css" />
     <link rel="stylesheet" href="/css/main.css" />
+    <link rel="stylesheet" href="/css/cookie-notifier.css" />
     <% if(typeof page !== 'undefined' && page === 'about-us') { %>
     <link rel="stylesheet" href="/css/about-us.css" />
-    <% } %> <% if(typeof page !== 'undefined' && page === 'safety') { %>
-    <link rel="stylesheet" href="/css/safety.css" />
-    <% } %> <% if(typeof page !== 'undefined' && page === 'terms-of-use') { %>
-    <link rel="stylesheet" href="/css/terms-of-use.css" />
-    <% } %> <% if(typeof page !== 'undefined' && page === 'contact-us') { %>
+    <% } %>
+    <% if(typeof page !== 'undefined' && page === 'contact-us') { %>
     <link rel="stylesheet" href="/css/contact-us.css" />
     <% } %> <% if(typeof page !== 'undefined' && page === 'privacy-policy') { %>
     <link rel="stylesheet" href="/css/privacy-policy.css" />
@@ -29,10 +27,11 @@
 
     <%- include('partials/footer') %>
 
+    <!-- Cookie Notifier -->
+    <%- include('partials/cookie-notifier') %>
+
     <!-- Socket.IO client script -->
     <script src="/socket.io/socket.io.js"></script>
-    <% if(typeof page !== 'undefined' && page === 'terms-of-use') { %>
-    <script src="/js/terms-of-use.js"></script>
-    <% } %>
+
   </body>
 </html>
