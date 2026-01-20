@@ -297,11 +297,17 @@ export function initializeSocketServer(httpServer) {
       }
     });
 
+    // Rate limiting storage: Map<userId, Array<timestamp>>
+    const messageRateLimit = new Map();
+    const RATE_LIMIT_WINDOW = 10000; // 10 seconds
+    const MAX_MESSAGES_PER_WINDOW = 10; // 10 messages per 10 seconds
+
     // Handle sending a message
     socket.on("send-message", async (messageData) => {
       try {
         const { postId, recipientId, content } = messageData;
 
+        // 1. Input Validation
         if (!postId || !recipientId || !content) {
           socket.emit("error", {
             message: "Gerekli alanlar eksik",
@@ -309,16 +315,49 @@ export function initializeSocketServer(httpServer) {
           return;
         }
 
-        // Ensure we have a valid user ID
-        const currentUserId = socket.user._id || socket.user.id;
-
-        if (!currentUserId) {
-          console.error("Cannot send message: User has no valid ID");
+        if (typeof content !== "string") {
           socket.emit("error", {
-            message: "Kimlik doğrulama hatası: Geçersiz kullanıcı kimliği",
+             message: "Geçersiz mesaj formatı.",
           });
           return;
         }
+
+        if (content.length > 1000) {
+           socket.emit("error", {
+             message: "Mesaj çok uzun. Maksimum 1000 karakter.",
+           });
+           return;
+        }
+        
+        // 2. Rate Limiting
+        const currentUserId = socket.user._id || socket.user.id;
+        
+        if (!currentUserId) { // Should be caught by middleware, but safety first
+             socket.emit("error", { message: "Auth Error" }); 
+             return; 
+        }
+
+        const now = Date.now();
+        const userTimestamps = messageRateLimit.get(currentUserId.toString()) || [];
+        
+        // Filter out timestamps older than the window
+        const recentTimestamps = userTimestamps.filter(t => now - t < RATE_LIMIT_WINDOW);
+        
+        if (recentTimestamps.length >= MAX_MESSAGES_PER_WINDOW) {
+           socket.emit("error", {
+             message: "Çok hızlı mesaj gönderiyorsunuz. Lütfen biraz bekleyin.",
+           });
+           // Don't update timestamps to avoid locking them out further if they keep spamming? 
+           // Usually better to just drop it.
+           return;
+        }
+
+        // Update timestamps
+        recentTimestamps.push(now);
+        messageRateLimit.set(currentUserId.toString(), recentTimestamps);
+
+
+        // ... Proceed with existing logic ...
 
         // Use the shared utility function
         const conversation = await createOrUpdateConversation({
@@ -337,6 +376,7 @@ export function initializeSocketServer(httpServer) {
           _id: savedMessage._id,
           content: savedMessage.content,
           sentBy: savedMessage.sentBy,
+          recipientId, // Add recipientId to the payload
           postId, // Add postId to the message for client-side routing
           sender: {
             _id: currentUserId,

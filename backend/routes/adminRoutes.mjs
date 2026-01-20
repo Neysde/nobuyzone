@@ -5,7 +5,6 @@ import Post from "../mongoose/post.mjs"; // Post model
 import Message from "../mongoose/message.mjs"; // Message model
 import { comparePassword } from "../encryptpass.mjs"; // Password comparison utility
 import { isAdmin } from "../middlewares.mjs"; // isAdmin middleware
-import fetch from 'node-fetch'; // For making internal API calls
 
 const router = express.Router();
 

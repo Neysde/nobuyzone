@@ -2,7 +2,7 @@
 <html lang="tr">
   <head>
     <script id="category-map-data" type="application/json">
-      <%- JSON.stringify(categoryMap || {}) %>
+      <%- categoryMapJson %>
     </script>
     <script>
       // Expose category map to client-side script by parsing the JSON data island
@@ -17,7 +17,7 @@
     </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>İlan Arama | NoBuyZone</title>
+
     <meta
       name="description"
       content="Platformumuzda takas edilecek eşyaları arayın ve bulun"

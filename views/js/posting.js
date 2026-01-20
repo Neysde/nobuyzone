@@ -430,7 +430,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const remainingSlots = 5 - currentCount;
 
     if (files.length > remainingSlots) {
-      showNotification("Maximum 5 images allowed", "error");
+      showNotification("En fazla 5 fotoğraf yüklenebilir", "error");
       return;
     }
 
@@ -455,7 +455,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const reader = new FileReader();
     reader.onload = function (e) {
       if (uploadedImageIds.size >= 5) {
-        showNotification("Maximum 5 images allowed", "error");
+        showNotification("En fazla 5 fotoğraf yüklenebilir", "error");
         return;
       }
 

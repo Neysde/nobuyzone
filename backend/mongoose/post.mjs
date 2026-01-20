@@ -100,8 +100,11 @@ const postSchema = new mongoose.Schema(
     // Status information
     status: {
       type: String,
-      enum: ["active", "draft", "completed", "deleted"],
+      enum: ["active", "draft", "deleted", "closed"],
       default: "active",
+    },
+    closedAt: {
+      type: Date,
     },
 
     //post approve info 

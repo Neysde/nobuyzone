@@ -27,8 +27,8 @@ async function getFormattedConversation(
 
     // Get post details if not already provided
     const post = await Post.findById(postId);
-    if (!post) {
-      return res.status(404).json({ error: "Post not found" });
+    if (!post || post.status === 'deleted' || post.status === 'closed') {
+      return res.status(404).json({ error: "Post not found or unavailable" });
     }
 
     // Get other user details if not already provided
@@ -185,6 +185,11 @@ router.get("/api/chats", isAuthenticated, async (req, res) => {
       // Get post details
       const post = await Post.findById(postId);
 
+      // Filter out conversations where the post is deleted or closed
+      if (!post || post.status === 'deleted' || post.status === 'closed') {
+        continue;
+      }
+
 
       //Get the other user's ID
       const otherUserId = conversation.users
@@ -264,6 +269,10 @@ router.post("/api/chat/:postId", isAuthenticated, async (req, res) => {
     // Validate required data
     if (!postId || !message) {
       return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    if (typeof message !== 'string' || message.length > 1000) {
+        return res.status(400).json({ error: "Message too long (max 1000 chars) or invalid format." });
     }
 
     // Validate that postId is a valid ObjectId

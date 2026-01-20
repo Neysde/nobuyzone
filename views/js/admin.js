@@ -267,7 +267,15 @@ document.addEventListener("DOMContentLoaded", () => {
       // Status (New Cell)
       const statusCell = document.createElement("td");
       const statusBold = document.createElement("strong");
-      statusBold.textContent = post.status ? post.status.charAt(0).toUpperCase() + post.status.slice(1) : "N/A"; // Capitalize first letter
+      
+      let statusColor = 'black';
+      if (post.status === 'active') statusColor = 'green';
+      else if (post.status === 'draft') statusColor = 'blue';
+      else if (post.status === 'deleted') statusColor = 'red';
+      else if (post.status === 'closed') statusColor = 'black';
+      
+      statusBold.style.color = statusColor;
+      statusBold.textContent = post.status ? post.status.charAt(0).toUpperCase() + post.status.slice(1) : "N/A";
       statusCell.appendChild(statusBold);
       row.appendChild(statusCell);
 

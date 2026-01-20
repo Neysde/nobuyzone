@@ -391,7 +391,7 @@ const Chat = (function () {
    */
   function redirectToLogin() {
     const returnUrl = encodeURIComponent(window.location.pathname);
-    window.location.href = `/api/login?returnTo=${returnUrl}`;
+    window.location.href = `/login?returnTo=${returnUrl}`;
   }
 
   /**
@@ -573,6 +573,9 @@ const Chat = (function () {
 
       // Scroll to bottom to ensure new message is visible
       scrollToBottom();
+
+      // Update Dashboard if active
+      updateDashboardChatList(currentPostId, currentRecipientId, sentMessage, true);
     });
 
     //NEW HANDLER: Dedicated handler for receiving new messages
@@ -616,6 +619,10 @@ const Chat = (function () {
           postId: messagePostId,
           senderId: messageSenderId,
         });
+
+        // Update Dashboard
+        updateDashboardChatList(messagePostId, messageSenderId, formattedMessage, false);
+
       } else {
         /* // Message is for a different chat, show notification
         const senderName =
@@ -624,6 +631,9 @@ const Chat = (function () {
 
         // Update unread count
         socket.emit("init-chats");
+
+        // Update Dashboard even if chat is not open
+        updateDashboardChatList(messagePostId, messageSenderId, message, false);
       }
     });
 
@@ -711,6 +721,12 @@ const Chat = (function () {
     socket.on("error", (error) => {
       console.error("Socket error:", error);
       showNotification(error.message || "Bir hata oluştu", "error");
+      
+      // If there's a pending optimistic message update, cancel it
+      if (window.lastMessageTimeout) {
+        clearTimeout(window.lastMessageTimeout);
+        window.lastMessageTimeout = null;
+      }
     });
   }
 
@@ -1217,6 +1233,7 @@ const Chat = (function () {
     const formattedTime = messageDate.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
+      hour12: false,
     });
 
     // Add read status class if the message is unread and from the current user
@@ -1238,12 +1255,86 @@ const Chat = (function () {
   }
 
   /**
+   * Update the dashboard chat list with new message info
+   * @param {string} postId - The post ID
+   * @param {string} otherUserId - The ID of the other user in the chat
+   * @param {Object} message - The message object
+   * @param {boolean} isCurrentUser - Whether the message is from current user
+   */
+  function updateDashboardChatList(postId, otherUserId, message, isCurrentUser) {
+    // Check if we are on the dashboard/messages page
+    // Select the table specifically within the messages tab to avoid picking up the favorites/posts table
+    const dashboardTable = document.querySelector(".tab-pane[data-tab-id='messages'] .data-table tbody");
+    if (!dashboardTable) return;
+
+    // Hardening: Ensure IDs are strings and trimmed
+    const safePostId = String(postId).trim();
+    const safeOtherUserId = String(otherUserId).trim();
+
+    // Find the existing row
+    // The dashboard row has data attributes: data-post-id and data-recipient-id
+    const row = dashboardTable.querySelector(
+      `tr[data-post-id="${safePostId}"][data-recipient-id="${safeOtherUserId}"]`
+    );
+
+    if (row) {
+      // 1. Update Preview
+      const previewCell = row.querySelector(".chat-preview span");
+      if (previewCell) {
+        const prefix = isCurrentUser ? "Siz: " : "";
+        previewCell.textContent = `${prefix}${message.content}`;
+        
+        // Update unread style
+        if (!isCurrentUser) {
+             previewCell.classList.add("unread-message");
+             row.classList.add("unread-chat");
+        } else {
+             // If I sent it, it's read by me
+             previewCell.classList.remove("unread-message");
+             row.classList.remove("unread-chat");
+        }
+      }
+
+      // 2. Update Date
+      const dateCell = row.querySelector(".chat-date");
+      if (dateCell) {
+        const messageDate = new Date(message.createdAt || Date.now());
+        const now = new Date();
+        let timeString;
+        
+        if (messageDate.toDateString() === now.toDateString()) {
+             timeString = messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        } else {
+             timeString = messageDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        }
+        dateCell.textContent = timeString;
+      }
+
+      // 3. Move to top
+      dashboardTable.prepend(row);
+    } else {
+       // Row doesn't exist (new chat). 
+       // Ideally we would fetch the partial render or construct it.
+       // For now, we'll just reload the page to make it appear if it's critical, 
+       // but reloading is disruptive. 
+       // "Senior Developer" decision: Just update existing rows for real-time. 
+       // New chats usually appear after refresh or if we implement a complex append logic.
+    }
+  }
+
+  /**
    * Send a message to the current recipient
    */
   function sendMessage() {
     const message = chatInput.value.trim();
 
     if (!message || !socket || !socket.connected) {
+      return;
+    }
+
+    // Client-side validation: Max 1000 chars
+    if (message.length > 1000) {
+      showNotification("Mesaj çok uzun. Maksimum 1000 karakter.", "error");
       return;
     }
 
@@ -1644,6 +1735,7 @@ const Chat = (function () {
         initializeSocketConnection();
       }
     },
+    updateDashboardRow: updateDashboardChatList,
   };
 })();
 

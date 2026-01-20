@@ -59,7 +59,7 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
     if (!req.body || Object.keys(req.body).length === 0) {
       return res.status(400).json({
         success: false,
-        error: "Request body is empty",
+        error: "İstek kısmı boş",
       });
     }
 
@@ -75,6 +75,7 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
       isDraft,
       imageUrls,
       imageIds,
+      approveUserAgreementBeforeCreation,
     } = req.body;
 
     // Extract location properties
@@ -97,7 +98,7 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
     if (!title || !category || !condition || !description) {
       return res.status(400).json({
         success: false,
-        error: "Please provide all required fields",
+        error: "Lütfen gerekli tüm alanları doldurun",
       });
     }
 
@@ -202,6 +203,7 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
       contactDetails,
       status: postStatus, // Use determined status (draft or active)
       approved: false, // New posts are not approved by default
+      approveUserAgreementBeforeCreation,
       createdBy: req.user._id,
     });
 
@@ -220,7 +222,7 @@ router.post("/api/posts", isAuthenticated, async (req, res) => {
     console.error("Error creating post:", error);
     res.status(500).json({
       success: false,
-      error: "Server error creating post",
+      error: "İlan oluşturulurken sunucu hatası",
     });
   }
 });
@@ -237,7 +239,7 @@ router.post("/api/posts/draft", isAuthenticated, async (req, res) => {
     console.error("Error saving draft:", error);
     res.status(500).json({
       success: false,
-      error: "Server error saving draft",
+      error: "Taslak kaydedilirken sunucu hatası",
     });
   }
 });
@@ -313,7 +315,7 @@ router.post("/api/drafts", isAuthenticated, async (req, res) => {
     console.error("Error saving draft:", error);
     res.status(500).json({
       success: false,
-      error: "Server error saving draft",
+      error: "Taslak kaydedilirken sunucu hatası",
     });
   }
 });
@@ -520,7 +522,7 @@ router.get("/api/posts", async (req, res) => {
     console.error("Error fetching posts:", error);
     res.status(500).json({
       success: false,
-      error: "Server error fetching posts",
+      error: "İlanlar getirilirken sunucu hatası",
     });
   }
 });
@@ -608,7 +610,7 @@ router.get("/api/posts/:id", async (req, res) => {
     if (!post) {
       return res.status(404).json({
         success: false,
-        error: "Post not found",
+        error: "İlan bulunamadı",
       });
     }
 
@@ -620,7 +622,7 @@ router.get("/api/posts/:id", async (req, res) => {
     console.error("Error fetching post:", error);
     res.status(500).json({
       success: false,
-      error: "Server error fetching post",
+      error: "İlan getirilirken sunucu hatası",
     });
   }
 });
@@ -637,7 +639,7 @@ router.put("/api/posts/:id", isAuthenticated, async (req, res) => {
     if (!post) {
       return res.status(404).json({
         success: false,
-        message: "Post not found",
+        message: "İlan bulunamadı",
       });
     }
 
@@ -645,7 +647,7 @@ router.put("/api/posts/:id", isAuthenticated, async (req, res) => {
     if (post.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message: "Not authorized to update this post",
+        message: "Bu ilanı güncelleme yetkiniz yok",
       });
     }
 
@@ -755,7 +757,7 @@ router.put("/api/posts/:id", isAuthenticated, async (req, res) => {
 
     const updatedPost = await Post.findByIdAndUpdate(postId, updateData, { new: true });
 
-    let message = "Post updated successfully.";
+    let message = "İlan başarıyla güncellendi.";
     if (updatedPost.status === 'active' && updatedPost.approved === false) {
       message = "İlanınız güncellendi ve onay bekliyor.";
     }
@@ -770,7 +772,7 @@ router.put("/api/posts/:id", isAuthenticated, async (req, res) => {
     console.error("Error updating post:", error);
     res.status(500).json({
       success: false,
-      error: "Server error updating post.",
+      error: "İlan güncellenirken sunucu hatası.",
     });
   }
 });
@@ -787,7 +789,7 @@ router.delete("/api/posts/:id", isAuthenticated, async (req, res) => {
     if (!post) {
       return res.status(404).json({
         success: false,
-        message: "Post not found",
+        message: "İlan bulunamadı",
       });
     }
 
@@ -795,63 +797,18 @@ router.delete("/api/posts/:id", isAuthenticated, async (req, res) => {
     if (post.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message: "Not authorized to delete this post",
+        message: "Bu ilanı silme yetkiniz yok",
       });
     }
 
-    // Delete images from Cloudinary using the existing /api/delete/:public_id endpoint
-    if (post.images && post.images.length > 0) {
-      const deletePromises = post.images
-        .filter((image) => image.publicId) // Only process images with publicId
-        .map(async (image) => {
-          try {
-            // Construct a full URL for the fetch request
-            // Get the protocol (http/https) and host from the request
-            const protocol = req.protocol; // 'http' or 'https'
-            const host = req.get("host");
-            const deleteUrl = `${protocol}://${host}/api/delete/${encodeURIComponent(
-              image.publicId
-            )}`;
-            
-            const response = await fetch(deleteUrl, {
-              method: "DELETE",
-              headers: {
-                "Content-Type": "application/json",
-                // Include auth cookies from the original request
-                Cookie: req.headers.cookie || "",
-              },
-              // Include credentials to send cookies with the request
-              credentials: "same-origin",
-            });
+    // Soft Delete: Mark as deleted instead of removing from DB
+    // We purposefully do NOT delete images from Cloudinary or messages to allow for retention/recovery.
+    await Post.findByIdAndUpdate(postId, {
+      status: "deleted",
+      closedAt: new Date(),
+    });
 
-            if (response.ok) {
-
-            } else {
-              const errorData = await response.json();
-              console.error(
-                `Error deleting image ${image.publicId}:`,
-                errorData
-              );
-            }
-          } catch (error) {
-            console.error(
-              `Error with delete request for image ${image.publicId}:`,
-              error
-            );
-        }
-      });
-
-      // Wait for all image deletion operations to complete
-      await Promise.all(deletePromises);
-    }
-
-    // Delete post
-    const deletedPost = await Post.findByIdAndDelete(req.params.id);
-
-    if (deletedPost) {
-      // Delete associated messages
-      await Message.deleteMany({ postId: req.params.id });
-    }
+    // Optionally, if we wanted to hide messages or such, we could do it here, but retaining them is safer for now.
 
     res.status(200).json({
       success: true,

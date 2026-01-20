@@ -157,7 +157,7 @@
 
 /* User button text styles */
 .user-button span {
-  line-height: 1;
+  line-height: 1.4;
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
@@ -337,6 +337,17 @@
     justify-content: center !important; /* Horizontal centering for flex item */
     font-weight: bold;        /* Make '+' bolder */
     /* position: relative; /* Removed as it's not used to shift the button */
+  }
+
+  /* Login button in mobile */
+  .mobile-actions > a.button.button-outline {
+    height: 32px !important;
+    padding: 0 var(--space-sm) !important;
+    font-size: 0.9rem;
+    font-weight: 400 !important; /* Force normal weight */
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
   }
 
   /* User button in mobile */

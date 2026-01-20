@@ -51,6 +51,31 @@ function initTabs() {
       activeTabLink.classList.add("active");
       activeTabPane.classList.add("active");
 
+      // Update document title based on active tab
+      const tabName = targetHash.substring(1);
+      let pageTitle = "NoBuyZone";
+      
+      switch(tabName) {
+        case "postings":
+          pageTitle = "İlanlarım | NoBuyZone";
+          break;
+        case "drafts":
+          pageTitle = "Taslaklar | NoBuyZone";
+          break;
+        case "favorites":
+          pageTitle = "Favoriler | NoBuyZone";
+          break;
+        case "messages":
+          pageTitle = "Mesajlar | NoBuyZone";
+          break;
+        case "account":
+          pageTitle = "Hesap | NoBuyZone";
+          break;
+        default:
+          pageTitle = "NoBuyZone";
+      }
+      document.title = pageTitle;
+
       // Use requestAnimationFrame to scroll to the top just before the next repaint.
       // This is the most reliable way to override the browser's default anchor jump.
       requestAnimationFrame(() => {

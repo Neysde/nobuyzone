@@ -638,7 +638,7 @@ function setupContactButton() {
           // User is not authenticated, redirect to login page
           const returnUrl = encodeURIComponent(window.location.pathname);
           window.isOpeningChat = false;
-          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          window.location.href = `/login?returnTo=${returnUrl}`;
           return;
         }
 
@@ -647,12 +647,12 @@ function setupContactButton() {
           // Redirect to login page with return URL
           const returnUrl = encodeURIComponent(window.location.pathname);
           window.isOpeningChat = false;
-          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          window.location.href = `/login?returnTo=${returnUrl}`;
           return;
         }
 
         // If we reach here, user is authenticated
-        showNotification("Opening chat with seller...", "info");
+        showNotification("Sohbet açılıyor...", "info");
 
         // Get seller ID and other details from API response
         const data = await response.json();
@@ -752,7 +752,7 @@ function setupContactButton() {
     } catch (error) {
       console.error("Error initiating chat:", error);
       // Only show notification for errors that are not authentication related
-      if (!window.location.href.includes("/api/login")) {
+      if (!window.location.href.includes("/login")) {
         showNotification(
           "Uygulama içi sohbet başlatılamadı, lütfen tekrar deneyin.",
           "error"
@@ -793,7 +793,7 @@ function setupContactButton() {
         ) {
           // User is not authenticated, redirect to login page
           const returnUrl = encodeURIComponent(window.location.pathname);
-          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          window.location.href = `/login?returnTo=${returnUrl}`;
           return;
         }
 
@@ -801,7 +801,7 @@ function setupContactButton() {
         if (response.status === 401 || response.status === 403) {
           // Redirect to login page with return URL
           const returnUrl = encodeURIComponent(window.location.pathname);
-          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          window.location.href = `/login?returnTo=${returnUrl}`;
           return;
         }
 
@@ -817,7 +817,7 @@ function setupContactButton() {
           } else {
             // For non-JSON responses, assume authentication failure
             const returnUrl = encodeURIComponent(window.location.pathname);
-            window.location.href = `/api/login?returnTo=${returnUrl}`;
+            window.location.href = `/login?returnTo=${returnUrl}`;
             return;
           }
         }
@@ -830,7 +830,7 @@ function setupContactButton() {
         } else {
           // If not JSON, assume authentication failure
           const returnUrl = encodeURIComponent(window.location.pathname);
-          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          window.location.href = `/login?returnTo=${returnUrl}`;
           return;
         }
 
@@ -853,7 +853,7 @@ function setupContactButton() {
         ) {
           // Network error or parsing error - likely auth issue
           const returnUrl = encodeURIComponent(window.location.pathname);
-          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          window.location.href = `/login?returnTo=${returnUrl}`;
           return;
         }
         // Re-throw other errors
@@ -882,8 +882,8 @@ function setupContactButton() {
     modal.className = "contact-modal";
 
     // Determine title and action text based on type
-    const title = type === "email" ? "Seller Email" : "Seller Phone";
-    const actionText = type === "email" ? "Email Seller" : "Call Seller";
+    const title = type === "email" ? "İlan Sahibinin E-postası" : "İlan Sahibinin Telefonu";
+    const actionText = type === "email" ? "E-posta Gönder" : "Ara";
     const actionUrl = type === "email" ? `mailto:${value}` : `tel:${value}`;
 
     // Create modal content
@@ -901,7 +901,7 @@ function setupContactButton() {
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                 <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
               </svg>
-              Copy to Clipboard
+              Kopyala
             </button>
             <a href="${actionUrl}" class="button button-primary button-sm">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -946,16 +946,12 @@ function setupContactButton() {
       navigator.clipboard
         .writeText(value)
         .then(() => {
-          showNotification(
-            `${
-              type.charAt(0).toUpperCase() + type.slice(1)
-            } copied to clipboard!`,
-            "success"
-          );
+          const typeText = type === "email" ? "E-posta" : "Telefon";
+          showNotification(`${typeText} kopyalandı!`, "success");
         })
         .catch((err) => {
           console.error("Could not copy text: ", err);
-          showNotification("Failed to copy to clipboard", "error");
+          showNotification("Kopyalanamadı", "error");
         });
     });
   }
@@ -1141,7 +1137,7 @@ function initializePostActions() {
         ) {
           // User is not authenticated, redirect to login page
           const returnUrl = encodeURIComponent(window.location.pathname);
-          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          window.location.href = `/login?returnTo=${returnUrl}`;
           return;
         }
 
@@ -1180,12 +1176,12 @@ function initializePostActions() {
         ) {
           // Likely a network error or CORS issue, might be auth-related
           const returnUrl = encodeURIComponent(window.location.pathname);
-          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          window.location.href = `/login?returnTo=${returnUrl}`;
           return;
         }
 
         // For other errors, show notification
-        if (!window.location.href.includes("/api/login")) {
+        if (!window.location.href.includes("/login")) {
           showNotification(
             error.message || "Error processing request",
             "error"
@@ -1220,7 +1216,7 @@ function initializePostActions() {
         ) {
           // User is not authenticated, redirect to login page
           const returnUrl = encodeURIComponent(window.location.pathname);
-          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          window.location.href = `/login?returnTo=${returnUrl}`;
           return;
         }
 
@@ -1261,12 +1257,12 @@ function initializePostActions() {
         ) {
           // Likely a network error or CORS issue, might be auth-related
           const returnUrl = encodeURIComponent(window.location.pathname);
-          window.location.href = `/api/login?returnTo=${returnUrl}`;
+          window.location.href = `/login?returnTo=${returnUrl}`;
           return;
         }
 
         // For other errors, show notification
-        if (!window.location.href.includes("/api/login")) {
+        if (!window.location.href.includes("/login")) {
           showNotification(
             error.message || "Error processing request",
             "error"

@@ -4,7 +4,6 @@ const userSchema = new mongoose.Schema({
   username: {
     type: String,
     required: [true, "Username is required"],
-    unique: true,
   },
   firstName: {
     type: String,
@@ -41,6 +40,14 @@ const userSchema = new mongoose.Schema({
   termsAccepted: {
     type: Boolean,
     required: true,
+  },
+  // Soft Delete fields
+  isDeleted: {
+    type: Boolean,
+    default: false,
+  },
+  deletedAt: {
+    type: Date,
   },
   //Store user's favorite posts
   favorites: [

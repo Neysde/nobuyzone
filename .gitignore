@@ -41,3 +41,11 @@ temp/
 
 # API keys and secrets
 .env.* 
+
+# Infrastructure: Local data and logs
+mongo_data/
+logs/
+
+# Uploads: Don't commit user-uploaded images
+backend/public/uploads/*
+!backend/public/uploads/.gitkeep  # Keep the folder structure, ignore contents

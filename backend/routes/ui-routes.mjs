@@ -3,8 +3,6 @@ import Post from "../mongoose/post.mjs";
 import User from "../mongoose/user.mjs";
 import { isAuthenticated } from "../middlewares.mjs";
 import passport from "passport";
-import Message from "../mongoose/message.mjs";
-import fetch from "node-fetch";
 import { getChatsForUser } from "../utils/chat-utils.mjs"; // Import the new function
 import { allCategories, categoryMap } from "../utils/categories.mjs";
 
@@ -69,12 +67,16 @@ router.get("/find-posts", (req, res, next) => {
         userData = await User.findById(user._id);
       }
 
+      const categoryMapJson = JSON.stringify(categoryMap || {}).replace(/</g, "\\u003c"); // preventing XSS by preventing </script> tag
+
       res.render("find-posts", {
         posts,
         categories,
         categoryMap,
+        categoryMapJson,
         totalCount,
         user: userData, // Pass the complete user object to the template
+        title: "İlanlar | NoBuyZone",
         currentFilters: {
           category: "all",
           search: "",
@@ -148,9 +150,10 @@ router.get("/posts/:id", async (req, res) => {
     }
 
     res.render("post-detail", {
-      post,
-      user,
-    });
+        post,
+        user,
+        title: `${post.title} | NoBuyZone`
+      });
   } catch (error) {
     console.error("Error rendering post detail:", error);
     //Redirect instead of rendering error page
@@ -200,6 +203,7 @@ router.get("/dashboard/:id", isAuthenticated, async (req, res) => {
     // This now calls our reliable utility function directly.
     const chats = await getChatsForUser(req.user._id.toString());
 
+
     // Render the dashboard template with all the data
     res.render("dashboard", {
       user,
@@ -207,6 +211,7 @@ router.get("/dashboard/:id", isAuthenticated, async (req, res) => {
       drafts,
       favorites,
       chats,
+      title: "NoBuyZone",
       formatTime: (date) => {
         const messageDate = new Date(date);
         const now = new Date();
@@ -216,6 +221,7 @@ router.get("/dashboard/:id", isAuthenticated, async (req, res) => {
           return messageDate.toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
+            hour12: false,
           });
         }
 
@@ -269,12 +275,12 @@ router.get("/profile/drafts", async (req, res) => {
 
 // Authentication pages
 // Login page
-router.get("/api/login", (req, res) => {
+router.get("/login", (req, res) => {
   res.render("login", { breadcrumbs: "Login", layout: false });
 });
 
 // Register page
-router.get("/api/register", (req, res) => {
+router.get("/register", (req, res) => {
   res.render("register", { breadcrumbs: "Register", layout: false });
 });
 
@@ -331,7 +337,7 @@ router.get("/about-us", (req, res) => {
 //user agreement page
 router.get('/user-agreement', (req, res) => {
   res.render('user-agreement', {
-      title: 'Kullanıcı Sözleşmesi',
+      title: 'Kullanıcı Sözleşmesi | NoBuyZone',
       description: 'NoBuyZone.com Kullanıcı Sözleşmesi',
       isAuthenticated: req.isAuthenticated(),
       currentPage: 'user-agreement'
@@ -345,7 +351,7 @@ router.get('/user-agreement', (req, res) => {
 //registration terms page
 router.get('/forbidden-products', (req, res) => {
   res.render('forbidden-products', {
-      title: 'Yasaklı Ürünler',
+      title: 'Yasaklı Ürünler Listesi | NoBuyZone',
       description: 'NoBuyZone.com Üyelik Koşulları',
       isAuthenticated: req.isAuthenticated(),
       currentPage: 'forbidden-products'

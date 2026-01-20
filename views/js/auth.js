@@ -121,7 +121,7 @@ function initRegisterForm(form) {
 
     if (!validatePassword(password)) {
       showError(
-        "Password must be at least 8 characters and include uppercase, lowercase, number, and special character"
+        "Şifre en az 8 karakter olmalı ve büyük harf, küçük harf, rakam ve özel karakter içermelidir"
       );
       return;
     }
@@ -253,7 +253,7 @@ function initPasswordResetForm(form) {
     // Validate form
     if (!validatePassword(password)) {
       showError(
-        "Password must be at least 8 characters and include uppercase, lowercase, number, and special character"
+        "Şifre en az 8 karakter olmalı ve büyük harf, küçük harf, rakam ve özel karakter içermelidir"
       );
       return;
     }
@@ -286,7 +286,7 @@ function initPasswordResetForm(form) {
           "success"
         );
         setTimeout(() => {
-          window.location.href = "/api/login"; //Redirect to login page
+          window.location.href = "/login"; //Redirect to login page
         }, 1500);
       } else {
         //Show error message

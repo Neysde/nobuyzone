@@ -1,0 +1,33 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: barter-app-backend
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongo:27017/barter-app
+    depends_on:
+      - mongo
+    volumes:
+      - ./backend/public/uploads:/usr/src/app/public/uploads
+      - ./logs/mongo:/var/log/mongodb
+
+  mongo:
+    image: mongo:8.2.3
+    command: ["mongod", "--profile", "2", "--logpath", "/var/log/mongodb/mongod.log", "--logappend"]
+    container_name: barter-app-mongo
+    restart: always
+    ports:
+      - "27018:27017" # Exposed to host on port 27018 (Docker) to avoid conflict with local Mongo setup (27017)
+    volumes:
+      - mongo_data:/data/db
+      - ./logs/mongo:/var/log/mongodb
+
+volumes:
+  mongo_data:

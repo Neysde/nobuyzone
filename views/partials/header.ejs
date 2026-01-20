@@ -36,7 +36,7 @@
 
         <% if (typeof user === 'undefined' || !user) { %>
         <!-- Sign in button for non-authenticated users -->
-        <a href="/api/login" class="button button-outline">Giriş Yap</a>
+        <a href="/login" class="button button-outline">Giriş Yap</a>
         <% } else { %>
         <!-- Notification bell icon with unread count -->
         <a
@@ -171,6 +171,35 @@
         if (message.isNotification) {
           // Update unread count when receiving a new message
           checkUnreadMessages();
+          
+          // Update dashboard table if Chat module is available and we are on dashboard
+          if (typeof Chat !== 'undefined') {
+              if (typeof Chat.updateDashboardRow === 'function') {
+                   const currentUserId = String("<%= user._id %>").trim();
+                   const msgSentBy = String(message.sentBy).trim();
+                   const msgRecipientId = String(message.recipientId).trim();
+                   
+                   let targetDetailsRowId;
+                   
+                   // Determine which user ID corresponds to the dashboard row
+                   // If I sent the message, the row is keyed by the RECIPIENT
+                   // If I received the message, the row is keyed by the SENDER
+                   if (msgSentBy === currentUserId) {
+                       targetDetailsRowId = msgRecipientId;
+                   } else {
+                       targetDetailsRowId = msgSentBy;
+                   }
+
+                   // Update the row. true = sent by me
+                   Chat.updateDashboardRow(message.postId, targetDetailsRowId, message, msgSentBy === currentUserId);
+              } else {
+                  console.error("Header: Chat.updateDashboardRow is not a function", Chat);
+              }
+          } else {
+              console.log("Header: Chat module undefined");
+          }
+        } else {
+            console.log("Header: isNotification is false/missing");
         }
       });
     } catch (error) {

@@ -34,6 +34,7 @@
                 <th>First Name</th>
                 <th>Last Name</th>
                 <th>Email</th>
+                <th>Status</th>
                 <th>Total Post Flags</th>
                 <th>Messages</th>
                 <th>Actions</th>
@@ -62,6 +63,13 @@
                 <td><%= user.firstName %></td>
                 <td><%= user.lastName %></td>
                 <td><%= user.email %></td>
+                <td>
+                  <% if (user.isDeleted) { %>
+                  <span style="color: red; font-weight: bold;">Deleted</span>
+                  <% } else { %>
+                  <span style="color: green; font-weight: bold;">Active</span>
+                  <% } %>
+                </td>
                 <td><%= user.totalFlagCount %></td>
                 <td>
                   <span class="message-count"><%= user.totalMessageCount %></span>
@@ -135,6 +143,7 @@
             <thead>
               <tr>
                 <th>Image</th>
+                <th>Status</th>
                 <th>Title</th>
                 <th>Category</th>
                 <th>Location</th>
@@ -158,6 +167,18 @@
                   <% } else { %>
                   <span>No Image</span>
                   <% } %>
+                </td>
+                <td>
+                  <%
+                    let statusClass = 'text-body'; // Default black
+                    if (post.status === 'active') statusClass = 'text-success'; // Green
+                    else if (post.status === 'draft') statusClass = 'text-primary'; // Blue
+                    else if (post.status === 'deleted') statusClass = 'text-danger'; // Red
+                    else if (post.status === 'closed') statusClass = 'text-secondary'; // Grey/Black
+                  %>
+                  <strong class="<%= statusClass %>">
+                    <%= post.status ? post.status.charAt(0).toUpperCase() + post.status.slice(1) : 'N/A' %>
+                  </strong>
                 </td>
                 <td class="post-title-link" data-postid="<%= post._id %>">
                   <%= post.title %>

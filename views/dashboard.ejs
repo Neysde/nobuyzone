@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kontrol Paneli | NoBuyZone</title>
+
     <link rel="stylesheet" href="/css/header.css" />
     <link rel="stylesheet" href="/css/footer.css" />
     <link rel="stylesheet" href="/css/dashboard.css" />
@@ -517,8 +517,8 @@
                     <% chats.forEach(chat => { %>
                     <tr
                       class="chat-row <%= chat.unreadCount > 0 ? 'unread-chat' : '' %>"
-                      data-post-id="<%= chat.postId %>"
-                      data-recipient-id="<%= chat.user._id %>"
+                      data-post-id="<%= String(chat.postId) %>"
+                      data-recipient-id="<%= String(chat.user._id) %>"
                       data-recipient="<%= chat.user.showUsername && chat.user.username ? chat.user.username : (chat.user.firstName && chat.user.lastName ? chat.user.firstName + ' ' + chat.user.lastName : chat.user.username || 'User') %>"
                       data-post-title="<%= chat.postTitle %>"
                       data-avatar="<%= chat.user.avatar || '/img/default-avatar.svg' %>"
@@ -894,6 +894,11 @@
 
       // Initialize chat functionality when the document is ready
       document.addEventListener("DOMContentLoaded", function () {
+        // Initialize the Chat module to establish socket connection
+        if (window.Chat) {
+          window.Chat.initialize();
+        }
+
         // Set up chat row click handlers
         const chatRows = document.querySelectorAll(".chat-row");
 

@@ -133,37 +133,55 @@ document.addEventListener("DOMContentLoaded", function () {
         // Clear mobile actions first to prevent duplicates
         mobileActions.innerHTML = "";
 
-        // Clone create post button for mobile
-        if (createPostBtn) {
-          const postBtnClone = createPostBtn.cloneNode(true);
-          postBtnClone.textContent = '+'; // Change text to '+' for mobile
-          postBtnClone.classList.add('create-post-button-mobile'); // Add a class for specific mobile styling
-          mobileActions.appendChild(postBtnClone);
-        }
+        // Check if user is logged in (using userDropdown existence as indicator)
+        if (userDropdown) {
+          // USER IS LOGGED IN
 
-        // Clone notification bell for mobile if it exists
-        if (notificationBell) {
-          // Deep clone to ensure all inner elements like badges are copied
-          const bellClone = notificationBell.cloneNode(true);
-
-          // Update the badge to match the current state
-          const originalBadge = document.getElementById("unread-badge");
-          if (originalBadge) {
-            const mobileUnreadBadge = bellClone.querySelector(".unread-badge");
-            mobileUnreadBadge.textContent = originalBadge.textContent;
-            mobileUnreadBadge.style.display = originalBadge.style.display;
+          // Clone create post button for mobile
+          if (createPostBtn) {
+            const postBtnClone = createPostBtn.cloneNode(true);
+            postBtnClone.textContent = '+'; // Change text to '+' for mobile
+            postBtnClone.classList.add('create-post-button-mobile'); // Add a class for specific mobile styling
+            mobileActions.appendChild(postBtnClone);
           }
 
-          // Add to mobile container
-          mobileActions.appendChild(bellClone);
-          attachEventListeners(bellClone);
-        }
+          // Clone notification bell for mobile if it exists
+          if (notificationBell) {
+            // Deep clone to ensure all inner elements like badges are copied
+            const bellClone = notificationBell.cloneNode(true);
 
-        // Clone user dropdown for mobile if it exists
-        if (userDropdown) {
-          const userDropdownClone = userDropdown.cloneNode(true);
-          mobileActions.appendChild(userDropdownClone);
-          attachEventListeners(userDropdownClone);
+            // Update the badge to match the current state
+            const originalBadge = document.getElementById("unread-badge");
+            if (originalBadge) {
+              const mobileUnreadBadge = bellClone.querySelector(".unread-badge");
+              mobileUnreadBadge.textContent = originalBadge.textContent;
+              mobileUnreadBadge.style.display = originalBadge.style.display;
+            }
+
+            // Add to mobile container
+            mobileActions.appendChild(bellClone);
+            attachEventListeners(bellClone);
+          }
+
+          // Clone user dropdown for mobile if it exists
+          if (userDropdown) {
+            const userDropdownClone = userDropdown.cloneNode(true);
+            mobileActions.appendChild(userDropdownClone);
+            attachEventListeners(userDropdownClone);
+          }
+        } else {
+          // USER IS NOT LOGGED IN
+
+          // Clone login button for mobile
+          // Find the login button in header actions (assuming it's the outline button)
+          const loginBtn = headerActions.querySelector(".button-outline");
+          
+          if (loginBtn) {
+            const loginBtnClone = loginBtn.cloneNode(true);
+            // Ensure appropriate mobile styling if needed
+            // The existing CSS for .mobile-actions .button should handle standard sizing
+            mobileActions.appendChild(loginBtnClone);
+          }
         }
       }
     } else {

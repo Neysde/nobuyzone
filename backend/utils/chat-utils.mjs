@@ -163,7 +163,8 @@ export async function getChatsForUser(userId) {
     .populate({
       path: "postId",
       model: "Post",
-      select: "title",
+      model: "Post",
+      select: "title status",
     })
     .sort({ "messages.createdAt": -1 }); // Sort by the most recent message activity
 
@@ -173,8 +174,13 @@ export async function getChatsForUser(userId) {
       (u) => u.user._id.toString() !== userId.toString()
     )?.user;
 
-    // If data is inconsistent, skip this chat to prevent errors
-    if (!otherUser || !convo.postId) {
+    // If data is inconsistent or post is unavailable, skip this chat
+    if (
+      !otherUser ||
+      !convo.postId ||
+      convo.postId.status === "deleted" ||
+      convo.postId.status === "closed"
+    ) {
       return null;
     }
 
@@ -190,8 +196,9 @@ export async function getChatsForUser(userId) {
         : null;
 
     // The template expects 'avatar', but the User model provides 'profilePicture'. We alias it here.
+    // The template expects 'avatar', but the User model provides 'profilePicture'. We alias it here.
     const userForTemplate = {
-      _id: otherUser._id,
+      _id: otherUser._id ? otherUser._id.toString() : "", // Explicitly toString() to avoid object wrapper issues
       showUsername: otherUser.showUsername,
       username: otherUser.username,
       firstName: otherUser.firstName,
@@ -208,9 +215,9 @@ export async function getChatsForUser(userId) {
       unreadCount,
       lastMessage: lastMessage
         ? {
-            text: lastMessage.content,
+            content: lastMessage.content,
             timestamp: lastMessage.createdAt,
-            isMine: lastMessage.sentBy.toString() === userId.toString(),
+            sentByCurrentUser: lastMessage.sentBy.toString() === userId.toString(),
           }
         : null,
     };

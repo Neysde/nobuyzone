@@ -24,25 +24,65 @@ import Post from "./mongoose/post.mjs";
 import { isAuthenticated } from "./middlewares.mjs";
 import { createServer } from "http";
 import { initializeSocketServer } from "./socket-server.mjs";
+import { initializeCronJobs } from "./cron-jobs.mjs";
 
 const app = express();
 const httpServer = createServer(app);
 
+// Initialize Cron Jobs
+initializeCronJobs();
+
 // Initialize Socket.IO through our separate module
 const io = initializeSocketServer(httpServer);
 
+// Security Middleware Imports
+import helmet from "helmet";
+// import mongoSanitize from "express-mongo-sanitize"; // Replaced with custom middleware
+import rateLimit from "express-rate-limit";
+import { mongoSanitize } from "./middlewares.mjs";
+
+// Set security HTTP headers
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Disabling CSP for now to avoid breaking existing scripts/images. Can be hardened later.
+  })
+);
+
+// Global Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 1000, // Limit each IP to 1000 requests per windowMs (general API limit)
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: "Too many requests from this IP, please try again after 15 minutes",
+});
+app.use(limiter);
+
 app.use(express.json());
 app.use(cookieParser());
+app.use(express.urlencoded({ extended: true })); // Ensure urlencoded is enabled if not already
+
+// Data Sanitization against NoSQL query injection
+// Must be AFTER body parsers
+app.use(mongoSanitize);
 
 //Session middleware setup for admins
+import MongoStore from "connect-mongo";
+
+// Session middleware setup for admins
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false, // Changed to false for MongoStore
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGODB_URI,
+      collectionName: 'sessions',
+    }),
     cookie: {
-      secure: false, //set to true in prod
+      secure: process.env.SECURE_COOKIES === "true", // Configurable via .env
       httpOnly: true,
+      sameSite: 'Lax', // Protects against CSRF
       maxAge: parseInt(process.env.COOKIE_MAX_AGE),
     },
   })
@@ -108,10 +148,14 @@ app.set("view engine", "ejs");
 
 // Homepage now renders the main page with the map
 app.get("/", (req, res) => {
-  res.render("main", { user: req.user });
+  res.render("main", { user: req.user, title: "NoBuyZone" });
 });
 
 app.use(routes); // all routes
+
+// Serve uploaded images statically
+app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
+
 
 app.get("/posting", isAuthenticated, async (req, res) => {
   try {
@@ -120,7 +164,7 @@ app.get("/posting", isAuthenticated, async (req, res) => {
 
     // Render the posting page as is if no draft ID was provided
     if (!draftId) {
-      return res.render("posting.ejs", { user: req.user });
+      return res.render("posting.ejs", { user: req.user, title: "İlan Oluştur | NoBuyZone" });
     }
 
     // Fetch the draft post if an ID was provided
@@ -132,7 +176,7 @@ app.get("/posting", isAuthenticated, async (req, res) => {
 
     // If no draft found or not owned by current user, render empty form
     if (!draft) {
-      return res.render("posting.ejs", { user: req.user });
+      return res.render("posting.ejs", { user: req.user, title: "İlan Oluştur | NoBuyZone" });
     }
 
     // Pass the draft data to the template
@@ -140,19 +184,29 @@ app.get("/posting", isAuthenticated, async (req, res) => {
       // Convert the Mongoose document to a plain JavaScript object
       const draftObject = draft.toObject();
 
-      // Stringify the draft data for the template
-      const draftJson = JSON.stringify(draftObject);
+      // Stringify the draft data for the template and escape potentially dangerous keys
+      const draftJson = JSON.stringify(draftObject).replace(/</g, "\\u003c");
 
-      res.render("posting.ejs", { draft: draftJson, user: req.user });
+      res.render("posting.ejs", { draft: draftJson, user: req.user, title: "İlan Oluştur | NoBuyZone" });
     } catch (serializationError) {
       console.error("Error serializing draft data:", serializationError);
       // Fallback to plain rendering if there's an issue with serialization
-      res.render("posting.ejs", { user: req.user });
+      res.render("posting.ejs", { user: req.user, title: "İlan Oluştur | NoBuyZone" });
     }
   } catch (error) {
     console.error("Error rendering posting page:", error);
-    res.render("posting.ejs", { user: req.user });
+    res.render("posting.ejs", { user: req.user, title: "İlan Oluştur | NoBuyZone" });
   }
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: "Sunucu hatası",
+    error: process.env.NODE_ENV === "development" ? err.message : undefined,
+  });
 });
 
 // 404 Handler - !!!!!! This must be the last middleware to catch all unhandled routes
@@ -167,6 +221,6 @@ const PORT = parseInt(process.env.PORT);
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(
-    `Socket.IO server is available at http://localhost:${PORT}/socket.io/socket.io.js`
+    `Socket.IO server is available at ${process.env.BASE_URL}:${PORT}/socket.io/socket.io.js`
   );
 });

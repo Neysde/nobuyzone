@@ -38,6 +38,7 @@ declare class Cropper {
     getCropperImage(): CropperImage | null;
     getCropperSelection(): CropperSelection | null;
     getCropperSelections(): NodeListOf<CropperSelection> | null;
+    destroy(): void;
 }
 export default Cropper;
 
@@ -1302,6 +1303,16 @@ export declare class CropperImage extends CropperElement_3 {
     skewable: boolean;
     slottable: boolean;
     translatable: boolean;
+    alt: string;
+    crossorigin: string;
+    decoding: string;
+    elementtiming: string;
+    fetchpriority: string;
+    loading: string;
+    referrerpolicy: string;
+    sizes: string;
+    src: string;
+    srcset: string;
     protected set $canvas(element: CropperCanvas_2);
     protected get $canvas(): CropperCanvas_2;
     protected static get observedAttributes(): string[];
@@ -1438,6 +1449,16 @@ declare class CropperImage_2 extends CropperElement_2_5 {
     skewable: boolean;
     slottable: boolean;
     translatable: boolean;
+    alt: string;
+    crossorigin: string;
+    decoding: string;
+    elementtiming: string;
+    fetchpriority: string;
+    loading: string;
+    referrerpolicy: string;
+    sizes: string;
+    src: string;
+    srcset: string;
     protected set $canvas(element: CropperCanvas_5);
     protected get $canvas(): CropperCanvas_5;
     protected static get observedAttributes(): string[];
@@ -1805,9 +1826,9 @@ declare class CropperSelection_2 extends CropperElement_4_2 {
 export declare class CropperShade extends CropperElement_4 {
     static $name: string;
     static $version: string;
-    protected $onCanvasChange: EventListener | null;
     protected $onCanvasActionEnd: EventListener | null;
     protected $onCanvasActionStart: EventListener | null;
+    protected $onSelectionChange: EventListener | null;
     protected $style: string;
     x: number;
     y: number;
@@ -1929,6 +1950,15 @@ export declare function getAdjustedSizes(data: SizeAdjustmentData | SizeAdjustme
 };
 
 /**
+ * Get the real event target by checking composed path.
+ * This is useful when dealing with events that can cross shadow DOM boundaries.
+ * {@link https://developer.mozilla.org/en-US/docs/Web/API/Event/composedPath}
+ * @param {Event} event The event object.
+ * @returns {EventTarget | null} The first element in the composed path, or the original event target.
+ */
+export declare function getComposedPathTarget(event: Event): EventTarget | null;
+
+/**
  * Get the offset base on the document.
  * @param {Element} element The target element.
  * @returns {object} The offset data.
@@ -1937,6 +1967,13 @@ export declare function getOffset(element: Element): {
     left: number;
     top: number;
 };
+
+/**
+ * Get the root document node.
+ * @param {Element} element The target element.
+ * @returns {Document|DocumentFragment|null} The document node.
+ */
+export declare function getRootDocument(element: Element): Document | DocumentFragment | null;
 
 export declare const HAS_POINTER_EVENT: boolean;
 

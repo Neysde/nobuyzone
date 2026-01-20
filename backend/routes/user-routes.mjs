@@ -9,9 +9,20 @@ import { hashPassword, comparePassword } from "../encryptpass.mjs";
 import nodemailer from "nodemailer";
 import Post from "../mongoose/post.mjs";
 import { isAuthenticated } from "../middlewares.mjs";
-import fetch from "node-fetch";
+import rateLimit from "express-rate-limit";
 
 const router = express.Router();
+
+// Strict Rate Limiting for Auth Routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 5, // Limit each IP to 5 login/register requests per windowMs
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: {
+    message: "Çok fazla başarısız giriş denemesi. Lütfen 15 dakika sonra tekrar deneyin.",
+  },
+});
 
 const register = async (req, res) => {
   try {
@@ -37,11 +48,26 @@ const register = async (req, res) => {
     if (error)
       return res.status(400).send({ message: error.details[0].message });
 
-    let user = await User.findOne({ email: req.body.email });
+    // Check for existing ACTIVE user by email
+    let user = await User.findOne({ 
+      email: req.body.email, 
+      isDeleted: { $ne: true } 
+    });
+    
     if (user)
       return res.status(409).send({
         message: "Bu e-posta adresi ile kayıtlı bir kullanıcı zaten var",
       });
+
+    // Check for existing ACTIVE user by username
+    const existingUsername = await User.findOne({ 
+      username: req.body.username, 
+      isDeleted: { $ne: true } 
+    });
+
+    if (existingUsername) {
+      return res.status(409).send({ message: "Bu kullanıcı adı zaten alınmış" });
+    }
 
     const hashedPassword = await hashPassword(req.body.password);
     user = await new User({
@@ -180,7 +206,15 @@ const register = async (req, res) => {
     await sendEmail(user.email, subject, message); //imports sendEmail func.
     res.status(201).send({ message: "Hesabınıza bir e-posta gönderildi" });
   } catch (error) {
-    res.status(500).send({ message: "Internally Server Error" });
+    if (error.code === 11000) {
+      if (error.keyPattern && error.keyPattern.username) {
+        return res.status(409).send({ message: "Bu kullanıcı adı zaten alınmış" });
+      }
+      if (error.keyPattern && error.keyPattern.email) {
+        return res.status(409).send({ message: "Bu e-posta adresi ile kayıtlı bir kullanıcı zaten var" });
+      }
+    }
+    res.status(500).send({ message: "Sunucu Hatası" });
   }
 };
 
@@ -198,10 +232,14 @@ const login = async (req, res) => {
     if (error)
       return res.status(400).send({ message: error.details[0].message });
 
-    const user = await User.findOne({ email: req.body.email });
+    // Find user, ensuring we only find active (non-deleted) users
+    const user = await User.findOne({ 
+      email: req.body.email, 
+      isDeleted: { $ne: true } 
+    });
 
     if (!user)
-      return res.status(401).send({ message: "Invalid Email or Password" });
+      return res.status(401).send({ message: "Geçersiz E-posta veya Şifre" });
 
     const validPassword = await comparePassword(
       req.body.password,
@@ -209,7 +247,7 @@ const login = async (req, res) => {
     );
 
     if (!validPassword)
-      return res.status(401).send({ message: "Invalid Email or Password" });
+      return res.status(401).send({ message: "Geçersiz E-posta veya Şifre" });
 
     if (!user.verified) {
       return res.status(403).send({ message: "Hesabınızı doğrulayın." });
@@ -222,14 +260,13 @@ const login = async (req, res) => {
     res
       .cookie("login", token, {
         httpOnly: true,
-        // This is the corrected line
-        secure: process.env.NODE_ENV === "production",
+        secure: process.env.SECURE_COOKIES === "true", // Configurable via .env
         maxAge: parseInt(process.env.COOKIE_MAX_AGE),
       })
       .status(200)
       .send({ data: token, message: "Kullanıcı başarıyla giriş yaptı" });
   } catch (error) {
-    res.status(500).send({ message: "Internally Server Error" });
+    res.status(500).send({ message: "Sunucu Hatası" });
   }
 };
 
@@ -242,14 +279,14 @@ const emailLink = async (req, res) => {
       userId: user._id,
       token: req.params.token,
     });
-    if (!token) return res.status(400).send({ message: "Invalid Link" });
+    if (!token) return res.status(400).send({ message: "Geçersiz Adres" });
     await User.updateOne({ _id: user._id }, { verified: true });
     await token.deleteOne();
 
     // Redirect to the success page instead of sending a JSON response
     res.redirect(`/${user._id}/verify/${req.params.token}/success`);
   } catch (error) {
-    res.status(500).send({ message: "Internal Server Error" });
+    res.status(500).send({ message: "Sunucu Hatası" });
   }
 };
 
@@ -266,7 +303,11 @@ const passwordLink = async (req, res) => {
       return res.status(400).send({
         message: error.details[0].message,
       });
-    let user = await User.findOne({ email: req.body.email });
+    // Check for ACTIVE user
+    let user = await User.findOne({ 
+      email: req.body.email, 
+      isDeleted: { $ne: true } 
+    });
     if (!user)
       return res.status(409).send({
         message: "Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı",
@@ -405,23 +446,23 @@ const passwordLink = async (req, res) => {
       message: "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi",
     });
   } catch (error) {
-    res.status(500).send({ message: "Internal server error" });
+    res.status(500).send({ message: "Sunucu Hatası" });
   }
 };
 
 const verifyUrl = async (req, res) => {
   try {
     const user = await User.findOne({ _id: req.params.id });
-    if (!user) return res.status(400).send({ message: "Invalid link" });
+    if (!user) return res.status(400).send({ message: "Geçersiz Adres" });
 
     const token = await Token.findOne({
       userId: user._id,
       token: req.params.token,
     });
-    if (!token) return res.status(400).send({ message: "Invalid Link" });
+    if (!token) return res.status(400).send({ message: "Geçersiz Adres" });
     res.status(200).send({ message: "Geçerli Bağlantı" });
   } catch (error) {
-    res.status(500).send({ message: "Internal server error" });
+    res.status(500).send({ message: "Sunucu Hatası" });
   }
 };
 
@@ -439,13 +480,13 @@ const resetPassword = async (req, res) => {
         message: error.details[0].message,
       });
     const user = await User.findOne({ _id: req.params.id });
-    if (!user) return res.status(400).send({ message: "Invalid link" });
+    if (!user) return res.status(400).send({ message: "Geçersiz Adres" });
 
     const token = await Token.findOne({
       userId: user._id,
       token: req.params.token,
     });
-    if (!token) return res.status(400).send({ message: "Invalid Link" });
+    if (!token) return res.status(400).send({ message: "Geçersiz Adres" });
 
     if (!user.verified) user.verified = true;
 
@@ -455,7 +496,7 @@ const resetPassword = async (req, res) => {
     await token.deleteOne(); //use deleteOne instead of delete or remove(deprecated)
     res.status(200).send({ message: "Şifreniz başarıyla sıfırlandı" });
   } catch (error) {
-    res.status(500).send({ message: "Internal Server Error" });
+    res.status(500).send({ message: "Sunucu Hatası" });
   }
 };
 
@@ -495,9 +536,9 @@ const logout = async (req, res) => {
 };
 
 //login and register routes
-router.post("/api/login", login);
+router.post("/api/login", authLimiter, login);
 
-router.post("/api/register", register);
+router.post("/api/register", authLimiter, register);
 
 router.post("/api/logout", isAuthenticated, logout);
 
@@ -520,7 +561,11 @@ router.patch("/api/user/username", isAuthenticated, async (req, res) => {
     }
 
     // Check if username is already taken
-    const existingUser = await User.findOne({ username });
+    // Check if username is already taken by another ACTIVE user
+    const existingUser = await User.findOne({ 
+      username, 
+      isDeleted: { $ne: true } 
+    });
     if (
       existingUser &&
       existingUser._id.toString() !== req.user._id.toString()
@@ -718,13 +763,13 @@ router.patch("/api/user/privacy", isAuthenticated, async (req, res) => {
     // Return success response
     return res.status(200).json({
       success: true,
-      message: "Privacy settings updated successfully",
+      message: "Gizlilik ayarları başarıyla güncellendi",
     });
   } catch (error) {
     console.error("Error updating privacy settings:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to update privacy settings: " + error.message,
+      message: "Gizlilik ayarları güncellenemedi: " + error.message,
     });
   }
 });
@@ -742,7 +787,7 @@ router.get("/api/user/current", isAuthenticated, async (req, res) => {
     console.error("Error getting user ID:", error);
     res.status(500).json({
       success: false,
-      error: "Failed to get user ID",
+      error: "Kullanıcı ID'si alınamadı",
     });
   }
 });
@@ -762,73 +807,34 @@ router.get("/api/check-auth", (req, res) => {
   } else {
     return res.status(401).json({
       authenticated: false,
-      message: "Not authenticated",
+      message: "Oturum açılmadı",
     });
   }
 });
 
-// Delete account route
+// Delete account route (Soft Delete)
 router.delete("/api/user/delete-account", isAuthenticated, async (req, res) => {
   try {
     const userId = req.user._id;
-    const protocol = req.protocol; // 'http' or 'https'
-    const host = req.get("host");
-    const cookies = req.headers.cookie || "";
 
-    // 1. Delete all posts and drafts created by the user using the API routes
-    // First, get all user's posts
-    const posts = await Post.find({
-      createdBy: userId,
-      status: "active",
-    }).select("_id");
-
-    // Get all user's drafts
-    const drafts = await Post.find({
-      createdBy: userId,
-      status: "draft",
-    }).select("_id");
-
-    // Delete each post using the post delete API to ensure Cloudinary images are deleted
-    for (const post of posts) {
-      try {
-        const deleteUrl = `${protocol}://${host}/api/posts/${post._id}`;
-        await fetch(deleteUrl, {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Cookie: cookies,
-          },
-          credentials: "same-origin",
-        });
-      } catch (postError) {
-        console.error(`Error deleting post ${post._id}:`, postError);
-        // Continue with other deletions even if one fails
+    // 1. Mark all posts (active, drafts) as "closed"
+    const now = new Date();
+    await Post.updateMany(
+      { createdBy: userId, status: { $ne: "deleted" } }, // Don't touch already deleted posts
+      { 
+        $set: { 
+          status: "closed",
+          closedAt: now
+        } 
       }
-    }
+    );
 
-    // Delete each draft using the draft delete API
-    for (const draft of drafts) {
-      try {
-        const deleteUrl = `${protocol}://${host}/api/drafts/${draft._id}`;
-        await fetch(deleteUrl, {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Cookie: cookies,
-          },
-          credentials: "same-origin",
-        });
-      } catch (draftError) {
-        console.error(`Error deleting draft ${draft._id}:`, draftError);
-        // Continue with other deletions even if one fails
-      }
-    }
-
-    // 2. Find all messages where this user is a participant
+    // 2. Soft delete conversations (mark as deleted for this user)
     const Message = mongoose.model("Message");
-    await Message.deleteMany({
-      "users.user": userId,
-    });
+    await Message.updateMany(
+      { "users.user": userId },
+      { $addToSet: { deletedBy: userId } }
+    );
 
     // 3. Remove user from other users' favorites
     await User.updateMany(
@@ -836,15 +842,21 @@ router.delete("/api/user/delete-account", isAuthenticated, async (req, res) => {
       { $pull: { favorites: userId } }
     );
 
-    // 4. Finally, delete the user account
-    await User.findByIdAndDelete(userId);
+    // 4. Mark the user as deleted (Soft Delete)
+    await User.findByIdAndUpdate(userId, {
+      isDeleted: true,
+      deletedAt: now,
+      // Optional: Clear sensitive fields immediately if required by policy, 
+      // but keeping them allows reactivation if we add that feature later.
+      // For strictly anonymity, we rely on the 6-month hard delete job.
+    });
 
     // 5. Clear the login cookie
     res.clearCookie("login");
 
     return res.status(200).json({
       success: true,
-      message: "Hesabınız ve ilgili tüm verileriniz başarıyla silindi",
+      message: "Hesabınız ve ilgili tüm verileriniz başarıyla silindi", // message will be displayed in the frontend
     });
   } catch (error) {
     console.error("Error deleting account:", error);
